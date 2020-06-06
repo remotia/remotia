@@ -1,0 +1,30 @@
+[package]
+name = "remotia"
+version = "0.1.0"
+authors = ["Lorenzo Catania <aegroto@protonmail.com>"]
+edition = "2018"
+
+[dependencies.tokio]
+version = '0.2'
+features = [
+    'udp',
+    'sync',
+    'rt-core',
+    'io-util',
+]
+
+[dev-dependencies]
+tokio-openssl = '0.4'
+openssl = { version = "0.10", features = ["vendored"] }
+
+[dev-dependencies.tokio]
+version = '0.2'
+features = [
+    'time',
+    'macros',
+]
+
+[dependencies]
+scrap = "0.5"
+udp-stream = "0.0.0-alpha.3"
+udt = "0.2.0"

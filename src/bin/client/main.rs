@@ -1,8 +1,7 @@
-// use std::net::UdpSocket;
+use std::net::UdpSocket;
 
 use std::str::FromStr;
-use std::net::{SocketAddr, SocketAddrV4};
-use udt::*;
+use std::net::{SocketAddr};
 
 use beryllium::*;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
@@ -29,29 +28,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     pixels.render()?;
 
     // Init socket
-    let localhost = std::net::Ipv4Addr::from_str("127.0.0.1").unwrap();
+    let socket = UdpSocket::bind("127.0.0.1:5002")?;
 
-    let sock = UdtSocket::new(SocketFamily::AFInet, SocketType::Datagram).unwrap();
-    sock.bind(SocketAddr::V4(SocketAddrV4::new(localhost, 5001))).unwrap();
-    let my_addr = sock.getsockname().unwrap();
-    println!("Server bound to {:?}", my_addr);
-    sock.listen(1).unwrap();
-    let (connection_socket, peer) = sock.accept().unwrap();
-    println!("Received new connection from peer {:?}", peer);
+    let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
+
+    let hello_buffer = [0; 16];
+    socket.send_to(&hello_buffer, server_address).unwrap();
 
     // let mut packet_buffer: [u8; PACKET_SIZE] = [0; PACKET_SIZE];
     // let mut frame_buffer: [u8; FRAME_SIZE] = [0; FRAME_SIZE];
 
-    connection_socket.setsockopt(UdtOpts::UDP_RCVBUF, RECV_BUFFER_SIZE).unwrap_err();
-    connection_socket.setsockopt(UdtOpts::UDT_RCVBUF, RECV_BUFFER_SIZE).unwrap_err();
-
     loop {
         println!("Waiting for next frame (expected length: {})...", FRAME_SIZE);
 
-        // let read_bytes = connection_socket.recv(pixels.get_frame(), FRAME_SIZE).unwrap();
-        let read_bytes = connection_socket.recvmsg(pixels.get_frame()).unwrap();
+        let frame_buffer = pixels.get_frame();
+
+        let mut total_received_bytes = 0;
+
+        while total_received_bytes < frame_buffer.len() {
+            let packet_slice = &mut frame_buffer[total_received_bytes..];
+
+            let received_bytes = socket.recv(packet_slice)?;
+
+            total_received_bytes += received_bytes;
+
+            println!("Received {}/{} bytes", total_received_bytes, &frame_buffer.len());
+        }
+
         pixels.render()?;
 
-        println!("Received a frame (read {} bytes)", read_bytes);
+        println!("Received a frame (received {} bytes)", total_received_bytes);
     }
 }

@@ -8,19 +8,17 @@ use std::thread;
 
 // use std::cmp::min;
 
-// use std::net::UdpSocket;
+use std::net::UdpSocket;
 
-use std::str::FromStr;
-use std::net::{SocketAddr, SocketAddrV4};
-use udt::*;
+// use udt::*;
 
-// const PACKET_SIZE: usize = 512;
+const PACKET_SIZE: usize = 512;
 
-const WIDTH: u32 = 1280;
-const HEIGHT: u32 = 720;
+// const WIDTH: u32 = 1280;
+// const HEIGHT: u32 = 720;
 
-const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
-const SEND_BUFFER_SIZE: i32 = (FRAME_SIZE * 4) as i32;
+// const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
+// const SEND_BUFFER_SIZE: i32 = (FRAME_SIZE * 4) as i32;
 
 fn main() -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
@@ -29,12 +27,18 @@ fn main() -> std::io::Result<()> {
     const FPS: u32 = 60;
     let spin_time = Duration::new(1, 0) / FPS;
 
-    let fast_socket = UdtSocket::new(SocketFamily::AFInet, SocketType::Datagram).unwrap();
-    let client_ipv4_address = std::net::Ipv4Addr::from_str("127.0.0.1").unwrap();
+    let socket = UdpSocket::bind("127.0.0.1:5001")?;
 
-    fast_socket.connect(SocketAddr::V4(SocketAddrV4::new(client_ipv4_address, 5001))).unwrap();
-    fast_socket.setsockopt(UdtOpts::UDP_SNDBUF, SEND_BUFFER_SIZE).unwrap_err();
-    fast_socket.setsockopt(UdtOpts::UDT_SNDBUF, SEND_BUFFER_SIZE).unwrap_err();
+    println!("Socket bound, waiting for hello message...");
+
+    let mut hello_buffer = [0; 16];
+    let (bytes_received, client_address) = socket.recv_from(&mut hello_buffer)?;
+
+    assert_eq!(bytes_received, 16);
+
+    print!("Hello message received correctly. Streaming...");
+
+    // let packet_buffer = [0, PACKET_SIZE];
 
     loop {
         let loop_start_time = Instant::now();
@@ -53,11 +57,18 @@ fn main() -> std::io::Result<()> {
 
         let transfer_start_time = Instant::now();
 
-        // let sent_bytes = fast_socket.send(&frame_buffer).unwrap();
-        let sent_bytes = fast_socket.sendmsg(&frame_buffer).unwrap();
+        let mut total_sent_bytes = 0;
 
-        let pending_buffer_data = fast_socket.getsockopt(UdtOpts::UDT_SNDDATA).unwrap();
-        println!("Sent {}/{} bytes. Pending {} bytes", sent_bytes, &frame_buffer.len(), pending_buffer_data);
+        while total_sent_bytes < frame_buffer.len() {
+            let packet_slice = &frame_buffer[total_sent_bytes..total_sent_bytes+PACKET_SIZE];
+
+            let sent_bytes = socket.send_to(&packet_slice, &client_address)?;
+
+            total_sent_bytes += sent_bytes;
+
+            println!("Sent {}/{} bytes", total_sent_bytes, &frame_buffer.len());
+        }
+
         println!("Transfer time: {}", transfer_start_time.elapsed().as_millis());
 
         println!("Total time: {}", loop_start_time.elapsed().as_millis());

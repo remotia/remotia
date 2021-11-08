@@ -31,9 +31,10 @@ fn main() -> std::io::Result<()> {
 
     print!("Hello message received correctly. Streaming...");
 
-    // let packet_buffer = [0, PACKET_SIZE];
-
+    socket.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
     let frame_sender = FrameSender::create(&socket, PACKET_SIZE, &client_address);
+
+    let frame_size = capturer.width() * capturer.height() * 3;
 
     loop {
         let loop_start_time = Instant::now();
@@ -51,7 +52,7 @@ fn main() -> std::io::Result<()> {
 
         let transfer_start_time = Instant::now();
 
-        frame_sender.send_frame(&frame_buffer);
+        frame_sender.send_frame(&frame_buffer[0..frame_size]);
 
         println!("Transfer time: {}", transfer_start_time.elapsed().as_millis());
 

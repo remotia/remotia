@@ -4,13 +4,14 @@ use std::net::UdpSocket;
 
 use std::str::FromStr;
 use std::net::{SocketAddr};
+use std::time::Duration;
 
 use beryllium::*;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::FrameReceiver;
 
-const WIDTH: u32 = 1280;
-const HEIGHT: u32 = 720;
+const WIDTH: u32 = 128;
+const HEIGHT: u32 = 72;
 
 // const PACKET_SIZE: usize = 512;
 const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
@@ -31,19 +32,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Init socket
     let socket = UdpSocket::bind("127.0.0.1:5002")?;
+    socket.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
 
     let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
 
     let hello_buffer = [0; 16];
     socket.send_to(&hello_buffer, server_address).unwrap();
 
-    let frame_receiver = FrameReceiver::create(&socket);
+    let frame_receiver = FrameReceiver::create(&socket, &server_address);
 
     loop {
         println!("Waiting for next frame (expected length: {})...", FRAME_SIZE);
 
-        frame_receiver.receive_frame(pixels.get_frame());
-
-        pixels.render()?;
+        match frame_receiver.receive_frame(pixels.get_frame()) {
+            Ok(_) => pixels.render()?,
+            Err(_) => println!("Error while receiving frame, dropping")
+        }
     }
 }

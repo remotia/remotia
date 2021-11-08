@@ -41,12 +41,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let frame_receiver = FrameReceiver::create(&socket, &server_address);
 
+    let mut consecutive_dropped_frames = 0;
+
     loop {
         println!("Waiting for next frame (expected length: {})...", FRAME_SIZE);
 
         match frame_receiver.receive_frame(pixels.get_frame()) {
-            Ok(_) => pixels.render()?,
-            Err(_) => println!("Error while receiving frame, dropping")
+            Ok(_) => {
+                consecutive_dropped_frames = 0;
+                pixels.render()?;
+            },
+            Err(_) => {
+                println!("Error while receiving frame, dropping");
+                consecutive_dropped_frames += 1;
+            }
+        };
+
+        if consecutive_dropped_frames >= 5 {
+            print!("Too much consecutive dropped frames, closing stream");
+            break;
         }
-    }
+    };
+
+    Ok(())
 }

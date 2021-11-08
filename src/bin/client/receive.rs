@@ -60,7 +60,7 @@ impl<'a> FrameReceiver<'a> {
         packet_header_buffer[0] == 64
     }
 
-    fn receive_frame_pixels(&self, frame_buffer: &'a mut[u8]) {
+    fn receive_frame_pixels(&self, frame_buffer: &'a mut[u8]) -> Result<(), ()> {
         println!("Receiving frame pixels...");
 
         let mut total_received_bytes = 0;
@@ -68,7 +68,7 @@ impl<'a> FrameReceiver<'a> {
         while total_received_bytes < frame_buffer.len() {
             if !self.receive_packet_header() {
                 println!("Invalid packet header, dropping frame");
-                return;
+                return Err(());
             }
 
             let packet_slice = &mut frame_buffer[total_received_bytes..];
@@ -81,5 +81,8 @@ impl<'a> FrameReceiver<'a> {
         }
 
         println!("Received frame pixels (received {} bytes)", total_received_bytes);
+
+        Ok(())
     }
+
 }

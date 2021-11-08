@@ -1,8 +1,17 @@
-use std::{net::{SocketAddr, UdpSocket}};
+use std::{io::ErrorKind, net::{SocketAddr, UdpSocket}};
+
+use std::io::Result;
+use std::io::Error;
+
+use crate::error::ClientError;
 
 pub struct FrameReceiver<'a> {
     socket: &'a UdpSocket,
     server_address: &'a SocketAddr
+}
+
+macro_rules! client_error {
+    ($kind: expr) => { Err(Error::new(ErrorKind::InvalidData, $kind)) }
 }
 
 impl<'a> FrameReceiver<'a> {
@@ -16,32 +25,32 @@ impl<'a> FrameReceiver<'a> {
         }
     }
 
-    pub fn receive_frame(&self, frame_buffer: &'a mut[u8]) -> Result<(), ()> {
+    pub fn receive_frame(&self, frame_buffer: &'a mut[u8]) -> Result<()> {
         if self.receive_whole_frame_header().is_err() {
             println!("Invalid frame header, dropping frame.");
-            return Err(());
+            return client_error!(ClientError::InvalidFrameHeader);
         }
 
         self.send_whole_frame_header_receipt();
 
-        self.receive_frame_pixels(frame_buffer);
+        self.receive_frame_pixels(frame_buffer)?;
 
         Ok(())
     }
 
-    fn receive_whole_frame_header(&self) -> Result<(), ()> {
+    fn receive_whole_frame_header(&self) -> Result<()> {
         println!("Receiving whole frame header...");
         let mut frame_header_buffer = [0, 8];
         let receive_result = self.socket.recv(&mut frame_header_buffer);
 
         if receive_result.is_err() {
-            return Err(());
+            return client_error!(ClientError::InvalidWholeFrameHeader);
         }
 
         println!("Received whole frame header.");
 
         if frame_header_buffer[0] != 128 {
-            return Err(());
+            return client_error!(ClientError::InvalidWholeFrameHeader);
         }
 
         Ok(())
@@ -60,7 +69,7 @@ impl<'a> FrameReceiver<'a> {
         packet_header_buffer[0] == 64
     }
 
-    fn receive_frame_pixels(&self, frame_buffer: &'a mut[u8]) -> Result<(), ()> {
+    fn receive_frame_pixels(&self, frame_buffer: &'a mut[u8]) -> Result<()> {
         println!("Receiving frame pixels...");
 
         let mut total_received_bytes = 0;
@@ -68,7 +77,7 @@ impl<'a> FrameReceiver<'a> {
         while total_received_bytes < frame_buffer.len() {
             if !self.receive_packet_header() {
                 println!("Invalid packet header, dropping frame");
-                return Err(());
+                return client_error!(ClientError::InvalidPacketHeader);
             }
 
             let packet_slice = &mut frame_buffer[total_received_bytes..];

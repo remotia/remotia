@@ -31,7 +31,8 @@ fn main() -> std::io::Result<()> {
 
     print!("Hello message received correctly. Streaming...");
 
-    socket.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+    socket.set_read_timeout(Some(Duration::from_millis(200))).unwrap();
+
     let frame_sender = FrameSender::create(&socket, PACKET_SIZE, &client_address);
 
     let frame_size = capturer.width() * capturer.height() * 3;

@@ -1,4 +1,5 @@
 mod receive;
+mod error;
 
 use std::net::UdpSocket;
 
@@ -10,8 +11,8 @@ use beryllium::*;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::FrameReceiver;
 
-const WIDTH: u32 = 128;
-const HEIGHT: u32 = 72;
+const WIDTH: u32 = 1280;
+const HEIGHT: u32 = 720;
 
 // const PACKET_SIZE: usize = 512;
 const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
@@ -32,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Init socket
     let socket = UdpSocket::bind("127.0.0.1:5002")?;
-    socket.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+    socket.set_read_timeout(Some(Duration::from_millis(200))).unwrap();
 
     let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
 
@@ -50,14 +51,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(_) => {
                 consecutive_dropped_frames = 0;
                 pixels.render()?;
+                println!("[SUCCESS] Frame rendered on screen");
             },
             Err(_) => {
-                println!("Error while receiving frame, dropping");
                 consecutive_dropped_frames += 1;
+                println!("Error while receiving frame, dropping (consecutive dropped frames: {})", consecutive_dropped_frames);
             }
         };
 
-        if consecutive_dropped_frames >= 5 {
+        if consecutive_dropped_frames >= 200 {
             print!("Too much consecutive dropped frames, closing stream");
             break;
         }

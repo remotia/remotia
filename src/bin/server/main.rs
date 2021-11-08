@@ -19,7 +19,7 @@ use udt::*;
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
 
-const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 4;
+const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
 const SEND_BUFFER_SIZE: i32 = (FRAME_SIZE * 4) as i32;
 
 fn main() -> std::io::Result<()> {
@@ -40,16 +40,16 @@ fn main() -> std::io::Result<()> {
         let loop_start_time = Instant::now();
 
         // Capture frame
-        // let result = capture::capture_frame(&mut capturer);
+        let result = capture::capture_frame(&mut capturer);
 
-        // let frame_buffer: Frame = match result {
-        //     Ok(buffer) => buffer,
-        //     Err(_error) => {
-        //         thread::sleep(spin_time);
-        //         continue;
-        //     }
-        // };
-        let frame_buffer = vec![128; FRAME_SIZE];
+        let frame_buffer: Frame = match result {
+            Ok(buffer) => buffer,
+            Err(_error) => {
+                thread::sleep(spin_time);
+                continue;
+            }
+        };
+        // let frame_buffer = vec![128; FRAME_SIZE];
 
         let transfer_start_time = Instant::now();
 

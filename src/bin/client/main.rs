@@ -11,7 +11,7 @@ const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
 
 // const PACKET_SIZE: usize = 512;
-const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 4;
+const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
 const RECV_BUFFER_SIZE: i32 = (FRAME_SIZE * 4) as i32;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

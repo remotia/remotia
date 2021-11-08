@@ -1,17 +1,16 @@
-use std::{error::Error, fmt::Display};
+use thiserror::Error;
 
-
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ClientError {
-    InvalidFrameHeader,
+    #[error("Invalid whole frame header")]
     InvalidWholeFrameHeader,
+
+    #[error("Invalid packet header")]
     InvalidPacketHeader,
-}
 
-impl Error for ClientError { }
+    #[error("Invalid packet")]
+    InvalidPacket,
 
-impl Display for ClientError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Oh no, something bad went down")
-    }
+    #[error("Connection error")]
+    ConnectionError,
 }

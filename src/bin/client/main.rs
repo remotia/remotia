@@ -1,21 +1,23 @@
-mod receive;
 mod error;
+mod receive;
 
 use std::net::UdpSocket;
 
+use std::net::SocketAddr;
 use std::str::FromStr;
-use std::net::{SocketAddr};
 use std::time::Duration;
 
 use beryllium::*;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::FrameReceiver;
 
+use crate::error::ClientError;
+
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
 
 // const PACKET_SIZE: usize = 512;
-const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
+const EXPECTED_FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Init display
@@ -33,7 +35,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Init socket
     let socket = UdpSocket::bind("127.0.0.1:5002")?;
-    socket.set_read_timeout(Some(Duration::from_millis(200))).unwrap();
+    socket
+        .set_read_timeout(Some(Duration::from_millis(200)))
+        .unwrap();
 
     let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
 
@@ -42,28 +46,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let frame_receiver = FrameReceiver::create(&socket, &server_address);
 
-    let mut consecutive_dropped_frames = 0;
+    let mut consecutive_connection_losses = 0;
 
     loop {
-        println!("Waiting for next frame (expected length: {})...", FRAME_SIZE);
+        println!(
+            "Waiting for next frame (expected length: {})...",
+            EXPECTED_FRAME_SIZE
+        );
 
-        match frame_receiver.receive_frame(pixels.get_frame()) {
-            Ok(_) => {
-                consecutive_dropped_frames = 0;
-                pixels.render()?;
+        let canvas_buffer = pixels.get_frame();
+
+        frame_receiver
+            .receive_frame(&mut canvas_buffer[0..EXPECTED_FRAME_SIZE])
+            .and_then(|_| {
+                consecutive_connection_losses = 0;
+                pixels.render().unwrap();
                 println!("[SUCCESS] Frame rendered on screen");
-            },
-            Err(_) => {
-                consecutive_dropped_frames += 1;
-                println!("Error while receiving frame, dropping (consecutive dropped frames: {})", consecutive_dropped_frames);
-            }
-        };
 
-        if consecutive_dropped_frames >= 200 {
-            print!("Too much consecutive dropped frames, closing stream");
+                Ok(())
+            })
+            .unwrap_or_else(|e| {
+                match e {
+                    ClientError::InvalidWholeFrameHeader => consecutive_connection_losses = 0,
+                    _ => consecutive_connection_losses += 1,
+                }
+
+                println!(
+                    "Error while receiving frame: {}, dropping (consecutive connection losses: {})",
+                    e, consecutive_connection_losses
+                );
+            });
+
+        if consecutive_connection_losses >= 10 {
+            print!("Too much consecutive connection losses, closing stream");
             break;
         }
-    };
+    }
 
     Ok(())
 }

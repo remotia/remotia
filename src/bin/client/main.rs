@@ -1,3 +1,5 @@
+mod receive;
+
 use std::net::UdpSocket;
 
 use std::str::FromStr;
@@ -5,6 +7,7 @@ use std::net::{SocketAddr};
 
 use beryllium::*;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
+use receive::FrameReceiver;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -34,28 +37,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hello_buffer = [0; 16];
     socket.send_to(&hello_buffer, server_address).unwrap();
 
-    // let mut packet_buffer: [u8; PACKET_SIZE] = [0; PACKET_SIZE];
-    // let mut frame_buffer: [u8; FRAME_SIZE] = [0; FRAME_SIZE];
+    let frame_receiver = FrameReceiver::create(&socket);
 
     loop {
         println!("Waiting for next frame (expected length: {})...", FRAME_SIZE);
 
-        let frame_buffer = pixels.get_frame();
-
-        let mut total_received_bytes = 0;
-
-        while total_received_bytes < frame_buffer.len() {
-            let packet_slice = &mut frame_buffer[total_received_bytes..];
-
-            let received_bytes = socket.recv(packet_slice)?;
-
-            total_received_bytes += received_bytes;
-
-            println!("Received {}/{} bytes", total_received_bytes, &frame_buffer.len());
-        }
+        frame_receiver.receive_frame(pixels.get_frame());
 
         pixels.render()?;
-
-        println!("Received a frame (received {} bytes)", total_received_bytes);
     }
 }

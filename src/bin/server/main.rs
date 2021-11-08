@@ -1,24 +1,17 @@
 extern crate scrap;
 
 mod capture;
+mod send;
 
 use scrap::{Capturer, Display, Frame};
 use std::time::{Duration, Instant};
 use std::thread;
 
-// use std::cmp::min;
-
 use std::net::UdpSocket;
 
-// use udt::*;
+use crate::send::FrameSender;
 
 const PACKET_SIZE: usize = 512;
-
-// const WIDTH: u32 = 1280;
-// const HEIGHT: u32 = 720;
-
-// const FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
-// const SEND_BUFFER_SIZE: i32 = (FRAME_SIZE * 4) as i32;
 
 fn main() -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
@@ -40,6 +33,8 @@ fn main() -> std::io::Result<()> {
 
     // let packet_buffer = [0, PACKET_SIZE];
 
+    let frame_sender = FrameSender::create(&socket, PACKET_SIZE, &client_address);
+
     loop {
         let loop_start_time = Instant::now();
 
@@ -53,21 +48,10 @@ fn main() -> std::io::Result<()> {
                 continue;
             }
         };
-        // let frame_buffer = vec![128; FRAME_SIZE];
 
         let transfer_start_time = Instant::now();
 
-        let mut total_sent_bytes = 0;
-
-        while total_sent_bytes < frame_buffer.len() {
-            let packet_slice = &frame_buffer[total_sent_bytes..total_sent_bytes+PACKET_SIZE];
-
-            let sent_bytes = socket.send_to(&packet_slice, &client_address)?;
-
-            total_sent_bytes += sent_bytes;
-
-            println!("Sent {}/{} bytes", total_sent_bytes, &frame_buffer.len());
-        }
+        frame_sender.send_frame(&frame_buffer);
 
         println!("Transfer time: {}", transfer_start_time.elapsed().as_millis());
 

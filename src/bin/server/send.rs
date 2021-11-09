@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, UdpSocket};
+use std::{cmp, net::{SocketAddr, UdpSocket}};
 
 pub struct FrameSender<'a> {
     socket: &'a UdpSocket,
@@ -28,6 +28,7 @@ impl<'a> FrameSender<'a> {
         }
 
         self.send_frame_pixels(frame_buffer);
+        self.send_end_packet_header();
     }
 
     fn send_whole_frame_header(&self) {
@@ -62,6 +63,12 @@ impl<'a> FrameSender<'a> {
             .unwrap();
     }
 
+    fn send_end_packet_header(&self) {
+        let packet_header = [65; 8];
+        self.socket.send_to(&packet_header, self.client_address)
+            .unwrap();
+    }
+
     fn send_frame_pixels(&self, frame_buffer: &'a [u8]) {
         println!("Sending frame pixels...");
 
@@ -70,14 +77,16 @@ impl<'a> FrameSender<'a> {
         while total_sent_bytes < frame_buffer.len() {
             self.send_packet_header();
 
-            let packet_slice = &frame_buffer[total_sent_bytes..total_sent_bytes+self.pixels_packet_size];
+            let slice_end = cmp::min(total_sent_bytes+self.pixels_packet_size, frame_buffer.len());
+
+            let packet_slice = &frame_buffer[total_sent_bytes..slice_end];
 
             let sent_bytes = self.socket.send_to(&packet_slice, self.client_address)
                 .unwrap();
 
             total_sent_bytes += sent_bytes;
 
-            // println!("Sent {}/{} bytes", total_sent_bytes, &frame_buffer.len());
+            println!("Sent {}/{} bytes", total_sent_bytes, &frame_buffer.len());
         }
 
         println!("Sent frame pixels.");

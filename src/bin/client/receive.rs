@@ -55,10 +55,25 @@ impl<'a> FrameReceiver<'a> {
         println!("Sent whole frame header receipt.");
     }
 
-    fn receive_packet_header(&self) -> bool {
+    fn receive_packet_header(&self) -> Result<bool, ClientError> {
         let mut packet_header_buffer = [0; 8];
-        self.socket.recv(&mut packet_header_buffer).unwrap();
-        packet_header_buffer[0] == 64
+        let receive_result = self.socket.recv(&mut packet_header_buffer);
+
+        if receive_result.is_err() {
+            println!("Couldn't receive packet header, connection error.");
+            return Err(ClientError::ConnectionError);
+        }
+
+        if packet_header_buffer[0] != 64 {
+            if packet_header_buffer[0] == 65 {
+                println!("Received end packet header");
+                return Ok(true);
+            }
+            println!("Invalid packet header");
+            return Err(ClientError::InvalidPacketHeader);
+        }
+
+        Ok(false)
     }
 
     fn receive_frame_pixels(&self, frame_buffer: &'a mut[u8]) -> Result<(), ClientError> {
@@ -66,10 +81,12 @@ impl<'a> FrameReceiver<'a> {
 
         let mut total_received_bytes = 0;
 
-        while total_received_bytes < frame_buffer.len() {
-            if !self.receive_packet_header() {
-                println!("Invalid packet header, dropping frame");
-                return Err(ClientError::InvalidPacketHeader);
+        // while total_received_bytes < frame_buffer.len() {
+        loop {
+            let end = self.receive_packet_header()?;
+
+            if end {
+                break;
             }
 
             let packet_slice = &mut frame_buffer[total_received_bytes..];
@@ -82,9 +99,14 @@ impl<'a> FrameReceiver<'a> {
                 }
             };
 
+            if received_bytes == 0 {
+                break;
+            }
+
             total_received_bytes += received_bytes;
 
-            println!("Received {}/{} bytes", total_received_bytes, &frame_buffer.len());
+            // println!("Received {}/{} bytes", total_received_bytes, &frame_buffer.len());
+            println!("Received {} bytes", total_received_bytes);
         }
 
         println!("Received frame pixels (received {} bytes)", total_received_bytes);

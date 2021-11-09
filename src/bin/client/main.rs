@@ -54,11 +54,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             EXPECTED_FRAME_SIZE
         );
 
-        let canvas_buffer = pixels.get_frame();
+        // let canvas_buffer = pixels.get_frame();
+        let mut encoded_frame_buffer = vec![0 as u8; EXPECTED_FRAME_SIZE];
 
         frame_receiver
-            .receive_frame(&mut canvas_buffer[0..EXPECTED_FRAME_SIZE])
+            .receive_frame(&mut encoded_frame_buffer)
             .and_then(|_| {
+                let rgb_pixels = 
+                    libavif::decode_rgb(&encoded_frame_buffer).unwrap();
+
+                pixels.get_frame().copy_from_slice(rgb_pixels.as_slice());
+
                 consecutive_connection_losses = 0;
                 pixels.render().unwrap();
                 println!("[SUCCESS] Frame rendered on screen");

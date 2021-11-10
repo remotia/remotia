@@ -2,15 +2,17 @@ extern crate scrap;
 
 mod capture;
 mod send;
+mod encode;
 
 use std::time::{Duration, Instant};
-use std::thread;
+use std::thread::{self};
 
 use std::net::{UdpSocket};
 
-use libavif::{AvifData, Encoder, Error, RgbPixels, YuvFormat};
 use scrap::{Capturer, Display, Frame};
 
+use crate::encode::Encoder;
+use crate::encode::identity::IdentityEncoder;
 use crate::send::FrameSender;
 
 const PACKET_SIZE: usize = 512;
@@ -19,7 +21,7 @@ fn main() -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
     let mut capturer = Capturer::new(display).expect("Couldn't begin capture.");
 
-    const FPS: u32 = 24;
+    const FPS: u32 = 60;
     let spin_time = Duration::new(1, 0) / FPS;
 
     let socket = UdpSocket::bind("127.0.0.1:5001")?;
@@ -41,7 +43,10 @@ fn main() -> std::io::Result<()> {
     let height = capturer.height();
     let frame_size = width * height * 3;
 
+    let mut encoder = IdentityEncoder::new(frame_size);
+
     loop {
+        thread::sleep(spin_time);
         let loop_start_time = Instant::now();
 
         // Capture frame
@@ -60,36 +65,16 @@ fn main() -> std::io::Result<()> {
         println!("Encoding...");
 
         let frame_buffer = &frame_buffer[0..frame_size];
-        let encoded_frame = 
-            encode_frame(
-                width as u32, 
-                height as u32, 
-                frame_buffer)
-        .unwrap();
+        let encoded_frame_length = encoder.encode(frame_buffer);
 
-        println!("Encoded frame size: {}/{}", encoded_frame.len(), frame_buffer.len());
+        println!("Encoded frame size: {}/{}", encoded_frame_length, frame_buffer.len());
 
         let transfer_start_time = Instant::now();
 
-        frame_sender.send_frame(&encoded_frame);
+        frame_sender.send_frame(encoder.get_encoded_frame());
 
         println!("Transfer time: {}", transfer_start_time.elapsed().as_millis());
 
         println!("Total time: {}", loop_start_time.elapsed().as_millis());
     }
-}
-
-fn encode_frame(width: u32, height: u32, rgb: &[u8]) -> Result<AvifData<'static>, Error> {
-    let rgb = RgbPixels::new(width, height, rgb)?;
-    let image = rgb.to_image(YuvFormat::Yuv444);
-
-
-    let mut encoder = Encoder::new();
-    encoder.set_max_threads(1);
-    encoder.set_quantizer(200);
-    encoder.set_speed(10);
-
-    println!("Speed: {}", encoder.speed());
-
-    encoder.encode(&image)
 }

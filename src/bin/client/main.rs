@@ -1,5 +1,6 @@
 mod error;
 mod receive;
+mod decode;
 
 use std::net::UdpSocket;
 
@@ -8,13 +9,15 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use beryllium::*;
+use decode::identity::IdentityDecoder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::FrameReceiver;
 
+use crate::decode::Decoder;
 use crate::error::ClientError;
 
-const WIDTH: u32 = 1280;
-const HEIGHT: u32 = 720;
+const WIDTH: u32 = 128;
+const HEIGHT: u32 = 72;
 
 // const PACKET_SIZE: usize = 512;
 const EXPECTED_FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
@@ -45,6 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     socket.send_to(&hello_buffer, server_address).unwrap();
 
     let frame_receiver = FrameReceiver::create(&socket, &server_address);
+    let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
 
     let mut consecutive_connection_losses = 0;
 
@@ -60,10 +64,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         frame_receiver
             .receive_frame(&mut encoded_frame_buffer)
             .and_then(|_| {
-                let rgb_pixels = 
-                    libavif::decode_rgb(&encoded_frame_buffer).unwrap();
+                let pixels_space = &mut pixels.get_frame()[..EXPECTED_FRAME_SIZE];
+                decoder.decode(&encoded_frame_buffer);
 
-                pixels.get_frame().copy_from_slice(rgb_pixels.as_slice());
+                pixels_space.copy_from_slice(decoder.get_decoded_frame());
 
                 consecutive_connection_losses = 0;
                 pixels.render().unwrap();

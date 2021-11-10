@@ -4,15 +4,16 @@ mod capture;
 mod send;
 mod encode;
 
+use std::str::FromStr;
 use std::time::{Duration, Instant};
 use std::thread::{self};
 
-use std::net::{UdpSocket};
+use std::net::{SocketAddr, UdpSocket};
 
 use scrap::{Capturer, Display, Frame};
 
 use crate::encode::Encoder;
-use crate::encode::identity::IdentityEncoder;
+use crate::encode::h264::H264Encoder;
 use crate::send::FrameSender;
 
 const PACKET_SIZE: usize = 512;
@@ -28,10 +29,10 @@ fn main() -> std::io::Result<()> {
 
     println!("Socket bound, waiting for hello message...");
 
-    let mut hello_buffer = [0; 16];
-    let (bytes_received, client_address) = socket.recv_from(&mut hello_buffer)?;
-    assert_eq!(bytes_received, 16);
-    // let client_address = SocketAddr::from_str("127.0.0.1:5000").unwrap();
+    // let mut hello_buffer = [0; 16];
+    // let (bytes_received, client_address) = socket.recv_from(&mut hello_buffer)?;
+    // assert_eq!(bytes_received, 16);
+    let client_address = SocketAddr::from_str("127.0.0.1:5000").unwrap();
 
     println!("Hello message received correctly. Streaming...");
 
@@ -43,7 +44,7 @@ fn main() -> std::io::Result<()> {
     let height = capturer.height();
     let frame_size = width * height * 3;
 
-    let mut encoder = IdentityEncoder::new(frame_size);
+    let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
 
     loop {
         thread::sleep(spin_time);

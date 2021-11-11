@@ -106,7 +106,7 @@ impl<'a> FrameReceiver<'a> {
             total_received_bytes += received_bytes;
 
             // println!("Received {}/{} bytes", total_received_bytes, &frame_buffer.len());
-            println!("Received {} bytes", total_received_bytes);
+            // println!("Received {} bytes", total_received_bytes);
         }
 
         println!("Received frame pixels (received {} bytes)", total_received_bytes);

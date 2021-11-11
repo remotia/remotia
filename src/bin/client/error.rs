@@ -13,4 +13,7 @@ pub enum ClientError {
 
     #[error("Connection error")]
     ConnectionError,
+
+    #[error("H264 Send packet error")]
+    H264SendPacketError,
 }

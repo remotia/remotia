@@ -24,7 +24,7 @@ fn main() -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
     let mut capturer = Capturer::new(display).expect("Couldn't begin capture.");
 
-    const FPS: u32 = 60;
+    const FPS: u32 = 24;
     let spin_time = Duration::new(1, 0) / FPS;
 
     let socket = UdpSocket::bind("127.0.0.1:5001")?;
@@ -50,6 +50,7 @@ fn main() -> std::io::Result<()> {
 
     loop {
         thread::sleep(spin_time);
+
         let loop_start_time = Instant::now();
 
         // Capture frame

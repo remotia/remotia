@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rsmpeg::{avcodec::{AVCodec, AVCodecContext}, avutil::AVFrame, error::RsmpegError, ffi};
 
 use cstr::cstr;

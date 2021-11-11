@@ -1,3 +1,5 @@
+use crate::error::ClientError;
+
 use super::Decoder;
 
 pub struct IdentityDecoder {
@@ -15,8 +17,10 @@ impl IdentityDecoder {
 }
 
 impl Decoder for IdentityDecoder {
-    fn decode(&mut self, encoded_frame_buffer: &[u8]) {
+    fn decode(&mut self, encoded_frame_buffer: &[u8]) -> Result<usize, ClientError> {
         self.decoded_frame_buffer.copy_from_slice(encoded_frame_buffer);
+
+        Ok(0)
     }
 
     fn get_decoded_frame(&self) -> &[u8] {

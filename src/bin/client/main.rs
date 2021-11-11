@@ -9,7 +9,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use beryllium::*;
-use decode::identity::IdentityDecoder;
+use decode::h264::H264Decoder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::FrameReceiver;
 
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     socket.send_to(&hello_buffer, server_address).unwrap();
 
     let frame_receiver = FrameReceiver::create(&socket, &server_address);
-    let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
+    let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
 
     let mut consecutive_connection_losses = 0;
 
@@ -64,9 +64,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         frame_receiver
             .receive_frame(&mut encoded_frame_buffer)
             .and_then(|_| {
+                decoder.decode(&encoded_frame_buffer)
+            }).and_then(|_| {
                 let pixels_space = &mut pixels.get_frame()[..EXPECTED_FRAME_SIZE];
-                decoder.decode(&encoded_frame_buffer);
-
                 pixels_space.copy_from_slice(decoder.get_decoded_frame());
 
                 consecutive_connection_losses = 0;
@@ -74,10 +74,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("[SUCCESS] Frame rendered on screen");
 
                 Ok(())
-            })
-            .unwrap_or_else(|e| {
+            }).unwrap_or_else(|e| {
                 match e {
                     ClientError::InvalidWholeFrameHeader => consecutive_connection_losses = 0,
+                    ClientError::H264SendPacketError => {
+                        println!("H264 Send packet error")
+                    }
                     _ => consecutive_connection_losses += 1,
                 }
 

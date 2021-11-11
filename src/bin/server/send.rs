@@ -86,7 +86,7 @@ impl<'a> FrameSender<'a> {
 
             total_sent_bytes += sent_bytes;
 
-            println!("Sent {}/{} bytes", total_sent_bytes, &frame_buffer.len());
+            // println!("Sent {}/{} bytes", total_sent_bytes, &frame_buffer.len());
         }
 
         println!("Sent frame pixels.");

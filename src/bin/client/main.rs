@@ -1,28 +1,27 @@
+#![allow(unused_imports)]
+
 mod error;
 mod receive;
 mod decode;
 
 use std::net::TcpStream;
-use std::net::UdpSocket;
 
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::time::Duration;
 
 use beryllium::*;
 
-// use decode::h264::H264Decoder;
+use decode::h264::H264Decoder;
 use decode::identity::IdentityDecoder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::tcp::TCPFrameReceiver;
-use receive::udp::UDPFrameReceiver;
 
 use crate::decode::Decoder;
 use crate::error::ClientError;
 use crate::receive::FrameReceiver;
 
-const WIDTH: u32 = 128;
-const HEIGHT: u32 = 72;
+const WIDTH: u32 = 1280;
+const HEIGHT: u32 = 720;
 
 // const PACKET_SIZE: usize = 512;
 const EXPECTED_FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
@@ -57,14 +56,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect(server_address)?;
     let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
-    // let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
-    let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
+    let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
+    // let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
 
     let mut consecutive_connection_losses = 0;
 
     loop {
         println!(
-            "Waiting for next frame (expected length: {})...",
+            "Waiting for next frame (expected maximum length: {})...",
             EXPECTED_FRAME_SIZE
         );
 
@@ -72,9 +71,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut encoded_frame_buffer = vec![0 as u8; EXPECTED_FRAME_SIZE];
 
         frame_receiver
-            .receive_frame(&mut encoded_frame_buffer)
-            .and_then(|_| {
-                decoder.decode(&encoded_frame_buffer)
+            .receive_encoded_frame(&mut encoded_frame_buffer)
+            .and_then(|received_data_length| {
+                println!("Decoding {} received bytes", received_data_length);
+                decoder.decode(&encoded_frame_buffer[..received_data_length])
             }).and_then(|_| {
                 let pixels_space = &mut pixels.get_frame()[..EXPECTED_FRAME_SIZE];
                 pixels_space.copy_from_slice(decoder.get_decoded_frame());

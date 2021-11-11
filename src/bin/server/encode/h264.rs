@@ -8,6 +8,8 @@ use super::Encoder;
 
 pub struct H264Encoder {
     encoded_frame_buffer: Vec<u8>,
+    encoded_frame_length: usize,
+
     encode_context: AVCodecContext,
 
     // output_context: ffi::AVFormatContext,
@@ -22,6 +24,7 @@ impl H264Encoder {
     pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
         H264Encoder {
             encoded_frame_buffer: vec![0 as u8; frame_buffer_size],
+            encoded_frame_length: 0,
             width: width,
             height: height,
 
@@ -87,9 +90,11 @@ impl Encoder for H264Encoder {
         loop {
             let packet = match self.encode_context.receive_packet() {
                 Ok(packet) => {
+                    println!("Received packet of size {}", packet.size);
                     packet
                 },
                 Err(RsmpegError::EncoderDrainError) | Err(RsmpegError::EncoderFlushedError) => {
+                    println!("Drain or flushed error, breaking the loop");
                     break
                 }
                 Err(e) => panic!("{:?}", e),
@@ -107,7 +112,8 @@ impl Encoder for H264Encoder {
 
         encoded_frame_length as usize
     }
+
     fn get_encoded_frame(&self) -> &[u8] {
-        self.encoded_frame_buffer.as_slice()
+        &self.encoded_frame_buffer.as_slice()[..self.encoded_frame_length]
     }
 }

@@ -1,27 +1,24 @@
+#![allow(unused_imports)]
+
 extern crate scrap;
 
 mod capture;
 mod send;
 mod encode;
 
-// use std::str::FromStr;
-// use std::net::SocketAddr;
-
 use std::time::{Duration, Instant};
 use std::thread::{self};
 
-// use std::net::UdpSocket;
 use std::net::{TcpListener};
 
 use scrap::{Capturer, Display, Frame};
 
 use crate::encode::Encoder;
 
-// use crate::encode::h264::H264Encoder;
+use crate::encode::h264::H264Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::send::FrameSender;
 use crate::send::tcp::TCPFrameSender;
-// use crate::send::udp::UDPFrameSender;
 
 // const PACKET_SIZE: usize = 512;
 
@@ -46,14 +43,16 @@ fn main() -> std::io::Result<()> {
     let frame_sender = UDPFrameSender::new(&socket, PACKET_SIZE, &client_address);*/
 
     let listener = TcpListener::bind("127.0.0.1:5001")?;
+
+    println!("Waiting for client connection...");
     let (mut stream, _client_address) = listener.accept()?;
 
     let width = capturer.width();
     let height = capturer.height();
     let frame_size = width * height * 3;
 
-    // let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
-    let mut encoder = IdentityEncoder::new(frame_size);
+    let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+    // let mut encoder = IdentityEncoder::new(frame_size);
     let mut frame_sender = TCPFrameSender::new(&mut stream);
 
     loop {

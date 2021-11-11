@@ -109,10 +109,11 @@ impl<'a> UDPFrameReceiver<'a> {
 }
 
 impl<'a> FrameReceiver for UDPFrameReceiver<'a> {
-    fn receive_frame(&mut self, frame_buffer: &mut[u8]) -> Result<(), ClientError> {
+    fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
         self.receive_whole_frame_header()?;
         self.send_whole_frame_header_receipt();
         self.receive_frame_pixels(frame_buffer)?;
-        Ok(())
+
+        Ok(frame_buffer.len())
     }
 }

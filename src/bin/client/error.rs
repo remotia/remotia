@@ -11,6 +11,9 @@ pub enum ClientError {
     #[error("Invalid packet")]
     InvalidPacket,
 
+    #[error("Empty frame")]
+    EmptyFrame,
+
     #[error("Connection error")]
     ConnectionError,
 

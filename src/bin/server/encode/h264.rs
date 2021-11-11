@@ -1,6 +1,12 @@
 #![allow(dead_code)]
 
-use rsmpeg::{avcodec::{AVCodec, AVCodecContext}, avutil::AVFrame, error::RsmpegError, ffi};
+use rgb2yuv420::convert_rgb_to_yuv420p;
+use rsmpeg::{
+    avcodec::{AVCodec, AVCodecContext},
+    avutil::AVFrame,
+    error::RsmpegError,
+    ffi,
+};
 
 use cstr::cstr;
 
@@ -13,11 +19,10 @@ pub struct H264Encoder {
     encode_context: AVCodecContext,
 
     // output_context: ffi::AVFormatContext,
-
     width: i32,
     height: i32,
 
-    frame_count: i64
+    frame_count: i64,
 }
 
 impl H264Encoder {
@@ -34,21 +39,17 @@ impl H264Encoder {
                 encode_context.set_bit_rate(400000);
                 encode_context.set_width(width);
                 encode_context.set_height(height);
-                encode_context.set_time_base(ffi::AVRational{ num: 1, den: 60 });
-                encode_context.set_framerate(ffi::AVRational{ num: 60, den: 1 });
+                encode_context.set_time_base(ffi::AVRational { num: 1, den: 60 });
+                encode_context.set_framerate(ffi::AVRational { num: 60, den: 1 });
                 encode_context.set_gop_size(10);
                 encode_context.set_max_b_frames(1);
-                encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV444P10);
+                encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV420P);
                 encode_context.open(None).unwrap();
 
                 encode_context
             },
-
-            /*output_context: unsafe {
-                *ffi::avformat_alloc_context()
-            },*/
-
-            frame_count: 0
+            
+            frame_count: 0,
         }
     }
 
@@ -60,18 +61,47 @@ impl H264Encoder {
         avframe.set_pts(self.frame_count);
         avframe.alloc_buffer().unwrap();
 
-        let data = avframe.data[0];
-        let linesize = avframe.linesize[0] as usize;
+        let data = avframe.data;
+        let linesize = avframe.linesize;
         let width = self.width as usize;
         let height = self.height as usize;
-        let rgb_data = unsafe { std::slice::from_raw_parts_mut(data, height * linesize * 3) };
-        for y in 0..height {
-            for x in 0..width {
-                rgb_data[y * linesize + x * 3 + 0] = frame_buffer[(y * width + x) * 3 + 0];
-                rgb_data[y * linesize + x * 3 + 1] = frame_buffer[(y * width + x) * 3 + 1];
-                rgb_data[y * linesize + x * 3 + 2] = frame_buffer[(y * width + x) * 3 + 2];
+
+        let yuv420_frame_buffer =
+            convert_rgb_to_yuv420p(frame_buffer, width as u32, height as u32, 3);
+
+        let linesize_y = linesize[0] as usize;
+        let linesize_cb = linesize[1] as usize;
+        let linesize_cr = linesize[2] as usize;
+        let y_data = unsafe { std::slice::from_raw_parts_mut(
+            data[0], height * linesize_y) };
+        let cb_data = unsafe { std::slice::from_raw_parts_mut(
+            data[1], height / 2 * linesize_cb) };
+        let cr_data = unsafe { std::slice::from_raw_parts_mut(
+            data[2], height / 2 * linesize_cr) };
+
+        // println!("Sizes: {} {}", frame_buffer.len(), yuv420_frame_buffer.len());
+
+        // prepare a dummy image
+        let y_data_end_index = height * linesize_y;
+        y_data.copy_from_slice(&yuv420_frame_buffer[..y_data_end_index]);
+
+        let cb_data_end_index = y_data_end_index + (height/2) * linesize_cb;
+
+        /*println!("Y end index: {} (linesize {})", y_data_end_index, linesize_y);
+        println!("Cb end index: {} (linesize {})", cb_data_end_index, linesize_cb);
+        println!("Cr linesize: {}", linesize_cr);*/
+
+        for y in 0..height / 2 {
+            for x in 0..width / 2 {
+                cb_data[y * linesize_cb + x] = 
+                    yuv420_frame_buffer[y_data_end_index + y * linesize_cb + x];
+
+                cr_data[y * linesize_cr + x] =
+                    yuv420_frame_buffer[cb_data_end_index + y * linesize_cr + x];
             }
         }
+
+        println!("Created avframe #{}", avframe.pts);
 
         self.frame_count += 1;
 
@@ -81,7 +111,7 @@ impl H264Encoder {
 
 impl Encoder for H264Encoder {
     fn encode(&mut self, frame_buffer: &[u8]) -> usize {
-        let mut encoded_frame_length = 0;
+        self.encoded_frame_length = 0;
 
         let avframe = self.create_avframe(frame_buffer);
 
@@ -90,27 +120,31 @@ impl Encoder for H264Encoder {
         loop {
             let packet = match self.encode_context.receive_packet() {
                 Ok(packet) => {
-                    println!("Received packet of size {}", packet.size);
+                    // println!("Received packet of size {}", packet.size);
                     packet
-                },
-                Err(RsmpegError::EncoderDrainError) | Err(RsmpegError::EncoderFlushedError) => {
-                    println!("Drain or flushed error, breaking the loop");
-                    break
+                }
+                Err(RsmpegError::EncoderDrainError) => {
+                    println!("Drain error, breaking the loop");
+                    break;
+                }
+                Err(RsmpegError::EncoderFlushedError) => {
+                    println!("Flushed error, breaking the loop");
+                    break;
                 }
                 Err(e) => panic!("{:?}", e),
             };
 
             let data = unsafe { std::slice::from_raw_parts(packet.data, packet.size as usize) };
 
-            let start_index = encoded_frame_length;
-            let end_index = encoded_frame_length + data.len();
+            let start_index = self.encoded_frame_length;
+            let end_index = self.encoded_frame_length + data.len();
 
             self.encoded_frame_buffer[start_index..end_index].copy_from_slice(data);
 
-            encoded_frame_length = end_index; 
+            self.encoded_frame_length = end_index;
         }
 
-        encoded_frame_length as usize
+        self.encoded_frame_length as usize
     }
 
     fn get_encoded_frame(&self) -> &[u8] {

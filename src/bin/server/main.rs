@@ -86,6 +86,8 @@ fn main() -> std::io::Result<()> {
 
         let transfer_start_time = Instant::now();
 
+        println!("Encoded frame slice length: {}", encoder.get_encoded_frame().len());
+
         frame_sender.send_frame(encoder.get_encoded_frame());
 
         println!("Transfer time: {}", transfer_start_time.elapsed().as_millis());

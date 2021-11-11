@@ -17,16 +17,20 @@ impl<'a> TCPFrameReceiver<'a> {
         }
     }
 
-    fn receive_frame_header(&mut self) -> usize {
+    fn receive_frame_header(&mut self) -> Result<usize, ClientError> {
         println!("Receiving frame header...");
 
         let mut frame_size_vec = [0 as u8; 8];
 
-        self.stream.read(&mut frame_size_vec).unwrap();
+        let result = self.stream.read(&mut frame_size_vec);
+
+        if result.is_err() {
+            return Err(ClientError::InvalidWholeFrameHeader);
+        }
 
         println!("Frame size: {:?}", frame_size_vec);
 
-        usize::from_be_bytes(frame_size_vec)
+        Ok(usize::from_be_bytes(frame_size_vec))
     }
 
     fn receive_frame_pixels(&mut self, frame_buffer: &mut[u8])  -> Result<usize, ClientError> {
@@ -39,10 +43,16 @@ impl<'a> TCPFrameReceiver<'a> {
             println!("Received {} bytes", read_bytes); 
 
             if read_bytes == 0 {
-                return Err(ClientError::InvalidPacket);
+                return Err(ClientError::EmptyFrame);
             }
 
             total_read_bytes += read_bytes;
+        }
+
+        println!("Total bytes received: {}", total_read_bytes); 
+
+        if total_read_bytes == 0 {
+            return Err(ClientError::EmptyFrame);
         }
 
         Ok(total_read_bytes)
@@ -51,7 +61,7 @@ impl<'a> TCPFrameReceiver<'a> {
 
 impl<'a> FrameReceiver for TCPFrameReceiver<'a> {
     fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
-        let frame_size = self.receive_frame_header();
+        let frame_size = self.receive_frame_header()?;
 
         self.receive_frame_pixels(&mut frame_buffer[..frame_size])
     }

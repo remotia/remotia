@@ -61,14 +61,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut consecutive_connection_losses = 0;
 
+    let mut encoded_frame_buffer = vec![0 as u8; EXPECTED_FRAME_SIZE];
+
     loop {
-        println!(
-            "Waiting for next frame (expected maximum length: {})...",
-            EXPECTED_FRAME_SIZE
-        );
+        println!("Waiting for next frame...");
 
         // let canvas_buffer = pixels.get_frame();
-        let mut encoded_frame_buffer = vec![0 as u8; EXPECTED_FRAME_SIZE];
 
         frame_receiver
             .receive_encoded_frame(&mut encoded_frame_buffer)
@@ -99,7 +97,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
             });
 
-        if consecutive_connection_losses >= 10 {
+        if consecutive_connection_losses >= 100 {
             print!("Too much consecutive connection losses, closing stream");
             break;
         }

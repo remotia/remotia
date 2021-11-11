@@ -9,12 +9,15 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use beryllium::*;
-use decode::h264::H264Decoder;
+
+// use decode::h264::H264Decoder;
+use decode::identity::IdentityDecoder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
-use receive::FrameReceiver;
+use receive::udp::UDPFrameReceiver;
 
 use crate::decode::Decoder;
 use crate::error::ClientError;
+use crate::receive::FrameReceiver;
 
 const WIDTH: u32 = 128;
 const HEIGHT: u32 = 72;
@@ -47,8 +50,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hello_buffer = [0; 16];
     socket.send_to(&hello_buffer, server_address).unwrap();
 
-    let frame_receiver = FrameReceiver::create(&socket, &server_address);
-    let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
+    let frame_receiver = UDPFrameReceiver::create(&socket, &server_address);
+    // let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
+    let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
 
     let mut consecutive_connection_losses = 0;
 

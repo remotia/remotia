@@ -55,6 +55,7 @@ impl Decoder for H264Decoder {
                 match result {
                     Ok(_) => (),
                     Err(e) => {
+                        println!("Error on send packet: {}", e);
                         break Err(ClientError::H264SendPacketError);
                     }
                 }

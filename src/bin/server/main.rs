@@ -15,8 +15,11 @@ use std::net::{UdpSocket};
 use scrap::{Capturer, Display, Frame};
 
 use crate::encode::Encoder;
-use crate::encode::h264::H264Encoder;
+
+// use crate::encode::h264::H264Encoder;
+use crate::encode::identity::IdentityEncoder;
 use crate::send::FrameSender;
+use crate::send::udp::UDPFrameSender;
 
 const PACKET_SIZE: usize = 512;
 
@@ -40,13 +43,14 @@ fn main() -> std::io::Result<()> {
 
     socket.set_read_timeout(Some(Duration::from_millis(200))).unwrap();
 
-    let frame_sender = FrameSender::create(&socket, PACKET_SIZE, &client_address);
+    let frame_sender = UDPFrameSender::new(&socket, PACKET_SIZE, &client_address);
 
     let width = capturer.width();
     let height = capturer.height();
     let frame_size = width * height * 3;
 
-    let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+    // let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+    let mut encoder = IdentityEncoder::new(frame_size);
 
     loop {
         thread::sleep(spin_time);

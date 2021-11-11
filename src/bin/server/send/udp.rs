@@ -1,35 +1,27 @@
 use std::{cmp, net::{SocketAddr, UdpSocket}};
 
-pub struct FrameSender<'a> {
+use super::FrameSender;
+
+pub struct UDPFrameSender<'a> {
     socket: &'a UdpSocket,
     pixels_packet_size: usize,
     client_address: &'a SocketAddr
 }
 
-impl<'a> FrameSender<'a> {
-    pub fn create(
+impl<'a> UDPFrameSender<'a> {
+    pub fn new(
         socket: &'a UdpSocket, 
         packet_size: usize,
         client_address: &'a SocketAddr
-    ) -> FrameSender<'a> {
-        FrameSender {
+    ) -> UDPFrameSender<'a> {
+        UDPFrameSender {
             socket: socket,
             pixels_packet_size: packet_size,
             client_address: client_address
         }
     }
 
-    pub fn send_frame(&self, frame_buffer: &'a [u8]) {
-        self.send_whole_frame_header();
-
-        if self.receive_whole_frame_header_receipt().is_err() {
-            println!("Invalid whole frame header receipt, dropping frame");
-            return;
-        }
-
-        self.send_frame_pixels(frame_buffer);
-        self.send_end_packet_header();
-    }
+    
 
     fn send_whole_frame_header(&self) {
         println!("Sending whole frame header...");
@@ -90,5 +82,19 @@ impl<'a> FrameSender<'a> {
         }
 
         println!("Sent frame pixels.");
+    }
+}
+
+impl<'a> FrameSender for UDPFrameSender<'a> {
+    fn send_frame(&self, frame_buffer: & [u8]) {
+        self.send_whole_frame_header();
+
+        if self.receive_whole_frame_header_receipt().is_err() {
+            println!("Invalid whole frame header receipt, dropping frame");
+            return;
+        }
+
+        self.send_frame_pixels(frame_buffer);
+        self.send_end_packet_header();
     }
 }

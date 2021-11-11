@@ -2,30 +2,22 @@ use std::{net::{SocketAddr, UdpSocket}};
 
 use crate::error::ClientError;
 
-pub struct FrameReceiver<'a> {
+use super::FrameReceiver;
+
+pub struct UDPFrameReceiver<'a> {
     socket: &'a UdpSocket,
     server_address: &'a SocketAddr
 }
 
-impl<'a> FrameReceiver<'a> {
+impl<'a> UDPFrameReceiver<'a> {
     pub fn create(
         socket: &'a UdpSocket,
         server_address: &'a SocketAddr
-    ) -> FrameReceiver<'a> {
-        FrameReceiver {
+    ) -> UDPFrameReceiver<'a> {
+        UDPFrameReceiver {
             socket: socket,
             server_address: server_address
         }
-    }
-
-    pub fn receive_frame(&self, frame_buffer: &'a mut[u8]) -> Result<(), ClientError> {
-        self.receive_whole_frame_header()?;
-
-        self.send_whole_frame_header_receipt();
-
-        self.receive_frame_pixels(frame_buffer)?;
-
-        Ok(())
     }
 
     fn receive_whole_frame_header(&self) -> Result<(), ClientError> {
@@ -114,4 +106,13 @@ impl<'a> FrameReceiver<'a> {
         Ok(())
     }
 
+}
+
+impl<'a> FrameReceiver for UDPFrameReceiver<'a> {
+    fn receive_frame(&self, frame_buffer: &mut[u8]) -> Result<(), ClientError> {
+        self.receive_whole_frame_header()?;
+        self.send_whole_frame_header_receipt();
+        self.receive_frame_pixels(frame_buffer)?;
+        Ok(())
+    }
 }

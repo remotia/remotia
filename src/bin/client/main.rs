@@ -2,6 +2,7 @@ mod error;
 mod receive;
 mod decode;
 
+use std::net::TcpStream;
 use std::net::UdpSocket;
 
 use std::net::SocketAddr;
@@ -13,6 +14,7 @@ use beryllium::*;
 // use decode::h264::H264Decoder;
 use decode::identity::IdentityDecoder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
+use receive::tcp::TCPFrameReceiver;
 use receive::udp::UDPFrameReceiver;
 
 use crate::decode::Decoder;
@@ -39,18 +41,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     pixels.render()?;
 
+    let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
+
     // Init socket
-    let socket = UdpSocket::bind("127.0.0.1:5002")?;
+    /*let socket = UdpSocket::bind("127.0.0.1:5002")?;
     socket
         .set_read_timeout(Some(Duration::from_millis(200)))
         .unwrap();
 
-    let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
-
     let hello_buffer = [0; 16];
     socket.send_to(&hello_buffer, server_address).unwrap();
 
-    let frame_receiver = UDPFrameReceiver::create(&socket, &server_address);
+    let frame_receiver = UDPFrameReceiver::create(&socket, &server_address);*/
+
+    let mut stream = TcpStream::connect(server_address)?;
+    let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
+
     // let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
     let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
 

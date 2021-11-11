@@ -86,7 +86,7 @@ impl<'a> UDPFrameSender<'a> {
 }
 
 impl<'a> FrameSender for UDPFrameSender<'a> {
-    fn send_frame(&self, frame_buffer: & [u8]) {
+    fn send_frame(&mut self, frame_buffer: & [u8]) {
         self.send_whole_frame_header();
 
         if self.receive_whole_frame_header_receipt().is_err() {

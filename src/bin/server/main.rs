@@ -10,7 +10,8 @@ mod encode;
 use std::time::{Duration, Instant};
 use std::thread::{self};
 
-use std::net::{UdpSocket};
+// use std::net::UdpSocket;
+use std::net::{TcpListener};
 
 use scrap::{Capturer, Display, Frame};
 
@@ -19,9 +20,10 @@ use crate::encode::Encoder;
 // use crate::encode::h264::H264Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::send::FrameSender;
-use crate::send::udp::UDPFrameSender;
+use crate::send::tcp::TCPFrameSender;
+// use crate::send::udp::UDPFrameSender;
 
-const PACKET_SIZE: usize = 512;
+// const PACKET_SIZE: usize = 512;
 
 fn main() -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
@@ -30,7 +32,7 @@ fn main() -> std::io::Result<()> {
     const FPS: u32 = 24;
     let spin_time = Duration::new(1, 0) / FPS;
 
-    let socket = UdpSocket::bind("127.0.0.1:5001")?;
+    /*let socket = UdpSocket::bind("127.0.0.1:5001")?;
 
     println!("Socket bound, waiting for hello message...");
 
@@ -40,10 +42,11 @@ fn main() -> std::io::Result<()> {
     // let client_address = SocketAddr::from_str("127.0.0.1:5000").unwrap();
 
     println!("Hello message received correctly. Streaming...");
-
     socket.set_read_timeout(Some(Duration::from_millis(200))).unwrap();
+    let frame_sender = UDPFrameSender::new(&socket, PACKET_SIZE, &client_address);*/
 
-    let frame_sender = UDPFrameSender::new(&socket, PACKET_SIZE, &client_address);
+    let listener = TcpListener::bind("127.0.0.1:5001")?;
+    let (mut stream, _client_address) = listener.accept()?;
 
     let width = capturer.width();
     let height = capturer.height();
@@ -51,6 +54,7 @@ fn main() -> std::io::Result<()> {
 
     // let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
     let mut encoder = IdentityEncoder::new(frame_size);
+    let mut frame_sender = TCPFrameSender::new(&mut stream);
 
     loop {
         thread::sleep(spin_time);

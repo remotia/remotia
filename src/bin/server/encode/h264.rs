@@ -8,10 +8,12 @@ pub struct H264Encoder {
     encoded_frame_buffer: Vec<u8>,
     encode_context: AVCodecContext,
 
-    output_context: ffi::AVFormatContext,
+    // output_context: ffi::AVFormatContext,
 
     width: i32,
     height: i32,
+
+    frame_count: i64
 }
 
 impl H264Encoder {
@@ -37,22 +39,21 @@ impl H264Encoder {
                 encode_context
             },
 
-            output_context: unsafe {
+            /*output_context: unsafe {
                 *ffi::avformat_alloc_context()
-            },
+            },*/
+
+            frame_count: 0
         }
     }
 
-    fn create_avframe(&self, frame_buffer: &[u8]) -> AVFrame {
+    fn create_avframe(&mut self, frame_buffer: &[u8]) -> AVFrame {
         let mut avframe = AVFrame::new();
-        avframe.set_format(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_RGB24);
-        avframe.set_width(self.width);
-        avframe.set_height(self.height);
+        avframe.set_format(self.encode_context.pix_fmt);
+        avframe.set_width(self.encode_context.width);
+        avframe.set_height(self.encode_context.height);
+        avframe.set_pts(self.frame_count);
         avframe.alloc_buffer().unwrap();
-
-        avframe.linesize_mut()[0] = self.width;
-        avframe.linesize_mut()[1] = self.width;
-        avframe.linesize_mut()[2] = self.width;
 
         let data = avframe.data[0];
         let linesize = avframe.linesize[0] as usize;
@@ -67,34 +68,42 @@ impl H264Encoder {
             }
         }
 
+        self.frame_count += 1;
+
         avframe
     }
 }
 
 impl Encoder for H264Encoder {
     fn encode(&mut self, frame_buffer: &[u8]) -> usize {
-        let encoded_frame_length = frame_buffer.len();
+        let mut encoded_frame_length = 0;
 
         let avframe = self.create_avframe(frame_buffer);
 
         self.encode_context.send_frame(Some(&avframe)).unwrap();
 
         loop {
-            let mut packet = match self.encode_context.receive_packet() {
-                Ok(packet) => packet,
+            let packet = match self.encode_context.receive_packet() {
+                Ok(packet) => {
+                    packet
+                },
                 Err(RsmpegError::EncoderDrainError) | Err(RsmpegError::EncoderFlushedError) => {
                     break
                 }
                 Err(e) => panic!("{:?}", e),
             };
 
-            let packet_ref = &mut packet;
-            let output_context_ref: &mut ffi::AVFormatContext = &mut self.output_context;
+            let data = unsafe { std::slice::from_raw_parts(packet.data, packet.size as usize) };
 
-            unsafe { ffi::av_write_frame(output_context_ref, packet_ref.as_mut_ptr()); }
+            let start_index = encoded_frame_length;
+            let end_index = encoded_frame_length + data.len();
+
+            self.encoded_frame_buffer[start_index..end_index].copy_from_slice(data);
+
+            encoded_frame_length = end_index; 
         }
 
-        encoded_frame_length
+        encoded_frame_length as usize
     }
     fn get_encoded_frame(&self) -> &[u8] {
         self.encoded_frame_buffer.as_slice()

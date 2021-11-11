@@ -1,5 +1,3 @@
-// From https://github.com/larksuite/rsmpeg/
-
 #!/bin/sh
 #![allow()] /*
 OUT=/tmp/tmp && rustc "$0" -o ${OUT} && exec ${OUT} $@ || exit $? #*/

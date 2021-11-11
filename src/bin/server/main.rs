@@ -4,11 +4,13 @@ mod capture;
 mod send;
 mod encode;
 
-use std::str::FromStr;
+// use std::str::FromStr;
+// use std::net::SocketAddr;
+
 use std::time::{Duration, Instant};
 use std::thread::{self};
 
-use std::net::{SocketAddr, UdpSocket};
+use std::net::{UdpSocket};
 
 use scrap::{Capturer, Display, Frame};
 
@@ -29,10 +31,10 @@ fn main() -> std::io::Result<()> {
 
     println!("Socket bound, waiting for hello message...");
 
-    // let mut hello_buffer = [0; 16];
-    // let (bytes_received, client_address) = socket.recv_from(&mut hello_buffer)?;
-    // assert_eq!(bytes_received, 16);
-    let client_address = SocketAddr::from_str("127.0.0.1:5000").unwrap();
+    let mut hello_buffer = [0; 16];
+    let (bytes_received, client_address) = socket.recv_from(&mut hello_buffer)?;
+    assert_eq!(bytes_received, 16);
+    // let client_address = SocketAddr::from_str("127.0.0.1:5000").unwrap();
 
     println!("Hello message received correctly. Streaming...");
 
@@ -65,8 +67,12 @@ fn main() -> std::io::Result<()> {
 
         println!("Encoding...");
 
+        let encoding_start_time = Instant::now();
+
         let frame_buffer = &frame_buffer[0..frame_size];
         let encoded_frame_length = encoder.encode(frame_buffer);
+
+        println!("Encoding time: {}", encoding_start_time.elapsed().as_millis());
 
         println!("Encoded frame size: {}/{}", encoded_frame_length, frame_buffer.len());
 

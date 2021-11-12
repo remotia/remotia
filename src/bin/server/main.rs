@@ -17,6 +17,7 @@ use crate::encode::Encoder;
 
 use crate::encode::h264::H264Encoder;
 use crate::encode::identity::IdentityEncoder;
+use crate::encode::yuv420::YUV420Encoder;
 use crate::send::FrameSender;
 use crate::send::tcp::TCPFrameSender;
 
@@ -51,8 +52,10 @@ fn main() -> std::io::Result<()> {
     let height = capturer.height();
     let frame_size = width * height * 3;
 
-    let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+    // let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
     // let mut encoder = IdentityEncoder::new(frame_size);
+    let mut encoder = YUV420Encoder::new(width, height);
+
     let mut frame_sender = TCPFrameSender::new(&mut stream);
 
     loop {

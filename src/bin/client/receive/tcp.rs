@@ -28,8 +28,6 @@ impl<'a> TCPFrameReceiver<'a> {
             return Err(ClientError::InvalidWholeFrameHeader);
         }
 
-        println!("Frame size: {:?}", frame_size_vec);
-
         Ok(usize::from_be_bytes(frame_size_vec))
     }
 

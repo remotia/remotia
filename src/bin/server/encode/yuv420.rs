@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use rgb2yuv420::convert_rgb_to_yuv420p;
+
 use super::{Encoder, utils::rgb2yuv::raster};
 
 pub struct YUV420Encoder {

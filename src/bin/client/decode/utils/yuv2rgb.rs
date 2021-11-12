@@ -1,12 +1,12 @@
 pub mod pixel {
-    pub fn yuv_to_rgb(y: u8, u: u8, v: u8) -> (u8, u8, u8) {
-        let y = (y - 16) as f64;
-        let u = (u - 128) as f64;
-        let v = (v - 128) as f64;
+    pub fn yuv_to_rgb(_y: u8, _u: u8, _v: u8) -> (u8, u8, u8) {
+        let y: f64 = _y as f64;
+        let u: f64 = ((_u as i16) - 128) as f64;
+        let v: f64 = ((_v as i16) - 128) as f64;
 
-        let r = (1.164 * y             + 1.596 * v) as u8;
-        let g = (1.164 * y - 0.392 * u - 0.813 * v) as u8;
-        let b = (1.164 * y + 2.017 * u            ) as u8;
+        let r = (y + v * 1.40200) as u8;
+        let g = (y + u * -0.34414 + v * -0.71414) as u8;
+        let b = (y + u * 1.77200) as u8;
 
         (r, g, b)
     }
@@ -27,9 +27,24 @@ pub mod raster {
 
             let (r, g, b) = pixel::yuv_to_rgb(y, u, v);
 
-            rgb_pixels[i] = r;
-            rgb_pixels[i + 1] = g;
-            rgb_pixels[i + 2] = b;
+            rgb_pixels[i * 3] = r;
+            rgb_pixels[i * 3 + 1] = g;
+            rgb_pixels[i * 3 + 2] = b;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::decode::utils::yuv2rgb::raster;
+
+    #[test]
+    fn yuv_to_rgb_simple_test() {
+        let input: Vec<u8> = vec![255, 0, 255, 0, 128, 128];
+        let mut output: Vec<u8> = vec![0; input.len() * 2];
+
+        raster::yuv_to_rgb(&input, &mut output);
+
+        println!("{:?}", output);
     }
 }

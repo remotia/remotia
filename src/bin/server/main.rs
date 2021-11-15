@@ -55,8 +55,8 @@ fn main() -> std::io::Result<()> {
     let mut packed_bgr_frame_buffer = vec![0; frame_size];
 
     // let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
-    let mut encoder = IdentityEncoder::new(frame_size);
-    // let mut encoder = YUV420PEncoder::new(width, height);
+    // let mut encoder = IdentityEncoder::new(frame_size);
+    let mut encoder = YUV420PEncoder::new(width, height);
 
     let mut frame_sender = TCPFrameSender::new(&mut stream);
 

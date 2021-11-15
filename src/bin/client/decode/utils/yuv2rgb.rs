@@ -4,9 +4,9 @@ pub mod pixel {
         let u: f64 = ((_u as i16) - 128) as f64;
         let v: f64 = ((_v as i16) - 128) as f64;
 
-        let r = (y + v * 1.40200) as u8;
+        let r = (y +                v *  1.40200) as u8;
         let g = (y + u * -0.34414 + v * -0.71414) as u8;
-        let b = (y + u * 1.77200) as u8;
+        let b = (y + u *  1.77200               ) as u8;
 
         (r, g, b)
     }
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn yuv_to_rgb_simple_test() {
-        let input: Vec<u8> = vec![255, 0, 255, 0, 128, 128];
+        let input: Vec<u8> = vec![41, 0, 191, 79, 96, 116];
         let mut output: Vec<u8> = vec![0; input.len() * 2];
 
         raster::yuv_to_rgb(&input, &mut output);

@@ -18,6 +18,8 @@ impl YUV420Encoder {
 
 impl Encoder for YUV420Encoder {
     fn encode(&mut self, frame_buffer: &[u8]) -> usize {
+        self.encoded_frame_buffer.fill(0);
+
         raster::rgb_to_yuv(frame_buffer, &mut self.encoded_frame_buffer);
 
         self.encoded_frame_buffer.len()

@@ -30,6 +30,9 @@ pub mod raster {
             let u_index = pixels_count + i / 4;
             let v_index = pixels_count + pixels_count / 4 + i / 4;
 
+            /*println!("{} {} {} -> {} {} {} ({} {} {})", 
+                r, g, b, y, u, v, yuv_pixels[y_index], yuv_pixels[u_index], yuv_pixels[v_index]);*/
+
             yuv_pixels[y_index] = y;
             yuv_pixels[u_index] += (u as f64 * 0.25) as u8;
             yuv_pixels[v_index] += (v as f64 * 0.25) as u8;
@@ -44,7 +47,7 @@ mod tests {
     #[test]
     fn rgb_to_yuv_simple_test() {
         // let input: Vec<u8> = vec![0, 64, 32, 0, 0, 0, 128, 255, 32, 128, 64, 32];
-        let input: Vec<u8> = vec![255, 255, 255, 0, 0, 0, 255, 255, 255, 0, 0, 0];
+        let input: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let mut output: Vec<u8> = vec![0; input.len() / 2];
 
         raster::rgb_to_yuv(&input, &mut output);

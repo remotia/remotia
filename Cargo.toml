@@ -2,7 +2,7 @@
 name = "remotia"
 version = "0.1.0"
 authors = ["Lorenzo Catania <aegroto@protonmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies.tokio]
 version = '0.2'
@@ -26,8 +26,9 @@ features = [
 
 [dependencies]
 scrap = "0.5"
-pixels = "0.1.0"
+pixels = "0.7.0"
 # beryllium = { version = "0.3.2", features = ["extern_crate_raw_window_handle"] }
+zstring = "0.1.2"
 beryllium = { git = "https://github.com/Lokathor/beryllium.git", rev = "9375bbd2dbc8c35d5f669181a9d525315f20ba40", features = ["extern_crate_raw_window_handle"] }
 thiserror = "1.0.30"
 rsmpeg = "0.6.0"

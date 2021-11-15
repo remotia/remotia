@@ -13,11 +13,14 @@ use beryllium::*;
 
 use decode::h264::H264Decoder;
 use decode::identity::IdentityDecoder;
+use pixels::PixelsBuilder;
+use pixels::wgpu;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::tcp::TCPFrameReceiver;
+use zstring::zstr;
 
 use crate::decode::Decoder;
-use crate::decode::yuv420::YUV420Decoder;
+use crate::decode::yuv420p::YUV420PDecoder;
 use crate::error::ClientError;
 use crate::receive::FrameReceiver;
 
@@ -34,9 +37,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         sdl.create_raw_window("Remotia client", WindowPosition::Centered, WIDTH, HEIGHT, 0)?;
 
     let mut pixels = {
-        let surface = Surface::create(&window);
-        let surface_texture = SurfaceTexture::new(WIDTH, HEIGHT, surface);
-        Pixels::new(WIDTH, HEIGHT, surface_texture)?
+        // let surface = Surface::create(&window);
+        let surface_texture = SurfaceTexture::new(WIDTH, HEIGHT, &window);
+        PixelsBuilder::new(WIDTH, HEIGHT, surface_texture)
+            // .texture_format(wgpu::TextureFormat::Bgra8Unorm)
+            .build()?
+        // Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
 
     pixels.render()?;
@@ -58,8 +64,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
     // let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
-    // let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
-    let mut decoder = YUV420Decoder::new(WIDTH as usize, HEIGHT as usize);
+    let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
+    // let mut decoder = YUV420PDecoder::new(WIDTH as usize, HEIGHT as usize);
 
     let mut consecutive_connection_losses = 0;
 
@@ -74,10 +80,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .receive_encoded_frame(&mut encoded_frame_buffer)
             .and_then(|received_data_length| {
                 println!("Decoding {} received bytes", received_data_length);
-                decoder.decode(&encoded_frame_buffer[..received_data_length])
-            }).and_then(|_| {
-                let pixels_space = &mut pixels.get_frame()[..EXPECTED_FRAME_SIZE];
-                pixels_space.copy_from_slice(decoder.get_decoded_frame());
+                decoder.decode(&encoded_frame_buffer[..received_data_length])?;
+
+                Ok(decoder.get_decoded_frame())
+            }).and_then(|decoded_frame| {
+                packed_bgr_to_packed_rgba(decoded_frame, pixels.get_frame());
 
                 consecutive_connection_losses = 0;
                 pixels.render().unwrap();
@@ -107,3 +114,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+fn packed_bgr_to_packed_rgba(packed_bgr_buffer: &[u8], packed_bgra_buffer: &mut [u8]) {
+    let pixels_count = packed_bgra_buffer.len() / 4;
+
+    for i in 0..pixels_count {
+        packed_bgra_buffer[i * 4 + 2] = packed_bgr_buffer[i * 3];
+        packed_bgra_buffer[i * 4 + 1] = packed_bgr_buffer[i * 3 + 1];
+        packed_bgra_buffer[i * 4] = packed_bgr_buffer[i * 3 + 2];
+    }
+}
+
+
+

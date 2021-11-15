@@ -3,13 +3,13 @@
 extern crate scrap;
 
 mod capture;
-mod send;
 mod encode;
+mod send;
 
-use std::time::{Duration, Instant};
 use std::thread::{self};
+use std::time::{Duration, Instant};
 
-use std::net::{TcpListener};
+use std::net::TcpListener;
 
 use scrap::{Capturer, Display, Frame};
 
@@ -17,9 +17,9 @@ use crate::encode::Encoder;
 
 use crate::encode::h264::H264Encoder;
 use crate::encode::identity::IdentityEncoder;
-use crate::encode::yuv420::YUV420Encoder;
-use crate::send::FrameSender;
+use crate::encode::yuv420p::YUV420PEncoder;
 use crate::send::tcp::TCPFrameSender;
+use crate::send::FrameSender;
 
 // const PACKET_SIZE: usize = 512;
 
@@ -52,9 +52,11 @@ fn main() -> std::io::Result<()> {
     let height = capturer.height();
     let frame_size = width * height * 3;
 
+    let mut packed_bgr_frame_buffer = vec![0; frame_size];
+
     // let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
-    // let mut encoder = IdentityEncoder::new(frame_size);
-    let mut encoder = YUV420Encoder::new(width, height);
+    let mut encoder = IdentityEncoder::new(frame_size);
+    // let mut encoder = YUV420PEncoder::new(width, height);
 
     let mut frame_sender = TCPFrameSender::new(&mut stream);
 
@@ -68,7 +70,7 @@ fn main() -> std::io::Result<()> {
 
         println!("Frame captured");
 
-        let frame_buffer: Frame = match result {
+        let packed_bgra_frame_buffer: Frame = match result {
             Ok(buffer) => buffer,
             Err(_error) => {
                 thread::sleep(spin_time);
@@ -80,21 +82,46 @@ fn main() -> std::io::Result<()> {
 
         let encoding_start_time = Instant::now();
 
-        let frame_buffer = &frame_buffer[0..frame_size];
-        let encoded_frame_length = encoder.encode(frame_buffer);
+        println!("{} {}", packed_bgra_frame_buffer.len(), packed_bgr_frame_buffer.len());
 
-        println!("Encoding time: {}", encoding_start_time.elapsed().as_millis());
+        packed_bgra_to_packed_bgr(&packed_bgra_frame_buffer, &mut packed_bgr_frame_buffer);
+        let encoded_frame_length = encoder.encode(&packed_bgr_frame_buffer);
 
-        println!("Encoded frame size: {}/{}", encoded_frame_length, frame_buffer.len());
+        println!(
+            "Encoding time: {}",
+            encoding_start_time.elapsed().as_millis()
+        );
+
+        println!(
+            "Encoded frame size: {}/{}",
+            encoded_frame_length,
+            packed_bgra_frame_buffer.len()
+        );
 
         let transfer_start_time = Instant::now();
 
-        println!("Encoded frame slice length: {}", encoder.get_encoded_frame().len());
+        println!(
+            "Encoded frame slice length: {}",
+            encoder.get_encoded_frame().len()
+        );
 
         frame_sender.send_frame(encoder.get_encoded_frame());
 
-        println!("Transfer time: {}", transfer_start_time.elapsed().as_millis());
+        println!(
+            "Transfer time: {}",
+            transfer_start_time.elapsed().as_millis()
+        );
 
         println!("Total time: {}", loop_start_time.elapsed().as_millis());
+    }
+}
+
+fn packed_bgra_to_packed_bgr(packed_bgra_buffer: &[u8], packed_bgr_buffer: &mut [u8]) {
+    let pixels_count = packed_bgra_buffer.len() / 4;
+
+    for i in 0..pixels_count {
+        packed_bgr_buffer[i * 3] = packed_bgra_buffer[i * 4];
+        packed_bgr_buffer[i * 3 + 1] = packed_bgra_buffer[i * 4 + 1];
+        packed_bgr_buffer[i * 3 + 2] = packed_bgra_buffer[i * 4 + 2];
     }
 }

@@ -5,11 +5,12 @@ extern crate scrap;
 mod capture;
 mod encode;
 mod send;
+mod profiling;
 
 use std::thread::{self};
 use std::time::{Duration, Instant};
 
-use log::{debug, info};
+use log::{debug, error, info};
 
 use std::net::{SocketAddr, TcpListener, UdpSocket};
 
@@ -21,6 +22,7 @@ use crate::encode::Encoder;
 use crate::encode::h264::H264Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::encode::yuv420p::YUV420PEncoder;
+use crate::profiling::RoundStats;
 use crate::send::tcp::TCPFrameSender;
 use crate::send::FrameSender;
 
@@ -35,7 +37,9 @@ fn enstablish_udp_connection() -> std::io::Result<(UdpSocket, SocketAddr)> {
     // let client_address = SocketAddr::from_str("127.0.0.1:5000").unwrap();
 
     info!("Hello message received correctly. Streaming...");
-    socket.set_read_timeout(Some(Duration::from_millis(200))).unwrap();
+    socket
+        .set_read_timeout(Some(Duration::from_millis(200)))
+        .unwrap();
 
     Ok((socket, client_address))
 }
@@ -48,7 +52,7 @@ fn main() -> std::io::Result<()> {
 
     const FPS: u32 = 60;
     let spin_time = Duration::new(1, 0) / FPS;
-    
+
     const PACKET_SIZE: usize = 512;
     let (udp_socket, client_address) = enstablish_udp_connection()?;
     let mut frame_sender = UDPFrameSender::new(&udp_socket, PACKET_SIZE, &client_address);
@@ -60,70 +64,111 @@ fn main() -> std::io::Result<()> {
 
     let mut frame_sender = TCPFrameSender::new(&mut stream);*/
 
-    let width = capturer.width();
-    let height = capturer.height();
-    let frame_size = width * height * 3;
+    let (mut packed_bgr_frame_buffer, mut encoder) = setup_encoding_env(&capturer);
 
-    let mut packed_bgr_frame_buffer = vec![0; frame_size];
+    let round_duration = Duration::from_secs(1);
 
-    let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
-    // let mut encoder = IdentityEncoder::new(frame_size);
-    // let mut encoder = YUV420PEncoder::new(width, height);
+    let mut round_stats: RoundStats = RoundStats::default();
 
     loop {
         thread::sleep(spin_time);
 
-        let loop_start_time = Instant::now();
+        match transmit_frame(
+            &mut capturer,
+            &mut packed_bgr_frame_buffer,
+            &mut encoder,
+            &mut frame_sender,
+        ) {
+            Ok((encoding_time, transfer_time, total_time)) => {
+                round_stats.transmitted_frames += 1;
+                round_stats.encoding_times.push(encoding_time);
+                round_stats.transfer_times.push(transfer_time);
+                round_stats.total_times.push(total_time);
 
-        // Capture frame
-        let result = capture::capture_frame(&mut capturer);
+                let current_round_duration = round_stats.start_time.elapsed();
 
-        debug!("Frame captured");
-
-        let packed_bgra_frame_buffer: Frame = match result {
-            Ok(buffer) => buffer,
-            Err(_error) => {
-                thread::sleep(spin_time);
-                continue;
+                if current_round_duration.gt(&round_duration) {
+                    round_stats.print_round_stats();
+                    round_stats.reset();
+                }
             }
+            Err(e) => error!("Frame transmission error: {}", e),
         };
-
-        debug!("Encoding...");
-
-        let encoding_start_time = Instant::now();
-
-        debug!("{} {}", packed_bgra_frame_buffer.len(), packed_bgr_frame_buffer.len());
-
-        packed_bgra_to_packed_bgr(&packed_bgra_frame_buffer, &mut packed_bgr_frame_buffer);
-        let encoded_frame_length = encoder.encode(&packed_bgr_frame_buffer);
-
-        debug!(
-            "Encoding time: {}",
-            encoding_start_time.elapsed().as_millis()
-        );
-
-        debug!(
-            "Encoded frame size: {}/{}",
-            encoded_frame_length,
-            packed_bgra_frame_buffer.len()
-        );
-
-        let transfer_start_time = Instant::now();
-
-        debug!(
-            "Encoded frame slice length: {}",
-            encoder.get_encoded_frame().len()
-        );
-
-        frame_sender.send_frame(encoder.get_encoded_frame());
-
-        debug!(
-            "Transfer time: {}",
-            transfer_start_time.elapsed().as_millis()
-        );
-
-        debug!("Total time: {}", loop_start_time.elapsed().as_millis());
     }
+}
+
+fn setup_encoding_env(capturer: &Capturer) -> (Vec<u8>, H264Encoder) {
+    let width = capturer.width();
+    let height = capturer.height();
+    let frame_size = width * height * 3;
+    let packed_bgr_frame_buffer: Vec<u8> = vec![0; frame_size];
+    let encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+
+    // let mut encoder = IdentityEncoder::new(frame_size);
+    // let mut encoder = YUV420PEncoder::new(width, height);
+
+    (packed_bgr_frame_buffer, encoder)
+}
+
+fn transmit_frame(
+    capturer: &mut Capturer,
+    packed_bgr_frame_buffer: &mut [u8],
+    encoder: &mut dyn Encoder,
+    frame_sender: &mut dyn FrameSender,
+) -> Result<(u128, u128, u128), std::io::Error> {
+    let loop_start_time = Instant::now();
+
+    // Capture frame
+    let result = capture::capture_frame(capturer);
+
+    debug!("Frame captured");
+
+    let packed_bgra_frame_buffer: Frame = match result {
+        Ok(buffer) => buffer,
+        Err(error) => {
+            return Err(error);
+        }
+    };
+
+    debug!("Encoding...");
+
+    let encoding_start_time = Instant::now();
+
+    debug!(
+        "{} {}",
+        packed_bgra_frame_buffer.len(),
+        packed_bgr_frame_buffer.len()
+    );
+
+    packed_bgra_to_packed_bgr(&packed_bgra_frame_buffer, packed_bgr_frame_buffer);
+    let encoded_frame_length = encoder.encode(&packed_bgr_frame_buffer);
+
+    let encoding_time = encoding_start_time.elapsed().as_millis();
+
+    debug!("Encoding time: {}", encoding_time);
+
+    debug!(
+        "Encoded frame size: {}/{}",
+        encoded_frame_length,
+        packed_bgra_frame_buffer.len()
+    );
+
+    let transfer_start_time = Instant::now();
+
+    debug!(
+        "Encoded frame slice length: {}",
+        encoder.get_encoded_frame().len()
+    );
+
+    frame_sender.send_frame(encoder.get_encoded_frame());
+
+    let transfer_time = transfer_start_time.elapsed().as_millis();
+    debug!("Transfer time: {}", transfer_time);
+
+    let total_time = loop_start_time.elapsed().as_millis();
+    debug!("Total time: {}", total_time);
+
+    Ok((encoding_time, transfer_time, total_time))
 }
 
 fn packed_bgra_to_packed_bgr(packed_bgra_buffer: &[u8], packed_bgr_buffer: &mut [u8]) {

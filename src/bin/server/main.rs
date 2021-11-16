@@ -9,9 +9,10 @@ mod send;
 use std::thread::{self};
 use std::time::{Duration, Instant};
 
-use std::net::TcpListener;
+use std::net::{SocketAddr, TcpListener, UdpSocket};
 
 use scrap::{Capturer, Display, Frame};
+use send::udp::UDPFrameSender;
 
 use crate::encode::Encoder;
 
@@ -21,16 +22,8 @@ use crate::encode::yuv420p::YUV420PEncoder;
 use crate::send::tcp::TCPFrameSender;
 use crate::send::FrameSender;
 
-// const PACKET_SIZE: usize = 512;
-
-fn main() -> std::io::Result<()> {
-    let display = Display::primary().expect("Couldn't find primary display.");
-    let mut capturer = Capturer::new(display).expect("Couldn't begin capture.");
-
-    const FPS: u32 = 60;
-    let spin_time = Duration::new(1, 0) / FPS;
-
-    /*let socket = UdpSocket::bind("127.0.0.1:5001")?;
+fn enstablish_udp_connection() -> std::io::Result<(UdpSocket, SocketAddr)> {
+    let socket = UdpSocket::bind("127.0.0.1:5001")?;
 
     println!("Socket bound, waiting for hello message...");
 
@@ -41,12 +34,27 @@ fn main() -> std::io::Result<()> {
 
     println!("Hello message received correctly. Streaming...");
     socket.set_read_timeout(Some(Duration::from_millis(200))).unwrap();
-    let frame_sender = UDPFrameSender::new(&socket, PACKET_SIZE, &client_address);*/
 
-    let listener = TcpListener::bind("127.0.0.1:5001")?;
+    Ok((socket, client_address))
+}
+
+fn main() -> std::io::Result<()> {
+    let display = Display::primary().expect("Couldn't find primary display.");
+    let mut capturer = Capturer::new(display).expect("Couldn't begin capture.");
+
+    const FPS: u32 = 60;
+    let spin_time = Duration::new(1, 0) / FPS;
+    
+    const PACKET_SIZE: usize = 512;
+    let (udp_socket, client_address) = enstablish_udp_connection()?;
+    let mut frame_sender = UDPFrameSender::new(&udp_socket, PACKET_SIZE, &client_address);
+
+    /*let listener = TcpListener::bind("127.0.0.1:5001")?;
 
     println!("Waiting for client connection...");
     let (mut stream, _client_address) = listener.accept()?;
+
+    let mut frame_sender = TCPFrameSender::new(&mut stream);*/
 
     let width = capturer.width();
     let height = capturer.height();
@@ -57,8 +65,6 @@ fn main() -> std::io::Result<()> {
     let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
     // let mut encoder = IdentityEncoder::new(frame_size);
     // let mut encoder = YUV420PEncoder::new(width, height);
-
-    let mut frame_sender = TCPFrameSender::new(&mut stream);
 
     loop {
         thread::sleep(spin_time);

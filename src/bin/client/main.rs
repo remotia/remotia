@@ -7,7 +7,9 @@ mod decode;
 use std::net::TcpStream;
 
 use std::net::SocketAddr;
+use std::net::UdpSocket;
 use std::str::FromStr;
+use std::time::Duration;
 
 use beryllium::*;
 
@@ -23,12 +25,25 @@ use crate::decode::Decoder;
 use crate::decode::yuv420p::YUV420PDecoder;
 use crate::error::ClientError;
 use crate::receive::FrameReceiver;
+use crate::receive::udp::UDPFrameReceiver;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
 
 // const PACKET_SIZE: usize = 512;
 const EXPECTED_FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
+
+fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<UdpSocket> {
+    let socket = UdpSocket::bind("127.0.0.1:5002")?;
+    socket
+        .set_read_timeout(Some(Duration::from_millis(200)))
+        .unwrap();
+
+    let hello_buffer = [0; 16];
+    socket.send_to(&hello_buffer, server_address).unwrap();
+
+    Ok(socket)
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Init display
@@ -47,21 +62,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     pixels.render()?;
 
+    
     let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
+    let socket = enstablish_udp_connection(&server_address)?;
+    let mut frame_receiver = UDPFrameReceiver::create(&socket, &server_address);
 
-    // Init socket
-    /*let socket = UdpSocket::bind("127.0.0.1:5002")?;
-    socket
-        .set_read_timeout(Some(Duration::from_millis(200)))
-        .unwrap();
-
-    let hello_buffer = [0; 16];
-    socket.send_to(&hello_buffer, server_address).unwrap();
-
-    let frame_receiver = UDPFrameReceiver::create(&socket, &server_address);*/
-
-    let mut stream = TcpStream::connect(server_address)?;
-    let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
+    // let mut stream = TcpStream::connect(server_address)?;
+    // let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
     let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
     // let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);

@@ -14,7 +14,7 @@ use yuv::{
 
 use crate::error::ClientError;
 
-use super::Decoder;
+use super::{Decoder, yuv420p::YUV420PDecoder};
 
 pub struct H264Decoder {
     decoded_frame_buffer: Vec<u8>,
@@ -22,6 +22,8 @@ pub struct H264Decoder {
 
     parsed_offset: usize,
     parser_context: AVCodecParserContext,
+
+    yuv420p_decoder: YUV420PDecoder
 }
 
 impl H264Decoder {
@@ -41,6 +43,8 @@ impl H264Decoder {
 
             parsed_offset: 0,
             parser_context: AVCodecParserContext::find(decoder.id).unwrap(),
+
+            yuv420p_decoder: YUV420PDecoder::new(width, height)
         }
     }
 
@@ -48,31 +52,19 @@ impl H264Decoder {
         &mut self,
         y_frame_buffer: &[u8],
         u_frame_buffer: &[u8],
-        v_frame_buffer: &[u8],
-        width: usize,
-        height: usize,
+        v_frame_buffer: &[u8]
     ) {
         // TODO: Remove fill
         self.decoded_frame_buffer.fill(0);
 
-        let rgb_converter =
-            RGBConvert::<u8>::new(Range::Full, MatrixCoefficients::Identity).unwrap();
+        let mut yuv420p_frame_buffer = Vec::new();
+        yuv420p_frame_buffer.extend_from_slice(y_frame_buffer);
+        yuv420p_frame_buffer.extend_from_slice(u_frame_buffer);
+        yuv420p_frame_buffer.extend_from_slice(v_frame_buffer);
 
-        let pixels_count = width * height;
+        self.yuv420p_decoder.decode(&yuv420p_frame_buffer).unwrap();
 
-        for i in 0..pixels_count {
-            let yuv_pixel = YUV::<u8> {
-                y: y_frame_buffer[i],
-                u: u_frame_buffer[i / 4],
-                v: v_frame_buffer[i / 4],
-            };
-
-            let rgb_pixel = rgb_converter.to_rgb(yuv_pixel);
-
-            self.decoded_frame_buffer[i] = rgb_pixel.r;
-            self.decoded_frame_buffer[pixels_count + i] = rgb_pixel.g;
-            self.decoded_frame_buffer[pixels_count * 2 + i] = rgb_pixel.b;
-        }
+        self.decoded_frame_buffer.copy_from_slice(&self.yuv420p_decoder.get_decoded_frame());
     }
 }
 
@@ -111,7 +103,7 @@ impl Decoder for H264Decoder {
 
                     let data = avframe.data;
                     let linesize = avframe.linesize;
-                    let width = avframe.width as usize;
+                    // let width = avframe.width as usize;
                     let height = avframe.height as usize;
 
                     let linesize_y = linesize[0] as usize;
@@ -126,7 +118,7 @@ impl Decoder for H264Decoder {
                         std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr)
                     };
 
-                    self.decoded_yuv_to_rgb(y_data, cb_data, cr_data, width, height);
+                    self.decoded_yuv_to_rgb(y_data, cb_data, cr_data);
                     // self.decoded_frame_buffer.copy_from_slice(yuv_frame_buffer);
                 }
             } else {

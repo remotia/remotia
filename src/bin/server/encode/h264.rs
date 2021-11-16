@@ -10,7 +10,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use super::Encoder;
+use super::{Encoder, yuv420p::YUV420PEncoder};
 
 pub struct H264Encoder {
     encoded_frame_buffer: Vec<u8>,
@@ -23,6 +23,8 @@ pub struct H264Encoder {
     height: i32,
 
     frame_count: i64,
+
+    yuv420p_encoder: YUV420PEncoder
 }
 
 impl H264Encoder {
@@ -50,6 +52,8 @@ impl H264Encoder {
             },
             
             frame_count: 0,
+
+            yuv420p_encoder: YUV420PEncoder::new(width as usize, height as usize)
         }
     }
 
@@ -66,8 +70,9 @@ impl H264Encoder {
         let width = self.width as usize;
         let height = self.height as usize;
 
-        let yuv420_frame_buffer =
-            convert_rgb_to_yuv420p(frame_buffer, width as u32, height as u32, 3);
+        self.yuv420p_encoder.encode(frame_buffer);
+        let yuv420p_frame_buffer = self.yuv420p_encoder.get_encoded_frame();
+            // convert_rgb_to_yuv420p(frame_buffer, width as u32, height as u32, 3);
 
         let linesize_y = linesize[0] as usize;
         let linesize_cb = linesize[1] as usize;
@@ -83,7 +88,7 @@ impl H264Encoder {
 
         // prepare a dummy image
         let y_data_end_index = height * linesize_y;
-        y_data.copy_from_slice(&yuv420_frame_buffer[..y_data_end_index]);
+        y_data.copy_from_slice(&yuv420p_frame_buffer[..y_data_end_index]);
 
         let cb_data_end_index = y_data_end_index + (height/2) * linesize_cb;
 
@@ -94,10 +99,10 @@ impl H264Encoder {
         for y in 0..height / 2 {
             for x in 0..width / 2 {
                 cb_data[y * linesize_cb + x] = 
-                    yuv420_frame_buffer[y_data_end_index + y * linesize_cb + x];
+                    yuv420p_frame_buffer[y_data_end_index + y * linesize_cb + x];
 
                 cr_data[y * linesize_cr + x] =
-                    yuv420_frame_buffer[cb_data_end_index + y * linesize_cr + x];
+                    yuv420p_frame_buffer[cb_data_end_index + y * linesize_cr + x];
             }
         }
 

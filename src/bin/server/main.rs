@@ -27,7 +27,7 @@ fn main() -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
     let mut capturer = Capturer::new(display).expect("Couldn't begin capture.");
 
-    const FPS: u32 = 24;
+    const FPS: u32 = 60;
     let spin_time = Duration::new(1, 0) / FPS;
 
     /*let socket = UdpSocket::bind("127.0.0.1:5001")?;
@@ -54,9 +54,9 @@ fn main() -> std::io::Result<()> {
 
     let mut packed_bgr_frame_buffer = vec![0; frame_size];
 
-    // let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+    let mut encoder = H264Encoder::new(frame_size, width as i32, height as i32);
     // let mut encoder = IdentityEncoder::new(frame_size);
-    let mut encoder = YUV420PEncoder::new(width, height);
+    // let mut encoder = YUV420PEncoder::new(width, height);
 
     let mut frame_sender = TCPFrameSender::new(&mut stream);
 

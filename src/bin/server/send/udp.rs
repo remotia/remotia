@@ -1,5 +1,7 @@
 use std::{cmp, net::{SocketAddr, UdpSocket}};
 
+use log::debug;
+
 use super::FrameSender;
 
 pub struct UDPFrameSender<'a> {
@@ -24,14 +26,14 @@ impl<'a> UDPFrameSender<'a> {
     
 
     fn send_whole_frame_header(&self) {
-        println!("Sending whole frame header...");
+        debug!("Sending whole frame header...");
         let frame_header = [128, 8];
         self.socket.send_to(&frame_header, self.client_address).unwrap();
-        println!("Sent whole frame header.");
+        debug!("Sent whole frame header.");
     }
 
     fn receive_whole_frame_header_receipt(&self) -> Result<(), ()> {
-        println!("Waiting for whole frame header receipt...");
+        debug!("Waiting for whole frame header receipt...");
 
         let mut frame_header_receipt_buffer = [0, 8];
         let receive_result = self.socket.recv(&mut frame_header_receipt_buffer);
@@ -44,7 +46,7 @@ impl<'a> UDPFrameSender<'a> {
             return Err(());
         }
 
-        println!("Received whole frame header receipt.");
+        debug!("Received whole frame header receipt.");
 
         Ok(())
     }
@@ -62,7 +64,7 @@ impl<'a> UDPFrameSender<'a> {
     }
 
     fn send_frame_pixels(&self, frame_buffer: &'a [u8]) {
-        println!("Sending frame pixels...");
+        debug!("Sending frame pixels...");
 
         let mut total_sent_bytes = 0;
 
@@ -78,10 +80,10 @@ impl<'a> UDPFrameSender<'a> {
 
             total_sent_bytes += sent_bytes;
 
-            // println!("Sent {}/{} bytes", total_sent_bytes, &frame_buffer.len());
+            // debug!("Sent {}/{} bytes", total_sent_bytes, &frame_buffer.len());
         }
 
-        println!("Sent frame pixels.");
+        debug!("Sent frame pixels.");
     }
 }
 
@@ -90,7 +92,7 @@ impl<'a> FrameSender for UDPFrameSender<'a> {
         self.send_whole_frame_header();
 
         if self.receive_whole_frame_header_receipt().is_err() {
-            println!("Invalid whole frame header receipt, dropping frame");
+            debug!("Invalid whole frame header receipt, dropping frame");
             return;
         }
 

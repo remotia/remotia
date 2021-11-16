@@ -25,6 +25,8 @@ features = [
 ]
 
 [dependencies]
+env_logger = "0.9.0"
+log = "0.4.14"
 scrap = "0.5"
 pixels = "0.7.0"
 # beryllium = { version = "0.3.2", features = ["extern_crate_raw_window_handle"] }

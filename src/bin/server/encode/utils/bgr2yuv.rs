@@ -30,7 +30,7 @@ pub mod raster {
             let u_index = pixels_count + i / 4;
             let v_index = pixels_count + pixels_count / 4 + i / 4;
 
-            /*println!("{} {} {} -> {} {} {} ({} {} {})", 
+            /*debug!("{} {} {} -> {} {} {} ({} {} {})", 
                 r, g, b, y, u, v, yuv_pixels[y_index], yuv_pixels[u_index], yuv_pixels[v_index]);*/
 
             yuv_pixels[y_index] = y;
@@ -42,6 +42,8 @@ pub mod raster {
 
 #[cfg(test)]
 mod tests {
+    use log::debug;
+
     use crate::encode::utils::bgr2yuv::raster;
 
     #[test]
@@ -52,6 +54,6 @@ mod tests {
 
         raster::bgr_to_yuv(&input, &mut output);
 
-        println!("{:?}", output);
+        debug!("{:?}", output);
     }
 }

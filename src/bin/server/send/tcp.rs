@@ -16,7 +16,7 @@ impl<'a> TCPFrameSender<'a> {
     }
 
     fn send_packet_header(&mut self, frame_size: usize) {
-        // println!("Sending frame header with size {}...", frame_size);
+        // debug!("Sending frame header with size {}...", frame_size);
         self.stream.write_all(&frame_size.to_be_bytes()).unwrap();
     }
 }

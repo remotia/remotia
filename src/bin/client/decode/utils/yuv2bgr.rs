@@ -36,6 +36,8 @@ pub mod raster {
 
 #[cfg(test)]
 mod tests {
+    use log::debug;
+
     use crate::decode::utils::yuv2bgr::raster;
 
     #[test]
@@ -45,6 +47,6 @@ mod tests {
 
         raster::yuv_to_bgr(&input, &mut output);
 
-        println!("{:?}", output);
+        debug!("{:?}", output);
     }
 }

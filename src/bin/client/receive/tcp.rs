@@ -1,5 +1,7 @@
 use std::{io::Read, net::{TcpStream}};
 
+use log::debug;
+
 use crate::error::ClientError;
 
 use super::FrameReceiver;
@@ -18,7 +20,7 @@ impl<'a> TCPFrameReceiver<'a> {
     }
 
     fn receive_frame_header(&mut self) -> Result<usize, ClientError> {
-        println!("Receiving frame header...");
+        debug!("Receiving frame header...");
 
         let mut frame_size_vec = [0 as u8; 8];
 
@@ -32,13 +34,13 @@ impl<'a> TCPFrameReceiver<'a> {
     }
 
     fn receive_frame_pixels(&mut self, frame_buffer: &mut[u8])  -> Result<usize, ClientError> {
-        println!("Receiving {} encoded frame bytes...", frame_buffer.len());
+        debug!("Receiving {} encoded frame bytes...", frame_buffer.len());
 
         let mut total_read_bytes = 0;
 
         while total_read_bytes < frame_buffer.len() {
             let read_bytes = self.stream.read(&mut frame_buffer[total_read_bytes..]).unwrap();
-            println!("Received {} bytes", read_bytes); 
+            debug!("Received {} bytes", read_bytes); 
 
             if read_bytes == 0 {
                 return Err(ClientError::EmptyFrame);
@@ -47,7 +49,7 @@ impl<'a> TCPFrameReceiver<'a> {
             total_read_bytes += read_bytes;
         }
 
-        println!("Total bytes received: {}", total_read_bytes); 
+        debug!("Total bytes received: {}", total_read_bytes); 
 
         if total_read_bytes == 0 {
             return Err(ClientError::EmptyFrame);

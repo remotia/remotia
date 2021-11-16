@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use log::debug;
 use rgb2yuv420::convert_rgb_to_yuv420p;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
@@ -84,7 +85,7 @@ impl H264Encoder {
         let cr_data = unsafe { std::slice::from_raw_parts_mut(
             data[2], height / 2 * linesize_cr) };
 
-        // println!("Sizes: {} {}", frame_buffer.len(), yuv420_frame_buffer.len());
+        // debug!("Sizes: {} {}", frame_buffer.len(), yuv420_frame_buffer.len());
 
         // prepare a dummy image
         let y_data_end_index = height * linesize_y;
@@ -92,9 +93,9 @@ impl H264Encoder {
 
         let cb_data_end_index = y_data_end_index + (height/2) * linesize_cb;
 
-        /*println!("Y end index: {} (linesize {})", y_data_end_index, linesize_y);
-        println!("Cb end index: {} (linesize {})", cb_data_end_index, linesize_cb);
-        println!("Cr linesize: {}", linesize_cr);*/
+        /*debug!("Y end index: {} (linesize {})", y_data_end_index, linesize_y);
+        debug!("Cb end index: {} (linesize {})", cb_data_end_index, linesize_cb);
+        debug!("Cr linesize: {}", linesize_cr);*/
 
         for y in 0..height / 2 {
             for x in 0..width / 2 {
@@ -106,7 +107,7 @@ impl H264Encoder {
             }
         }
 
-        println!("Created avframe #{}", avframe.pts);
+        debug!("Created avframe #{}", avframe.pts);
 
         self.frame_count += 1;
 
@@ -125,15 +126,15 @@ impl Encoder for H264Encoder {
         loop {
             let packet = match self.encode_context.receive_packet() {
                 Ok(packet) => {
-                    // println!("Received packet of size {}", packet.size);
+                    // debug!("Received packet of size {}", packet.size);
                     packet
                 }
                 Err(RsmpegError::EncoderDrainError) => {
-                    println!("Drain error, breaking the loop");
+                    debug!("Drain error, breaking the loop");
                     break;
                 }
                 Err(RsmpegError::EncoderFlushedError) => {
-                    println!("Flushed error, breaking the loop");
+                    debug!("Flushed error, breaking the loop");
                     break;
                 }
                 Err(e) => panic!("{:?}", e),

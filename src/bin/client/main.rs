@@ -13,8 +13,11 @@ use std::time::Duration;
 
 use beryllium::*;
 
+
 use decode::h264::H264Decoder;
 use decode::identity::IdentityDecoder;
+use log::info;
+use log::{debug, warn, error};
 use pixels::PixelsBuilder;
 use pixels::wgpu;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
@@ -36,7 +39,7 @@ const EXPECTED_FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
 fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<UdpSocket> {
     let socket = UdpSocket::bind("127.0.0.1:5002")?;
     socket
-        .set_read_timeout(Some(Duration::from_millis(200)))
+        .set_read_timeout(Some(Duration::from_millis(50)))
         .unwrap();
 
     let hello_buffer = [0; 16];
@@ -46,6 +49,8 @@ fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<Udp
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     // Init display
     let sdl = SDL::init(InitFlags::default())?;
     let window =
@@ -78,15 +83,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut encoded_frame_buffer = vec![0 as u8; EXPECTED_FRAME_SIZE];
 
+    info!("Starting to receive stream...");
+
     loop {
-        println!("Waiting for next frame...");
+        debug!("Waiting for next frame...");
 
         // let canvas_buffer = pixels.get_frame();
 
         frame_receiver
             .receive_encoded_frame(&mut encoded_frame_buffer)
             .and_then(|received_data_length| {
-                println!("Decoding {} received bytes", received_data_length);
+                debug!("Decoding {} received bytes", received_data_length);
                 decoder.decode(&encoded_frame_buffer[..received_data_length])?;
 
                 Ok(decoder.get_decoded_frame())
@@ -95,26 +102,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 consecutive_connection_losses = 0;
                 pixels.render().unwrap();
-                println!("[SUCCESS] Frame rendered on screen");
+                debug!("[SUCCESS] Frame rendered on screen");
 
                 Ok(())
             }).unwrap_or_else(|e| {
                 match e {
                     ClientError::InvalidWholeFrameHeader => consecutive_connection_losses = 0,
                     ClientError::H264SendPacketError => {
-                        println!("H264 Send packet error")
+                        debug!("H264 Send packet error")
                     }
                     _ => consecutive_connection_losses += 1,
                 }
 
-                println!(
+                warn!(
                     "Error while receiving frame: {}, dropping (consecutive connection losses: {})",
                     e, consecutive_connection_losses
                 );
             });
 
         if consecutive_connection_losses >= 100 {
-            print!("Too much consecutive connection losses, closing stream");
+            error!("Too much consecutive connection losses, closing stream");
             break;
         }
     }

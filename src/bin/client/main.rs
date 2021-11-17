@@ -36,6 +36,7 @@ const HEIGHT: u32 = 720;
 // const PACKET_SIZE: usize = 512;
 const EXPECTED_FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
 
+#[allow(dead_code)]
 fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<UdpSocket> {
     let socket = UdpSocket::bind("127.0.0.1:5002")?;
     socket
@@ -69,11 +70,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     
     let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
-    let socket = enstablish_udp_connection(&server_address)?;
-    let mut frame_receiver = UDPFrameReceiver::create(&socket, &server_address);
 
-    // let mut stream = TcpStream::connect(server_address)?;
-    // let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
+    /*let socket = enstablish_udp_connection(&server_address)?;
+    let mut frame_receiver = UDPFrameReceiver::create(&socket, &server_address);*/
+
+    let mut stream = TcpStream::connect(server_address)?;
+    let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
     let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
     // let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);

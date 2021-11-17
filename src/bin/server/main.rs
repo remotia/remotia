@@ -4,9 +4,10 @@ extern crate scrap;
 
 mod capture;
 mod encode;
-mod send;
 mod profiling;
+mod send;
 
+use std::cmp::max;
 use std::thread::{self};
 use std::time::{Duration, Instant};
 
@@ -26,6 +27,7 @@ use crate::profiling::RoundStats;
 use crate::send::tcp::TCPFrameSender;
 use crate::send::FrameSender;
 
+#[allow(dead_code)]
 fn enstablish_udp_connection() -> std::io::Result<(UdpSocket, SocketAddr)> {
     let socket = UdpSocket::bind("127.0.0.1:5001")?;
 
@@ -50,28 +52,29 @@ fn main() -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
     let mut capturer = Capturer::new(display).expect("Couldn't begin capture.");
 
-    const FPS: u32 = 60;
-    let spin_time = Duration::new(1, 0) / FPS;
+    const FPS: i64 = 60;
+    let spin_time = 1000 / FPS;
 
-    const PACKET_SIZE: usize = 512;
+    /*const PACKET_SIZE: usize = 512;
     let (udp_socket, client_address) = enstablish_udp_connection()?;
-    let mut frame_sender = UDPFrameSender::new(&udp_socket, PACKET_SIZE, &client_address);
+    let mut frame_sender = UDPFrameSender::new(&udp_socket, PACKET_SIZE, &client_address);*/
 
-    /*let listener = TcpListener::bind("127.0.0.1:5001")?;
-
+    let listener = TcpListener::bind("127.0.0.1:5001")?;
     info!("Waiting for client connection...");
     let (mut stream, _client_address) = listener.accept()?;
-
-    let mut frame_sender = TCPFrameSender::new(&mut stream);*/
+    let mut frame_sender = TCPFrameSender::new(&mut stream);
 
     let (mut packed_bgr_frame_buffer, mut encoder) = setup_encoding_env(&capturer);
 
     let round_duration = Duration::from_secs(1);
+    let mut last_frame_transmission_time = 0;
 
     let mut round_stats: RoundStats = RoundStats::default();
 
     loop {
-        thread::sleep(spin_time);
+        thread::sleep(Duration::from_millis(
+            max(0, spin_time - last_frame_transmission_time) as u64,
+        ));
 
         match transmit_frame(
             &mut capturer,
@@ -91,6 +94,8 @@ fn main() -> std::io::Result<()> {
                     round_stats.print_round_stats();
                     round_stats.reset();
                 }
+
+                last_frame_transmission_time = total_time as i64;
             }
             Err(e) => error!("Frame transmission error: {}", e),
         };

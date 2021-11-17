@@ -24,6 +24,7 @@ use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::tcp::TCPFrameReceiver;
 use zstring::zstr;
 
+use crate::decode::h265::H265Decoder;
 use crate::decode::yuv420p::YUV420PDecoder;
 use crate::decode::Decoder;
 use crate::error::ClientError;
@@ -104,7 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect(server_address)?;
     let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
-    let mut decoder = H264Decoder::new(canvas_width as usize, canvas_height as usize);
+    let mut decoder = H265Decoder::new(canvas_width as usize, canvas_height as usize);
     // let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
     // let mut decoder = YUV420PDecoder::new(WIDTH as usize, HEIGHT as usize);
 

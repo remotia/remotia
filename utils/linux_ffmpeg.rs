@@ -56,7 +56,7 @@ fn main() -> Result<()> {
         // .arg("--enable-libvorbis")
         .arg("--enable-libvpx")
         .arg("--enable-libx264")
-        // .arg("--enable-libx265")
+        .arg("--enable-libx265")
         .arg("--disable-programs")
         .arg("--enable-nonfree")
         .spawn()?

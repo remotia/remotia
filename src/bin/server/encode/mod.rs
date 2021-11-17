@@ -1,5 +1,6 @@
 pub mod identity;
 pub mod h264;
+pub mod h265;
 pub mod yuv420p;
 
 mod utils;

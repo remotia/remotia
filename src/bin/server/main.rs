@@ -22,6 +22,7 @@ use send::udp::UDPFrameSender;
 use crate::encode::Encoder;
 
 use crate::encode::h264::H264Encoder;
+use crate::encode::h265::H265Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::encode::yuv420p::YUV420PEncoder;
 use crate::profiling::RoundStats;
@@ -60,12 +61,12 @@ fn main() -> std::io::Result<()> {
     let (udp_socket, client_address) = enstablish_udp_connection()?;
     let mut frame_sender = UDPFrameSender::new(&udp_socket, PACKET_SIZE, &client_address);*/
 
+    let (mut packed_bgr_frame_buffer, mut encoder) = setup_encoding_env(&capturer);
+
     let listener = TcpListener::bind("127.0.0.1:5001")?;
     info!("Waiting for client connection...");
     let (mut stream, _client_address) = listener.accept()?;
     let mut frame_sender = TCPFrameSender::new(&mut stream);
-
-    let (mut packed_bgr_frame_buffer, mut encoder) = setup_encoding_env(&capturer);
 
     let round_duration = Duration::from_secs(1);
     let mut last_frame_transmission_time = 0;
@@ -100,11 +101,13 @@ fn main() -> std::io::Result<()> {
 }
 
 fn setup_encoding_env(capturer: &Capturer) -> (Vec<u8>, Box<dyn Encoder>) {
+    info!("Setting up encoder...");
+
     let width = capturer.width();
     let height = capturer.height();
     let frame_size = width * height * 3;
     let packed_bgr_frame_buffer: Vec<u8> = vec![0; frame_size];
-    let encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+    let encoder = H265Encoder::new(frame_size, width as i32, height as i32);
 
     // let mut encoder = IdentityEncoder::new(frame_size);
     // let mut encoder = YUV420PEncoder::new(width, height);

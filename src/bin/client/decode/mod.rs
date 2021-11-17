@@ -4,6 +4,7 @@ use crate::error::ClientError;
 
 pub mod identity;
 pub mod h264;
+pub mod h265;
 
 mod utils;
 pub mod yuv420p;

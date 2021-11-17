@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect(server_address)?;
     let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
-    let mut decoder = H265Decoder::new(canvas_width as usize, canvas_height as usize);
+    let mut decoder = H264Decoder::new(canvas_width as usize, canvas_height as usize);
     // let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
     // let mut decoder = YUV420PDecoder::new(WIDTH as usize, HEIGHT as usize);
 

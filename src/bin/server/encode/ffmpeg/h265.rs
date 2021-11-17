@@ -11,7 +11,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use super::{yuv420p::YUV420PEncoder, Encoder};
+use crate::encode::{Encoder, yuv420p::YUV420PEncoder};
 
 pub struct H265Encoder {
     encoded_frame_buffer: Vec<u8>,

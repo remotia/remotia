@@ -1,9 +1,10 @@
 #![allow(unused_imports)]
 
+mod decode;
 mod error;
 mod receive;
-mod decode;
 
+use std::env;
 use std::net::TcpStream;
 
 use std::net::SocketAddr;
@@ -13,28 +14,21 @@ use std::time::Duration;
 
 use beryllium::*;
 
-
 use decode::h264::H264Decoder;
 use decode::identity::IdentityDecoder;
 use log::info;
-use log::{debug, warn, error};
-use pixels::PixelsBuilder;
+use log::{debug, error, warn};
 use pixels::wgpu;
+use pixels::PixelsBuilder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::tcp::TCPFrameReceiver;
 use zstring::zstr;
 
-use crate::decode::Decoder;
 use crate::decode::yuv420p::YUV420PDecoder;
+use crate::decode::Decoder;
 use crate::error::ClientError;
-use crate::receive::FrameReceiver;
 use crate::receive::udp::UDPFrameReceiver;
-
-const WIDTH: u32 = 1920;
-const HEIGHT: u32 = 1080;
-
-// const PACKET_SIZE: usize = 512;
-const EXPECTED_FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;
+use crate::receive::FrameReceiver;
 
 #[allow(dead_code)]
 fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<UdpSocket> {
@@ -49,18 +43,52 @@ fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<Udp
     Ok(socket)
 }
 
+fn parse_canvas_resolution_arg(arg: &String) -> (u32, u32) {
+    let canvas_resolution_split: Vec<&str> = arg.split("x").collect();
+
+    let width_str = canvas_resolution_split[0];
+    let height_str = canvas_resolution_split[1];
+
+    let canvas_width: u32 = u32::from_str(width_str).unwrap_or_else(|e| {
+        panic!(
+            "Unable to parse width '{}': {}",
+            width_str, e
+        )
+    });
+
+    let canvas_height: u32 = u32::from_str(height_str).unwrap_or_else(|e| {
+        panic!(
+            "Unable to parse height '{}': {}",
+            height_str, e
+        )
+    });
+
+
+    (canvas_width, canvas_height)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
+    let args: Vec<String> = env::args().collect();
+
+    let (canvas_width, canvas_height) = parse_canvas_resolution_arg(&args[1]);
+    let expected_frame_size: usize = (canvas_width as usize) * (canvas_height as usize) * 3;
+
     // Init display
     let sdl = SDL::init(InitFlags::default())?;
-    let window =
-        sdl.create_raw_window("Remotia client", WindowPosition::Centered, WIDTH, HEIGHT, 0)?;
+    let window = sdl.create_raw_window(
+        "Remotia client",
+        WindowPosition::Centered,
+        canvas_width,
+        canvas_height,
+        0,
+    )?;
 
     let mut pixels = {
         // let surface = Surface::create(&window);
-        let surface_texture = SurfaceTexture::new(WIDTH, HEIGHT, &window);
-        PixelsBuilder::new(WIDTH, HEIGHT, surface_texture)
+        let surface_texture = SurfaceTexture::new(canvas_width, canvas_height, &window);
+        PixelsBuilder::new(canvas_width, canvas_height, surface_texture)
             // .texture_format(wgpu::TextureFormat::Bgra8Unorm)
             .build()?
         // Pixels::new(WIDTH, HEIGHT, surface_texture)?
@@ -68,7 +96,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     pixels.render()?;
 
-    
     let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
 
     /*let socket = enstablish_udp_connection(&server_address)?;
@@ -77,13 +104,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect(server_address)?;
     let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
-    let mut decoder = H264Decoder::new(WIDTH as usize, HEIGHT as usize);
+    let mut decoder = H264Decoder::new(canvas_width as usize, canvas_height as usize);
     // let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
     // let mut decoder = YUV420PDecoder::new(WIDTH as usize, HEIGHT as usize);
 
     let mut consecutive_connection_losses = 0;
 
-    let mut encoded_frame_buffer = vec![0 as u8; EXPECTED_FRAME_SIZE];
+    let mut encoded_frame_buffer = vec![0 as u8; expected_frame_size];
 
     info!("Starting to receive stream...");
 
@@ -99,7 +126,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 decoder.decode(&encoded_frame_buffer[..received_data_length])?;
 
                 Ok(decoder.get_decoded_frame())
-            }).and_then(|decoded_frame| {
+            })
+            .and_then(|decoded_frame| {
                 packed_bgr_to_packed_rgba(decoded_frame, pixels.get_frame());
 
                 consecutive_connection_losses = 0;
@@ -107,7 +135,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 debug!("[SUCCESS] Frame rendered on screen");
 
                 Ok(())
-            }).unwrap_or_else(|e| {
+            })
+            .unwrap_or_else(|e| {
                 match e {
                     ClientError::InvalidWholeFrameHeader => consecutive_connection_losses = 0,
                     ClientError::H264SendPacketError => {
@@ -140,6 +169,3 @@ fn packed_bgr_to_packed_rgba(packed_bgr_buffer: &[u8], packed_bgra_buffer: &mut 
         packed_bgra_buffer[i * 4] = packed_bgr_buffer[i * 3 + 2];
     }
 }
-
-
-

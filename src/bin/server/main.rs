@@ -12,6 +12,7 @@ use std::thread::{self};
 use std::time::{Duration, Instant};
 
 use log::{debug, error, info};
+use profiling::FrameStats;
 
 use std::net::{SocketAddr, TcpListener, UdpSocket};
 
@@ -82,11 +83,9 @@ fn main() -> std::io::Result<()> {
             &mut *encoder,
             &mut frame_sender,
         ) {
-            Ok((encoding_time, transfer_time, total_time)) => {
-                round_stats.transmitted_frames += 1;
-                round_stats.encoding_times.push(encoding_time);
-                round_stats.transfer_times.push(transfer_time);
-                round_stats.total_times.push(total_time);
+            Ok(frame_stats) => {
+                last_frame_transmission_time = frame_stats.total_time as i64;
+                round_stats.profile_frame(frame_stats);
 
                 let current_round_duration = round_stats.start_time.elapsed();
 
@@ -94,8 +93,6 @@ fn main() -> std::io::Result<()> {
                     round_stats.print_round_stats();
                     round_stats.reset();
                 }
-
-                last_frame_transmission_time = total_time as i64;
             }
             Err(e) => error!("Frame transmission error: {}", e),
         };
@@ -120,7 +117,7 @@ fn transmit_frame(
     packed_bgr_frame_buffer: &mut [u8],
     encoder: &mut dyn Encoder,
     frame_sender: &mut dyn FrameSender,
-) -> Result<(u128, u128, u128), std::io::Error> {
+) -> Result<FrameStats, std::io::Error> {
     let loop_start_time = Instant::now();
 
     // Capture frame
@@ -146,7 +143,7 @@ fn transmit_frame(
     );
 
     packed_bgra_to_packed_bgr(&packed_bgra_frame_buffer, packed_bgr_frame_buffer);
-    let encoded_frame_length = encoder.encode(&packed_bgr_frame_buffer);
+    let encoded_size = encoder.encode(&packed_bgr_frame_buffer);
 
     let encoding_time = encoding_start_time.elapsed().as_millis();
 
@@ -154,7 +151,7 @@ fn transmit_frame(
 
     debug!(
         "Encoded frame size: {}/{}",
-        encoded_frame_length,
+        encoded_size,
         packed_bgra_frame_buffer.len()
     );
 
@@ -173,7 +170,12 @@ fn transmit_frame(
     let total_time = loop_start_time.elapsed().as_millis();
     debug!("Total time: {}", total_time);
 
-    Ok((encoding_time, transfer_time, total_time))
+    Ok(FrameStats {
+        encoding_time,
+        transfer_time,
+        total_time,
+        encoded_size,
+    })
 }
 
 fn packed_bgra_to_packed_bgr(packed_bgra_buffer: &[u8], packed_bgr_buffer: &mut [u8]) {

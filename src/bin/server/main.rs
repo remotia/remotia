@@ -76,7 +76,7 @@ fn main() -> std::io::Result<()> {
         match transmit_frame(
             &mut capturer,
             &mut packed_bgr_frame_buffer,
-            &mut encoder,
+            &mut *encoder,
             &mut frame_sender,
         ) {
             Ok((encoding_time, transfer_time, total_time)) => {
@@ -97,7 +97,7 @@ fn main() -> std::io::Result<()> {
     }
 }
 
-fn setup_encoding_env(capturer: &Capturer) -> (Vec<u8>, H264Encoder) {
+fn setup_encoding_env(capturer: &Capturer) -> (Vec<u8>, Box<dyn Encoder>) {
     let width = capturer.width();
     let height = capturer.height();
     let frame_size = width * height * 3;
@@ -107,7 +107,7 @@ fn setup_encoding_env(capturer: &Capturer) -> (Vec<u8>, H264Encoder) {
     // let mut encoder = IdentityEncoder::new(frame_size);
     // let mut encoder = YUV420PEncoder::new(width, height);
 
-    (packed_bgr_frame_buffer, encoder)
+    (packed_bgr_frame_buffer, Box::new(encoder))
 }
 
 fn transmit_frame(

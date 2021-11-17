@@ -30,8 +30,8 @@ use crate::error::ClientError;
 use crate::receive::FrameReceiver;
 use crate::receive::udp::UDPFrameReceiver;
 
-const WIDTH: u32 = 1280;
-const HEIGHT: u32 = 720;
+const WIDTH: u32 = 1920;
+const HEIGHT: u32 = 1080;
 
 // const PACKET_SIZE: usize = 512;
 const EXPECTED_FRAME_SIZE: usize = (WIDTH as usize) * (HEIGHT as usize) * 3;

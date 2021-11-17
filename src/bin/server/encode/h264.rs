@@ -4,14 +4,14 @@ use log::debug;
 use rgb2yuv420::convert_rgb_to_yuv420p;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
-    avutil::AVFrame,
+    avutil::{AVDictionary, AVFrame},
     error::RsmpegError,
     ffi,
 };
 
 use cstr::cstr;
 
-use super::{Encoder, yuv420p::YUV420PEncoder};
+use super::{yuv420p::YUV420PEncoder, Encoder};
 
 pub struct H264Encoder {
     encoded_frame_buffer: Vec<u8>,
@@ -25,7 +25,7 @@ pub struct H264Encoder {
 
     frame_count: i64,
 
-    yuv420p_encoder: YUV420PEncoder
+    yuv420p_encoder: YUV420PEncoder,
 }
 
 impl H264Encoder {
@@ -39,22 +39,25 @@ impl H264Encoder {
             encode_context: {
                 let encoder = AVCodec::find_encoder_by_name(cstr!("libx264")).unwrap();
                 let mut encode_context = AVCodecContext::new(&encoder);
-                encode_context.set_bit_rate(400000);
+
                 encode_context.set_width(width);
                 encode_context.set_height(height);
                 encode_context.set_time_base(ffi::AVRational { num: 1, den: 60 });
                 encode_context.set_framerate(ffi::AVRational { num: 60, den: 1 });
-                encode_context.set_gop_size(10);
-                encode_context.set_max_b_frames(1);
                 encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV420P);
-                encode_context.open(None).unwrap();
+
+                let options = AVDictionary
+                   ::new(cstr!("preset"), cstr!("ultrafast"), 0)
+                    .set(cstr!("tune"), cstr!("zerolatency"), 0);
+
+                encode_context.open(Some(options)).unwrap();
 
                 encode_context
             },
-            
+
             frame_count: 0,
 
-            yuv420p_encoder: YUV420PEncoder::new(width as usize, height as usize)
+            yuv420p_encoder: YUV420PEncoder::new(width as usize, height as usize),
         }
     }
 
@@ -73,17 +76,14 @@ impl H264Encoder {
 
         self.yuv420p_encoder.encode(frame_buffer);
         let yuv420p_frame_buffer = self.yuv420p_encoder.get_encoded_frame();
-            // convert_rgb_to_yuv420p(frame_buffer, width as u32, height as u32, 3);
+        // convert_rgb_to_yuv420p(frame_buffer, width as u32, height as u32, 3);
 
         let linesize_y = linesize[0] as usize;
         let linesize_cb = linesize[1] as usize;
         let linesize_cr = linesize[2] as usize;
-        let y_data = unsafe { std::slice::from_raw_parts_mut(
-            data[0], height * linesize_y) };
-        let cb_data = unsafe { std::slice::from_raw_parts_mut(
-            data[1], height / 2 * linesize_cb) };
-        let cr_data = unsafe { std::slice::from_raw_parts_mut(
-            data[2], height / 2 * linesize_cr) };
+        let y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
+        let cb_data = unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
+        let cr_data = unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
 
         // debug!("Sizes: {} {}", frame_buffer.len(), yuv420_frame_buffer.len());
 
@@ -91,7 +91,7 @@ impl H264Encoder {
         let y_data_end_index = height * linesize_y;
         y_data.copy_from_slice(&yuv420p_frame_buffer[..y_data_end_index]);
 
-        let cb_data_end_index = y_data_end_index + (height/2) * linesize_cb;
+        let cb_data_end_index = y_data_end_index + (height / 2) * linesize_cb;
 
         /*debug!("Y end index: {} (linesize {})", y_data_end_index, linesize_y);
         debug!("Cb end index: {} (linesize {})", cb_data_end_index, linesize_cb);
@@ -99,7 +99,7 @@ impl H264Encoder {
 
         for y in 0..height / 2 {
             for x in 0..width / 2 {
-                cb_data[y * linesize_cb + x] = 
+                cb_data[y * linesize_cb + x] =
                     yuv420p_frame_buffer[y_data_end_index + y * linesize_cb + x];
 
                 cr_data[y * linesize_cr + x] =

@@ -1,10 +1,11 @@
 #![allow(unused_imports)]
+#![feature(test)]
 
 extern crate scrap;
 
 mod capture;
-mod encode;
 mod profiling;
+mod encode;
 mod send;
 
 use std::cmp::max;

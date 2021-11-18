@@ -16,6 +16,7 @@ features = [
 [dev-dependencies]
 tokio-openssl = '0.4'
 openssl = { version = "0.10", features = ["vendored"] }
+rand = "0.8.4"
 
 [dev-dependencies.tokio]
 version = '0.2'
@@ -23,6 +24,7 @@ features = [
     'time',
     'macros',
 ]
+
 
 [dependencies]
 env_logger = "0.9.0"

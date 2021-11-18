@@ -25,10 +25,10 @@ impl Encoder for YUV420PEncoder {
 
         if log_enabled!(log::Level::Debug) {
             let conversion_start_time = Instant::now();
-            raster::bgr_to_yuv(frame_buffer, &mut self.encoded_frame_buffer);
+            raster::bgr_to_yuv_local_arrays(frame_buffer, &mut self.encoded_frame_buffer);
             debug!("YUV420P conversion time: {}", conversion_start_time.elapsed().as_millis());
         } else {
-            raster::bgr_to_yuv(frame_buffer, &mut self.encoded_frame_buffer);
+            raster::bgr_to_yuv_local_arrays(frame_buffer, &mut self.encoded_frame_buffer);
         }
 
         self.encoded_frame_buffer.len()

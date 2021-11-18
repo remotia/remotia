@@ -1,3 +1,5 @@
+
+#[allow(dead_code)]
 pub mod pixel {
     pub fn bgr_to_yuv(_b: u8, _g: u8, _r: u8) -> (u8, u8, u8) {
         let r = _r as f64;
@@ -12,6 +14,7 @@ pub mod pixel {
     }
 }
 
+#[allow(dead_code)]
 pub mod raster {
     use super::pixel;
 
@@ -36,7 +39,6 @@ pub mod raster {
         }
     }
 
-    #[allow(dead_code)]
     pub fn bgr_to_yuv_local_arrays(bgr_pixels: &[u8], yuv_pixels: &mut [u8]) {
         let pixels_count = bgr_pixels.len() / 3;
 
@@ -64,8 +66,17 @@ pub mod raster {
 }
 
 #[cfg(test)]
+#[allow(soft_unstable)]
 mod tests {
+    extern crate test;
+
     use log::debug;
+    use log::info;
+    use rand::Rng;
+    use rand::SeedableRng;
+    use rand::prelude::StdRng;
+    use test::Bencher;
+    use test::bench::BenchSamples;
 
     use crate::encode::utils::bgr2yuv::raster;
 
@@ -78,5 +89,56 @@ mod tests {
         raster::bgr_to_yuv(&input, &mut output);
 
         debug!("{:?}", output);
+    }
+
+    fn generate_hd_frames_set(frames_count: i32) -> Vec<Vec<u8>> {
+        let width = 1280;
+        let height = 720;
+        let pixels_count = width * height;
+        let values_count = pixels_count * 3;
+
+        info!("Generating {} {}x{} frames...", frames_count, width, height);
+
+        let mut frames: Vec<Vec<u8>> = Vec::new();
+
+        let mut rng = StdRng::seed_from_u64(42);
+
+        for _ in 0..frames_count {
+            let mut frame = vec![0; values_count];
+
+            for p in 0..values_count {
+                frame[p] = rng.gen();
+            }
+
+            frames.push(frame);
+        }
+
+        frames
+    }
+
+    fn bench_conversion_function(b: &mut Bencher, conversion_function: fn(&[u8], &mut [u8])) {
+        let frames = generate_hd_frames_set(4);
+        let mut output_buffer= vec![0; frames[0].len() / 2];
+
+        info!("Running conversions...");
+        b.iter(|| {
+            frames.clone().into_iter().for_each(|frame| {
+                conversion_function(frame.as_slice(), &mut output_buffer);
+            });
+        });
+    }
+
+    #[bench]
+    fn bench_rgb_to_yuv(b: &mut Bencher) {
+        env_logger::try_init().ok();
+        info!("Benchmarking rgb_to_yuv...");
+        bench_conversion_function(b, raster::bgr_to_yuv);
+    }
+
+    #[bench]
+    fn bench_rgb_to_yuv_local_arrays(b: &mut Bencher) {
+        env_logger::try_init().ok();
+        info!("Benchmarking rgb_to_yuv_local_arrays...");
+        bench_conversion_function(b, raster::bgr_to_yuv_local_arrays);
     }
 }

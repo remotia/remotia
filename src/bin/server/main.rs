@@ -107,10 +107,10 @@ fn setup_encoding_env(capturer: &Capturer) -> (Vec<u8>, Box<dyn Encoder>) {
     let height = capturer.height();
     let frame_size = width * height * 3;
     let packed_bgr_frame_buffer: Vec<u8> = vec![0; frame_size];
-    let encoder = H265Encoder::new(frame_size, width as i32, height as i32);
 
-    // let mut encoder = IdentityEncoder::new(frame_size);
-    // let mut encoder = YUV420PEncoder::new(width, height);
+    // let encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+    // let encoder = IdentityEncoder::new(frame_size);
+    let encoder = YUV420PEncoder::new(width, height);
 
     (packed_bgr_frame_buffer, Box::new(encoder))
 }

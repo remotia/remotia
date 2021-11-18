@@ -105,9 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect(server_address)?;
     let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
-    let mut decoder = H265Decoder::new(canvas_width as usize, canvas_height as usize);
-    // let mut decoder = IdentityDecoder::new(WIDTH as usize, HEIGHT as usize);
-    // let mut decoder = YUV420PDecoder::new(WIDTH as usize, HEIGHT as usize);
+    let mut decoder = setup_decoding_env(canvas_width, canvas_height);
 
     let mut consecutive_connection_losses = 0;
 
@@ -159,6 +157,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn setup_decoding_env(canvas_width: u32, canvas_height: u32) -> Box<dyn Decoder> {
+    // let decoder = H264Decoder::new(canvas_width as usize, canvas_height as usize);
+    // let decoder = IdentityDecoder::new(canvas_width as usize, canvas_height as usize);
+    let decoder = YUV420PDecoder::new(canvas_width as usize, canvas_height as usize);
+
+    Box::new(decoder)
 }
 
 fn packed_bgr_to_packed_rgba(packed_bgr_buffer: &[u8], packed_bgra_buffer: &mut [u8]) {

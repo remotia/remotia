@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+use std::time::Instant;
+
+use log::{debug, log_enabled};
 use rgb2yuv420::convert_rgb_to_yuv420p;
 
 use super::{Encoder, utils::bgr2yuv::raster};
@@ -20,7 +23,13 @@ impl Encoder for YUV420PEncoder {
     fn encode(&mut self, frame_buffer: &[u8]) -> usize {
         self.encoded_frame_buffer.fill(0);
 
-        raster::bgr_to_yuv(frame_buffer, &mut self.encoded_frame_buffer);
+        if log_enabled!(log::Level::Debug) {
+            let conversion_start_time = Instant::now();
+            raster::bgr_to_yuv(frame_buffer, &mut self.encoded_frame_buffer);
+            debug!("YUV420P conversion time: {}", conversion_start_time.elapsed().as_millis());
+        } else {
+            raster::bgr_to_yuv(frame_buffer, &mut self.encoded_frame_buffer);
+        }
 
         self.encoded_frame_buffer.len()
     }

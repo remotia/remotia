@@ -30,13 +30,36 @@ pub mod raster {
             let u_index = pixels_count + i / 4;
             let v_index = pixels_count + pixels_count / 4 + i / 4;
 
-            /*debug!("{} {} {} -> {} {} {} ({} {} {})", 
-                r, g, b, y, u, v, yuv_pixels[y_index], yuv_pixels[u_index], yuv_pixels[v_index]);*/
-
             yuv_pixels[y_index] = y;
             yuv_pixels[u_index] += (u as f64 * 0.25) as u8;
             yuv_pixels[v_index] += (v as f64 * 0.25) as u8;
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn bgr_to_yuv_local_arrays(bgr_pixels: &[u8], yuv_pixels: &mut [u8]) {
+        let pixels_count = bgr_pixels.len() / 3;
+
+        let mut y_pixels: Vec<u8> = vec![0; pixels_count];
+        let mut u_pixels: Vec<u8> = vec![0; pixels_count / 4];
+        let mut v_pixels: Vec<u8> = vec![0; pixels_count / 4];
+
+        for i in 0..pixels_count {
+            let (b, g, r) = (
+                bgr_pixels[i * 3],
+                bgr_pixels[i * 3 + 1],
+                bgr_pixels[i * 3 + 2],
+            );
+            let (y, u, v) = pixel::bgr_to_yuv(b, g, r);
+
+            y_pixels[i] = y;
+            u_pixels[i / 4] = (u as f64 * 0.25) as u8;
+            v_pixels[i / 4] = (v as f64 * 0.25) as u8;
+        }
+
+        yuv_pixels[..pixels_count].copy_from_slice(&y_pixels);
+        yuv_pixels[pixels_count..pixels_count+pixels_count/4].copy_from_slice(&u_pixels);
+        yuv_pixels[pixels_count+pixels_count/4..].copy_from_slice(&v_pixels);
     }
 }
 

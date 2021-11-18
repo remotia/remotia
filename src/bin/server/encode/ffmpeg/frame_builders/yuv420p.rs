@@ -1,25 +1,30 @@
 use log::debug;
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
 
-use crate::encode::{Encoder, yuv420p::YUV420PEncoder};
+use crate::encode::{utils::bgr2yuv::raster, yuv420p::YUV420PEncoder, Encoder};
 
 pub struct YUV420PAVFrameBuilder {
     frame_count: i64,
-    yuv420p_encoder: YUV420PEncoder,
+    y_pixels: Vec<u8>,
+    u_pixels: Vec<u8>,
+    v_pixels: Vec<u8>,
 }
 
 impl YUV420PAVFrameBuilder {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
-            yuv420p_encoder: YUV420PEncoder::new(
-                width,
-                height,
-            ),
             frame_count: 0,
+            y_pixels: vec![0; width * height],
+            u_pixels: vec![0; (width * height) / 4],
+            v_pixels: vec![0; (width * height) / 4],
         }
     }
 
-    pub fn create_avframe(&mut self, encode_context: &mut AVCodecContext, frame_buffer: &[u8]) -> AVFrame {
+    pub fn create_avframe(
+        &mut self,
+        encode_context: &mut AVCodecContext,
+        frame_buffer: &[u8],
+    ) -> AVFrame {
         let mut avframe = AVFrame::new();
         avframe.set_format(encode_context.pix_fmt);
         avframe.set_width(encode_context.width);
@@ -29,11 +34,8 @@ impl YUV420PAVFrameBuilder {
 
         let data = avframe.data;
         let linesize = avframe.linesize;
-        let width = encode_context.width as usize;
+        // let width = encode_context.width as usize;
         let height = encode_context.height as usize;
-
-        self.yuv420p_encoder.encode(frame_buffer);
-        let yuv420p_frame_buffer = self.yuv420p_encoder.get_encoded_frame();
 
         let linesize_y = linesize[0] as usize;
         let linesize_cb = linesize[1] as usize;
@@ -42,20 +44,19 @@ impl YUV420PAVFrameBuilder {
         let cb_data = unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
         let cr_data = unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
 
-        let y_data_end_index = height * linesize_y;
-        y_data.copy_from_slice(&yuv420p_frame_buffer[..y_data_end_index]);
+        self.u_pixels.fill(0);
+        self.v_pixels.fill(0);
 
-        let cb_data_end_index = y_data_end_index + (height / 2) * linesize_cb;
+        raster::bgr_to_yuv_separate(
+            frame_buffer,
+            &mut self.y_pixels,
+            &mut self.u_pixels,
+            &mut self.v_pixels,
+        );
 
-        for y in 0..height / 2 {
-            for x in 0..width / 2 {
-                cb_data[y * linesize_cb + x] =
-                    yuv420p_frame_buffer[y_data_end_index + y * linesize_cb + x];
-
-                cr_data[y * linesize_cr + x] =
-                    yuv420p_frame_buffer[cb_data_end_index + y * linesize_cr + x];
-            }
-        }
+        y_data.copy_from_slice(&self.y_pixels);
+        cb_data.copy_from_slice(&self.u_pixels);
+        cr_data.copy_from_slice(&self.v_pixels);
 
         debug!("Created avframe #{}", avframe.pts);
 
@@ -64,4 +65,3 @@ impl YUV420PAVFrameBuilder {
         avframe
     }
 }
-

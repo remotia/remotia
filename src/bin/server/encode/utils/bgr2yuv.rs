@@ -1,4 +1,3 @@
-
 #[allow(dead_code)]
 pub mod pixel {
     pub fn bgr_to_yuv(_b: u8, _g: u8, _r: u8) -> (u8, u8, u8) {
@@ -39,12 +38,13 @@ pub mod raster {
         }
     }
 
-    pub fn bgr_to_yuv_local_arrays(bgr_pixels: &[u8], yuv_pixels: &mut [u8]) {
+    pub fn bgr_to_yuv_separate(
+        bgr_pixels: &[u8],
+        y_pixels: &mut [u8],
+        u_pixels: &mut [u8],
+        v_pixels: &mut [u8],
+    ) {
         let pixels_count = bgr_pixels.len() / 3;
-
-        let mut y_pixels: Vec<u8> = vec![0; pixels_count];
-        let mut u_pixels: Vec<u8> = vec![0; pixels_count / 4];
-        let mut v_pixels: Vec<u8> = vec![0; pixels_count / 4];
 
         for i in 0..pixels_count {
             let (b, g, r) = (
@@ -55,13 +55,9 @@ pub mod raster {
             let (y, u, v) = pixel::bgr_to_yuv(b, g, r);
 
             y_pixels[i] = y;
-            u_pixels[i / 4] = (u as f64 * 0.25) as u8;
-            v_pixels[i / 4] = (v as f64 * 0.25) as u8;
+            u_pixels[i / 4] += (u as f64 * 0.25) as u8;
+            v_pixels[i / 4] += (v as f64 * 0.25) as u8;
         }
-
-        yuv_pixels[..pixels_count].copy_from_slice(&y_pixels);
-        yuv_pixels[pixels_count..pixels_count+pixels_count/4].copy_from_slice(&u_pixels);
-        yuv_pixels[pixels_count+pixels_count/4..].copy_from_slice(&v_pixels);
     }
 }
 
@@ -72,23 +68,36 @@ mod tests {
 
     use log::debug;
     use log::info;
+    use rand::prelude::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use rand::prelude::StdRng;
-    use test::Bencher;
     use test::bench::BenchSamples;
+    use test::Bencher;
 
     use crate::encode::utils::bgr2yuv::raster;
 
     #[test]
     fn bgr_to_yuv_simple_test() {
-        // let input: Vec<u8> = vec![0, 64, 32, 0, 0, 0, 128, 255, 32, 128, 64, 32];
-        let input: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let input: Vec<u8> = vec![0, 64, 32, 0, 0, 0, 128, 255, 32, 128, 64, 32];
+        // let input: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let mut output: Vec<u8> = vec![0; input.len() / 2];
 
         raster::bgr_to_yuv(&input, &mut output);
 
-        debug!("{:?}", output);
+        println!("{:?}", output);
+    }
+
+    #[test]
+    fn bgr_to_yuv_separate_simple_test() {
+        let input: Vec<u8> = vec![0, 64, 32, 0, 0, 0, 128, 255, 32, 128, 64, 32];
+        // let input: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let mut y_output: Vec<u8> = vec![0; 4];
+        let mut u_output: Vec<u8> = vec![0; 1];
+        let mut v_output: Vec<u8> = vec![0; 1];
+
+        raster::bgr_to_yuv_separate(&input, &mut y_output, &mut u_output, &mut v_output);
+
+        println!("{:?} {:?} {:?}", y_output, u_output, v_output);
     }
 
     fn generate_hd_frames_set(frames_count: i32) -> Vec<Vec<u8>> {
@@ -118,12 +127,36 @@ mod tests {
 
     fn bench_conversion_function(b: &mut Bencher, conversion_function: fn(&[u8], &mut [u8])) {
         let frames = generate_hd_frames_set(4);
-        let mut output_buffer= vec![0; frames[0].len() / 2];
+        let mut output_buffer = vec![0; frames[0].len() / 2];
 
         info!("Running conversions...");
         b.iter(|| {
             frames.clone().into_iter().for_each(|frame| {
                 conversion_function(frame.as_slice(), &mut output_buffer);
+            });
+        });
+    }
+
+    fn bench_conversion_function_with_separate_outputs(
+        b: &mut Bencher,
+        conversion_function: fn(&[u8], &mut [u8], &mut [u8], &mut [u8]),
+    ) {
+        let frames = generate_hd_frames_set(4);
+        let pixels_count = frames[0].len() / 3;
+
+        let mut y_output_buffer = vec![0; pixels_count];
+        let mut u_output_buffer = vec![0; pixels_count / 4];
+        let mut v_output_buffer = vec![0; pixels_count / 4];
+
+        info!("Running conversions...");
+        b.iter(|| {
+            frames.clone().into_iter().for_each(|frame| {
+                conversion_function(
+                    frame.as_slice(),
+                    &mut y_output_buffer,
+                    &mut u_output_buffer,
+                    &mut v_output_buffer,
+                );
             });
         });
     }
@@ -136,9 +169,9 @@ mod tests {
     }
 
     #[bench]
-    fn bench_rgb_to_yuv_local_arrays(b: &mut Bencher) {
+    fn bench_rgb_to_yuv_separate(b: &mut Bencher) {
         env_logger::try_init().ok();
-        info!("Benchmarking rgb_to_yuv_local_arrays...");
-        bench_conversion_function(b, raster::bgr_to_yuv_local_arrays);
+        info!("Benchmarking rgb_to_yuv_separate...");
+        bench_conversion_function_with_separate_outputs(b, raster::bgr_to_yuv_separate);
     }
 }

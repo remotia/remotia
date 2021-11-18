@@ -161,8 +161,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn setup_decoding_env(canvas_width: u32, canvas_height: u32) -> Box<dyn Decoder> {
-    let decoder = H264RGBDecoder::new(canvas_width as usize, canvas_height as usize);
-    // let decoder = H264Decoder::new(canvas_width as usize, canvas_height as usize);
+    // let decoder = H264RGBDecoder::new(canvas_width as usize, canvas_height as usize);
+    let decoder = H264Decoder::new(canvas_width as usize, canvas_height as usize);
     // let decoder = IdentityDecoder::new(canvas_width as usize, canvas_height as usize);
     // let decoder = YUV420PDecoder::new(canvas_width as usize, canvas_height as usize);
 

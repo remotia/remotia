@@ -13,34 +13,34 @@ use cstr::cstr;
 
 use crate::encode::{yuv420p::YUV420PEncoder, Encoder};
 
-use super::{FFMpegEncodingBridge, frame_builders::yuv420p::YUV420PAVFrameBuilder};
+use super::{FFMpegEncodingBridge, frame_builders::{bgr::BGRAVFrameBuilder, yuv420p::YUV420PAVFrameBuilder}};
 
-pub struct H265Encoder {
+pub struct H264RGBEncoder {
 
     encode_context: AVCodecContext,
 
     width: i32,
     height: i32,
 
-    yuv420_avframe_builder: YUV420PAVFrameBuilder,
+    bgr_avframe_builder: BGRAVFrameBuilder,
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
 }
 
-impl H265Encoder {
+impl H264RGBEncoder {
     pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
-        H265Encoder {
+        H264RGBEncoder {
             width: width,
             height: height,
 
             encode_context: {
-                let encoder = AVCodec::find_encoder_by_name(cstr!("libx265")).unwrap();
+                let encoder = AVCodec::find_encoder_by_name(cstr!("libx264rgb")).unwrap();
                 let mut encode_context = AVCodecContext::new(&encoder);
 
                 encode_context.set_width(width);
                 encode_context.set_height(height);
                 encode_context.set_time_base(ffi::AVRational { num: 1, den: 60 });
                 encode_context.set_framerate(ffi::AVRational { num: 60, den: 1 });
-                encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV420P);
+                encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_BGR24);
 
                 let options = AVDictionary::new(cstr!("preset"), cstr!("ultrafast"), 0).set(
                     cstr!("tune"),
@@ -53,16 +53,16 @@ impl H265Encoder {
                 encode_context
             },
 
-            yuv420_avframe_builder: YUV420PAVFrameBuilder::new(width as usize, height as usize),
+            bgr_avframe_builder: BGRAVFrameBuilder::new(),
             ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size)
         }
     }
 }
 
-impl Encoder for H265Encoder {
+impl Encoder for H264RGBEncoder {
     fn encode(&mut self, frame_buffer: &[u8]) -> usize {
         let avframe = self
-            .yuv420_avframe_builder
+            .bgr_avframe_builder
             .create_avframe(&mut self.encode_context, frame_buffer);
 
         

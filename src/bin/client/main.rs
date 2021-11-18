@@ -15,6 +15,7 @@ use std::time::Duration;
 use beryllium::*;
 
 use decode::h264::H264Decoder;
+use decode::h264rgb::H264RGBDecoder;
 use decode::identity::IdentityDecoder;
 use log::info;
 use log::{debug, error, warn};
@@ -160,9 +161,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn setup_decoding_env(canvas_width: u32, canvas_height: u32) -> Box<dyn Decoder> {
+    let decoder = H264RGBDecoder::new(canvas_width as usize, canvas_height as usize);
     // let decoder = H264Decoder::new(canvas_width as usize, canvas_height as usize);
     // let decoder = IdentityDecoder::new(canvas_width as usize, canvas_height as usize);
-    let decoder = YUV420PDecoder::new(canvas_width as usize, canvas_height as usize);
+    // let decoder = YUV420PDecoder::new(canvas_width as usize, canvas_height as usize);
 
     Box::new(decoder)
 }

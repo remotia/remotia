@@ -23,6 +23,7 @@ use send::udp::UDPFrameSender;
 use crate::encode::Encoder;
 
 use crate::encode::ffmpeg::h264::H264Encoder;
+use crate::encode::ffmpeg::h264rgb::H264RGBEncoder;
 use crate::encode::ffmpeg::h265::H265Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::encode::yuv420p::YUV420PEncoder;
@@ -110,8 +111,9 @@ fn setup_encoding_env(capturer: &Capturer) -> (Vec<u8>, Box<dyn Encoder>) {
     let packed_bgr_frame_buffer: Vec<u8> = vec![0; frame_size];
 
     // let encoder = H264Encoder::new(frame_size, width as i32, height as i32);
+    let encoder = H264RGBEncoder::new(frame_size, width as i32, height as i32);
     // let encoder = IdentityEncoder::new(frame_size);
-    let encoder = YUV420PEncoder::new(width, height);
+    // let encoder = YUV420PEncoder::new(width, height);
 
     (packed_bgr_frame_buffer, Box::new(encoder))
 }

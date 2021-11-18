@@ -13,7 +13,7 @@ use cstr::cstr;
 
 use crate::encode::{yuv420p::YUV420PEncoder, Encoder};
 
-use super::{FFMpegEncodingBridge, YUV420PAVFrameBuilder};
+use super::{FFMpegEncodingBridge, frame_builders::yuv420p::YUV420PAVFrameBuilder};
 
 pub struct H264Encoder {
 

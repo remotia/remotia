@@ -8,7 +8,10 @@ mod profiling;
 mod encode;
 mod send;
 
+mod utils;
+
 use std::cmp::max;
+use std::env;
 use std::thread::{self};
 use std::time::{Duration, Instant};
 
@@ -30,6 +33,7 @@ use crate::encode::yuv420p::YUV420PEncoder;
 use crate::profiling::RoundStats;
 use crate::send::tcp::TCPFrameSender;
 use crate::send::FrameSender;
+use crate::utils::encoding::setup_encoding_env;
 
 #[allow(dead_code)]
 fn enstablish_udp_connection() -> std::io::Result<(UdpSocket, SocketAddr)> {
@@ -53,6 +57,8 @@ fn enstablish_udp_connection() -> std::io::Result<(UdpSocket, SocketAddr)> {
 fn main() -> std::io::Result<()> {
     env_logger::init();
 
+    let args: Vec<String> = env::args().collect();
+
     let display = Display::primary().expect("Couldn't find primary display.");
     let mut capturer = Capturer::new(display).expect("Couldn't begin capture.");
 
@@ -63,7 +69,7 @@ fn main() -> std::io::Result<()> {
     let (udp_socket, client_address) = enstablish_udp_connection()?;
     let mut frame_sender = UDPFrameSender::new(&udp_socket, PACKET_SIZE, &client_address);*/
 
-    let (mut packed_bgr_frame_buffer, mut encoder) = setup_encoding_env(&capturer);
+    let (mut packed_bgr_frame_buffer, mut encoder) = setup_encoding_env(&capturer, &args[1]);
 
     let listener = TcpListener::bind("127.0.0.1:5001")?;
     info!("Waiting for client connection...");
@@ -101,23 +107,6 @@ fn main() -> std::io::Result<()> {
         };
     }
 }
-
-fn setup_encoding_env(capturer: &Capturer) -> (Vec<u8>, Box<dyn Encoder>) {
-    info!("Setting up encoder...");
-
-    let width = capturer.width();
-    let height = capturer.height();
-    let frame_size = width * height * 3;
-    let packed_bgr_frame_buffer: Vec<u8> = vec![0; frame_size];
-
-    let encoder = H264Encoder::new(frame_size, width as i32, height as i32);
-    // let encoder = H264RGBEncoder::new(frame_size, width as i32, height as i32);
-    // let encoder = IdentityEncoder::new(frame_size);
-    // let encoder = YUV420PEncoder::new(width, height);
-
-    (packed_bgr_frame_buffer, Box::new(encoder))
-}
-
 fn transmit_frame(
     capturer: &mut Capturer,
     packed_bgr_frame_buffer: &mut [u8],

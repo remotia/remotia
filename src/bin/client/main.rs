@@ -4,6 +4,8 @@ mod decode;
 mod error;
 mod receive;
 
+mod utils;
+
 use std::env;
 use std::net::TcpStream;
 
@@ -14,9 +16,6 @@ use std::time::Duration;
 
 use beryllium::*;
 
-use decode::h264::H264Decoder;
-use decode::h264rgb::H264RGBDecoder;
-use decode::identity::IdentityDecoder;
 use log::info;
 use log::{debug, error, warn};
 use pixels::wgpu;
@@ -25,12 +24,11 @@ use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use receive::tcp::TCPFrameReceiver;
 use zstring::zstr;
 
-use crate::decode::h265::H265Decoder;
-use crate::decode::yuv420p::YUV420PDecoder;
 use crate::decode::Decoder;
 use crate::error::ClientError;
 use crate::receive::udp::UDPFrameReceiver;
 use crate::receive::FrameReceiver;
+use crate::utils::decoding::setup_decoding_env;
 
 #[allow(dead_code)]
 fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<UdpSocket> {
@@ -106,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect(server_address)?;
     let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
-    let mut decoder = setup_decoding_env(canvas_width, canvas_height);
+    let mut decoder = setup_decoding_env(canvas_width, canvas_height, &args[2]);
 
     let mut consecutive_connection_losses = 0;
 
@@ -158,15 +156,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-fn setup_decoding_env(canvas_width: u32, canvas_height: u32) -> Box<dyn Decoder> {
-    // let decoder = H264RGBDecoder::new(canvas_width as usize, canvas_height as usize);
-    let decoder = H264Decoder::new(canvas_width as usize, canvas_height as usize);
-    // let decoder = IdentityDecoder::new(canvas_width as usize, canvas_height as usize);
-    // let decoder = YUV420PDecoder::new(canvas_width as usize, canvas_height as usize);
-
-    Box::new(decoder)
 }
 
 fn packed_bgr_to_packed_rgba(packed_bgr_buffer: &[u8], packed_bgra_buffer: &mut [u8]) {

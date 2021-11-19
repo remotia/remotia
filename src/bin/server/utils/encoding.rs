@@ -2,7 +2,9 @@ use log::info;
 use scrap::Capturer;
 
 use crate::encode::{
-    ffmpeg::{h264::H264Encoder, h264rgb::H264RGBEncoder},
+    ffmpeg::{
+        h264::H264Encoder, h264rgb::H264RGBEncoder, h265::H265Encoder,
+    },
     identity::IdentityEncoder,
     yuv420p::YUV420PEncoder,
     Encoder,
@@ -19,6 +21,7 @@ pub fn setup_encoding_env(capturer: &Capturer, encoder_name: &str) -> (Vec<u8>, 
     let encoder: Box<dyn Encoder> = match encoder_name {
         "h264" => Box::new(H264Encoder::new(frame_size, width as i32, height as i32)),
         "h264rgb" => Box::new(H264RGBEncoder::new(frame_size, width as i32, height as i32)),
+        "h265" => Box::new(H265Encoder::new(frame_size, width as i32, height as i32)),
         "identity" => Box::new(IdentityEncoder::new(frame_size)),
         "yuv420p" => Box::new(YUV420PEncoder::new(width, height)),
         _ => panic!("Unknown encoder name"),

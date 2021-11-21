@@ -99,7 +99,7 @@ fn main() -> std::io::Result<()> {
                 let current_round_duration = round_stats.start_time.elapsed();
 
                 if current_round_duration.gt(&round_duration) {
-                    round_stats.print_round_stats();
+                    round_stats.log();
                     round_stats.reset();
                 }
             }

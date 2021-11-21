@@ -81,9 +81,12 @@ impl RoundStats {
             "Average encoded size: {} bytes",
             vec_avg!(self.encoded_sizes, usize)
         );
+
+        let bandwidth = (self.encoded_sizes.iter().sum::<usize>() as f64) / 1024.0;
         info!(
-            "Required round bandwidth: {} Kb",
-            (self.encoded_sizes.iter().sum::<usize>() as f64) / 1024.0
+            "Required round bandwidth: {} Kb ({} Mbits)",
+            bandwidth,
+            (bandwidth / 1024.0) * 8.0
         );
     }
 }

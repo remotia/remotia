@@ -18,8 +18,5 @@ pub enum ClientError {
     ConnectionError,
 
     #[error("H264 Send packet error")]
-    H264SendPacketError,
-
-    #[error("H265 Send packet error")]
-    H265SendPacketError,
+    FFMpegSendPacketError,
 }

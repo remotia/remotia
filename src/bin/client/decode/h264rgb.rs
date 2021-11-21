@@ -67,7 +67,7 @@ impl Decoder for H264RGBDecoder {
                     Ok(_) => (),
                     Err(e) => {
                         debug!("Error on send packet: {}", e);
-                        break Err(ClientError::H264SendPacketError);
+                        break Err(ClientError::FFMpegSendPacketError);
                     }
                 }
 

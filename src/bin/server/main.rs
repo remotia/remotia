@@ -16,7 +16,7 @@ use std::thread::{self};
 use std::time::{Duration, Instant};
 
 use log::{debug, error, info};
-use profiling::FrameStats;
+use profiling::TransmittedFrameStats;
 
 use std::net::{SocketAddr, TcpListener, UdpSocket};
 
@@ -30,7 +30,7 @@ use crate::encode::ffmpeg::h264rgb::H264RGBEncoder;
 use crate::encode::ffmpeg::h265::H265Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::encode::yuv420p::YUV420PEncoder;
-use crate::profiling::RoundStats;
+use crate::profiling::TransmissionRoundStats;
 use crate::send::tcp::TCPFrameSender;
 use crate::send::FrameSender;
 use crate::utils::encoding::setup_encoding_env;
@@ -79,7 +79,7 @@ fn main() -> std::io::Result<()> {
     let round_duration = Duration::from_secs(1);
     let mut last_frame_transmission_time = 0;
 
-    let mut round_stats: RoundStats = RoundStats::default();
+    let mut round_stats: TransmissionRoundStats = TransmissionRoundStats::default();
 
     loop {
         thread::sleep(Duration::from_millis(
@@ -112,7 +112,7 @@ fn transmit_frame(
     packed_bgr_frame_buffer: &mut [u8],
     encoder: &mut dyn Encoder,
     frame_sender: &mut dyn FrameSender,
-) -> Result<FrameStats, std::io::Error> {
+) -> Result<TransmittedFrameStats, std::io::Error> {
     let loop_start_time = Instant::now();
 
     // Capture frame
@@ -165,7 +165,7 @@ fn transmit_frame(
     let total_time = loop_start_time.elapsed().as_millis();
     debug!("Total time: {}", total_time);
 
-    Ok(FrameStats {
+    Ok(TransmittedFrameStats {
         encoding_time,
         transfer_time,
         total_time,

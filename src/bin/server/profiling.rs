@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use log::info;
 
-pub struct FrameStats {
+pub struct TransmittedFrameStats {
     pub encoding_time: u128,
     pub transfer_time: u128,
     pub total_time: u128,
@@ -10,7 +10,7 @@ pub struct FrameStats {
     pub encoded_size: usize,
 }
 
-pub struct RoundStats {
+pub struct TransmissionRoundStats {
     pub start_time: Instant,
 
     pub transmitted_frames: u16,
@@ -22,7 +22,7 @@ pub struct RoundStats {
     pub encoded_sizes: Vec<usize>,
 }
 
-impl Default for RoundStats {
+impl Default for TransmissionRoundStats {
     fn default() -> Self {
         Self {
             start_time: Instant::now(),
@@ -41,7 +41,7 @@ macro_rules! vec_avg {
     };
 }
 
-impl RoundStats {
+impl TransmissionRoundStats {
     pub fn reset(&mut self) {
         self.start_time = Instant::now();
 
@@ -52,7 +52,7 @@ impl RoundStats {
         self.encoded_sizes = Vec::new();
     }
 
-    pub fn profile_frame(&mut self, frame_stats: FrameStats) {
+    pub fn profile_frame(&mut self, frame_stats: TransmittedFrameStats) {
         self.transmitted_frames += 1;
         self.encoding_times.push(frame_stats.encoding_time);
         self.transfer_times.push(frame_stats.transfer_time);
@@ -61,7 +61,7 @@ impl RoundStats {
     }
 
     pub fn print_round_stats(&mut self) {
-        info!("Round stats: ");
+        info!("Transmission round stats: ");
         info!(
             "Transmitted {} frames in {} seconds",
             self.transmitted_frames,

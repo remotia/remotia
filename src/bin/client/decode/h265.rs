@@ -90,7 +90,7 @@ impl Decoder for H265Decoder {
                     Ok(_) => (),
                     Err(e) => {
                         debug!("Error on send packet: {}", e);
-                        break Err(ClientError::H265SendPacketError);
+                        break Err(ClientError::FFMpegSendPacketError);
                     }
                 }
 

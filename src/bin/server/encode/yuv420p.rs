@@ -3,7 +3,6 @@
 use std::time::Instant;
 
 use log::{debug, log_enabled};
-use rgb2yuv420::convert_rgb_to_yuv420p;
 
 use super::{Encoder, utils::bgr2yuv::raster};
 

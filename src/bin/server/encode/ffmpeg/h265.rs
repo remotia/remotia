@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use log::debug;
-use rgb2yuv420::convert_rgb_to_yuv420p;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
     avutil::{AVDictionary, AVFrame},

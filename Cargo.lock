@@ -930,13 +930,11 @@ dependencies = [
  "openssl",
  "pixels",
  "rand",
- "rgb2yuv420",
  "rsmpeg",
  "scrap",
  "thiserror",
  "tokio",
  "tokio-openssl",
- "yuv",
  "zstring",
 ]
 
@@ -945,21 +943,6 @@ name = "renderdoc-sys"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1382d1f0a252c4bf97dc20d979a2fdd05b024acd7c2ed0f7595d7817666a157"
-
-[[package]]
-name = "rgb"
-version = "0.8.29"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a27fa03bb1e3e2941f52d4a555a395a72bf79b0a85fbbaab79447050c97d978c"
-dependencies = [
- "bytemuck",
-]
-
-[[package]]
-name = "rgb2yuv420"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cf3ad431593a2bb204ed1c609814aa9f95b169f8cef6b811b03261097f2453b"
 
 [[package]]
 name = "rsmpeg"
@@ -1428,16 +1411,6 @@ checksum = "d59cefebd0c892fa2dd6de581e937301d8552cb44489cdff035c6187cb63fa5e"
 dependencies = [
  "winapi 0.2.8",
  "winapi-build",
-]
-
-[[package]]
-name = "yuv"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4910f36f7fb1b669910bc780fd107578d02abee89dbf05ae734e01125abbebff"
-dependencies = [
- "num-traits",
- "rgb",
 ]
 
 [[package]]

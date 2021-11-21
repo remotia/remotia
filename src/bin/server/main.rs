@@ -107,6 +107,7 @@ fn main() -> std::io::Result<()> {
         };
     }
 }
+
 fn transmit_frame(
     capturer: &mut Capturer,
     packed_bgr_frame_buffer: &mut [u8],

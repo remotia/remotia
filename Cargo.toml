@@ -37,5 +37,4 @@ beryllium = { git = "https://github.com/Lokathor/beryllium.git", rev = "9375bbd2
 thiserror = "1.0.30"
 rsmpeg = "0.6.0"
 cstr = "0.2.9"
-rgb2yuv420 = "0.2.3"
-yuv = "0.1.4"
+

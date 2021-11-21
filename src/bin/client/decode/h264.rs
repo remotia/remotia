@@ -7,11 +7,6 @@ use rsmpeg::{
 };
 
 use cstr::cstr;
-use yuv::{
-    color::{MatrixCoefficients, Range},
-    convert::RGBConvert,
-    YUV,
-};
 
 use crate::error::ClientError;
 

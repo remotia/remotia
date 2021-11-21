@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use log::info;
+use remotia::{field_vec, vec_avg};
 
 pub struct ReceivedFrameStats {
     pub reception_time: u128,
@@ -23,21 +24,6 @@ impl Default for ReceptionRoundStats {
             profiled_frames: Vec::new(),
         }
     }
-}
-
-macro_rules! vec_avg {
-    ($data_vec:expr, $data_type:ty) => {
-        $data_vec.iter().sum::<$data_type>() / $data_vec.len() as $data_type
-    };
-}
-
-macro_rules! field_vec {
-    ($data_vec:expr, $field_name:ident, $data_type:ty) => {
-        $data_vec
-            .iter()
-            .map(|o| o.$field_name)
-            .collect::<Vec<$data_type>>()
-    };
 }
 
 impl ReceptionRoundStats {

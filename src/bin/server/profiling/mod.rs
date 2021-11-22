@@ -2,11 +2,13 @@ use std::time::{Duration, Instant};
 
 use log::info;
 use remotia::{field_vec, vec_avg};
+use serde::Serialize;
 
 use self::logging::{TransmissionRoundLogger, console::TransmissionRoundConsoleLogger};
 
 pub mod logging;
 
+#[derive(Serialize)]
 pub struct TransmittedFrameStats {
     pub encoding_time: u128,
     pub transfer_time: u128,
@@ -42,8 +44,8 @@ impl TransmissionRoundStats {
         self.profiled_frames.push(frame_stats);
     }
 
-    pub fn log(&self) {
-        self.logger.log(&self)
+    pub fn log(&mut self) {
+        self.logger.log(&mut self.profiled_frames);
     }
 }
 

@@ -31,6 +31,7 @@ use crate::encode::ffmpeg::h265::H265Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::encode::yuv420p::YUV420PEncoder;
 use crate::profiling::TransmissionRoundStats;
+use crate::profiling::logging::csv::TransmissionRoundCSVLogger;
 use crate::send::tcp::TCPFrameSender;
 use crate::send::FrameSender;
 use crate::utils::encoding::setup_encoding_env;
@@ -79,7 +80,11 @@ fn main() -> std::io::Result<()> {
     let round_duration = Duration::from_secs(1);
     let mut last_frame_transmission_time = 0;
 
-    let mut round_stats: TransmissionRoundStats = TransmissionRoundStats::default();
+    let mut round_stats: TransmissionRoundStats = TransmissionRoundStats {
+        logger: Box::new(TransmissionRoundCSVLogger::new("logs.csv")?),
+
+        ..Default::default()
+    };
 
     loop {
         thread::sleep(Duration::from_millis(

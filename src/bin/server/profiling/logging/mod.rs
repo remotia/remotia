@@ -1,9 +1,9 @@
-use super::TransmissionRoundStats;
+use super::{TransmissionRoundStats, TransmittedFrameStats};
 
 pub mod console;
 pub mod csv;
 
 pub trait TransmissionRoundLogger {
-    fn log(&self, round_stats: &TransmissionRoundStats);
+    fn log(&mut self, profiled_frames: &Vec<TransmittedFrameStats>);
 }
 

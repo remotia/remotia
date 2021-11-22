@@ -2,21 +2,21 @@ use std::{net::{SocketAddr, UdpSocket}};
 
 use log::debug;
 
-use crate::error::ClientError;
+use crate::client::error::ClientError;
 
 use super::FrameReceiver;
 
-pub struct UDPFrameReceiver<'a> {
-    socket: &'a UdpSocket,
-    server_address: &'a SocketAddr
+pub struct UDPFrameReceiver {
+    socket: UdpSocket,
+    server_address: SocketAddr
 }
 
-impl<'a> UDPFrameReceiver<'a> {
+impl UDPFrameReceiver {
     pub fn create(
-        socket: &'a UdpSocket,
-        server_address: &'a SocketAddr
-    ) -> UDPFrameReceiver<'a> {
-        UDPFrameReceiver {
+        socket: UdpSocket,
+        server_address: SocketAddr
+    ) -> Self {
+        Self {
             socket: socket,
             server_address: server_address
         }
@@ -70,7 +70,7 @@ impl<'a> UDPFrameReceiver<'a> {
         Ok(false)
     }
 
-    fn receive_frame_pixels(&self, frame_buffer: &'a mut[u8]) -> Result<(), ClientError> {
+    fn receive_frame_pixels(&self, frame_buffer: &mut[u8]) -> Result<(), ClientError> {
         debug!("Receiving frame pixels...");
 
         let mut total_received_bytes = 0;
@@ -110,7 +110,7 @@ impl<'a> UDPFrameReceiver<'a> {
 
 }
 
-impl<'a> FrameReceiver for UDPFrameReceiver<'a> {
+impl FrameReceiver for UDPFrameReceiver {
     fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
         self.receive_whole_frame_header()?;
         self.send_whole_frame_header_receipt();

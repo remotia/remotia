@@ -1,7 +1,6 @@
 use log::info;
-use remotia::{field_vec, vec_avg};
 
-use crate::profiling::{ReceptionRoundStats, ReceivedFrameStats};
+use crate::{client::profiling::{ReceptionRoundStats, ReceivedFrameStats}, field_vec, vec_avg};
 
 use super::ReceptionRoundLogger;
 

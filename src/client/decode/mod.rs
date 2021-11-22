@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::error::ClientError;
+use crate::client::error::ClientError;
 
 pub mod identity;
 pub mod h264;

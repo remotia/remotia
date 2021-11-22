@@ -2,19 +2,19 @@ use std::{io::Read, net::{TcpStream}};
 
 use log::debug;
 
-use crate::error::ClientError;
+use crate::client::error::ClientError;
 
 use super::FrameReceiver;
 
-pub struct TCPFrameReceiver<'a> {
-    stream: &'a mut TcpStream,
+pub struct TCPFrameReceiver {
+    stream: TcpStream,
 }
 
-impl<'a> TCPFrameReceiver<'a> {
+impl TCPFrameReceiver {
     pub fn create(
-        stream: &'a mut TcpStream,
-    ) -> TCPFrameReceiver<'a> {
-        TCPFrameReceiver {
+        stream: TcpStream,
+    ) -> Self {
+        Self {
             stream
         }
     }
@@ -59,7 +59,7 @@ impl<'a> TCPFrameReceiver<'a> {
     }
 }
 
-impl<'a> FrameReceiver for TCPFrameReceiver<'a> {
+impl FrameReceiver for TCPFrameReceiver {
     fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
         let frame_size = self.receive_frame_header()?;
 

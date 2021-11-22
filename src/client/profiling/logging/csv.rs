@@ -1,10 +1,10 @@
 use std::{fs::File, io::Write};
 
 use log::info;
-use remotia::{field_vec, vec_avg};
+use crate::{field_vec, vec_avg};
 use csv::Writer;
 
-use crate::profiling::{ReceptionRoundStats, ReceivedFrameStats};
+use crate::client::profiling::{ReceptionRoundStats, ReceivedFrameStats};
 
 use super::ReceptionRoundLogger;
 

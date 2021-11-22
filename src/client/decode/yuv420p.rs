@@ -1,4 +1,4 @@
-use crate::error::ClientError;
+use crate::client::error::ClientError;
 
 use super::{Decoder, utils::yuv2bgr::raster};
 

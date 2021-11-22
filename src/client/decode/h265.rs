@@ -8,7 +8,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::error::ClientError;
+use crate::client::error::ClientError;
 
 use super::{Decoder, yuv420p::YUV420PDecoder};
 

@@ -3,7 +3,6 @@ use std::time::Instant;
 pub mod logging;
 
 use log::info;
-use remotia::{field_vec, vec_avg};
 use serde::Serialize;
 
 use self::logging::{ReceptionRoundLogger, console::ReceptionRoundConsoleLogger};

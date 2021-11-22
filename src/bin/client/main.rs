@@ -20,6 +20,7 @@ use std::time::Instant;
 use beryllium::*;
 
 use chrono::Utc;
+use clap::Parser;
 use log::info;
 use log::{debug, error, warn};
 use pixels::wgpu;
@@ -38,6 +39,16 @@ use crate::receive::udp::UDPFrameReceiver;
 use crate::receive::FrameReceiver;
 use crate::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::utils::decoding::setup_decoding_env;
+
+#[derive(Parser)]
+#[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
+struct Options {
+    #[clap(short, long, default_value = "h264rgb")]
+    decoder_name: String,
+
+    #[clap(short, long, default_value = "1280x720")]
+    resolution: String
+}
 
 #[allow(dead_code)]
 fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<UdpSocket> {
@@ -70,9 +81,9 @@ fn parse_canvas_resolution_arg(arg: &String) -> (u32, u32) {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
-    let args: Vec<String> = env::args().collect();
+    let options = Options::parse();
 
-    let (canvas_width, canvas_height) = parse_canvas_resolution_arg(&args[1]);
+    let (canvas_width, canvas_height) = parse_canvas_resolution_arg(&options.resolution);
     let expected_frame_size: usize = (canvas_width as usize) * (canvas_height as usize) * 3;
 
     // Init display
@@ -104,7 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stream = TcpStream::connect(server_address)?;
     let mut frame_receiver = TCPFrameReceiver::create(&mut stream);
 
-    let mut decoder = setup_decoding_env(canvas_width, canvas_height, &args[2]);
+    let mut decoder = setup_decoding_env(canvas_width, canvas_height, &options.decoder_name);
 
     let mut consecutive_connection_losses = 0;
 

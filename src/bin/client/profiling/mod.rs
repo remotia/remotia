@@ -22,7 +22,7 @@ pub struct ReceptionRoundStats {
     pub start_time: Instant,
     pub profiled_frames: Vec<ReceivedFrameStats>,
 
-    pub logger: Box<dyn ReceptionRoundLogger>
+    pub loggers: Vec<Box<dyn ReceptionRoundLogger>>
 }
 
 impl Default for ReceptionRoundStats {
@@ -30,7 +30,7 @@ impl Default for ReceptionRoundStats {
         Self {
             start_time: Instant::now(),
             profiled_frames: Vec::new(),
-            logger: Box::new(ReceptionRoundConsoleLogger { })
+            loggers: vec![Box::new(ReceptionRoundConsoleLogger { })]
         }
     }
 }
@@ -46,6 +46,8 @@ impl ReceptionRoundStats {
     }
 
     pub fn log(&mut self) {
-        self.logger.log(&mut self.profiled_frames);
+        for i in 0..self.loggers.len() {
+            self.loggers[i].log(&self.profiled_frames);
+        }
     }
 }

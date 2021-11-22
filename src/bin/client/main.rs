@@ -31,6 +31,7 @@ use zstring::zstr;
 
 use crate::decode::Decoder;
 use crate::error::ClientError;
+use crate::profiling::logging::console::ReceptionRoundConsoleLogger;
 use crate::profiling::logging::csv::ReceptionRoundCSVLogger;
 use crate::profiling::ReceptionRoundStats;
 use crate::receive::udp::UDPFrameReceiver;
@@ -144,9 +145,12 @@ fn setup_round_stats() -> Result<ReceptionRoundStats, std::io::Error> {
         let datetime = Utc::now();
 
         ReceptionRoundStats {
-            logger: Box::new(ReceptionRoundCSVLogger::new(
-                format!("csv_logs/client/{}.csv", datetime).as_str(),
-            )?),
+            loggers: vec![
+                Box::new(ReceptionRoundCSVLogger::new(
+                    format!("csv_logs/client/{}.csv", datetime).as_str(),
+                )?),
+                Box::new(ReceptionRoundConsoleLogger::default()),
+            ],
 
             ..Default::default()
         }

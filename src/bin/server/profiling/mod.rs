@@ -21,7 +21,7 @@ pub struct TransmissionRoundStats {
     pub(super) start_time: Instant,
     pub(super) profiled_frames: Vec<TransmittedFrameStats>,
 
-    pub logger: Box<dyn TransmissionRoundLogger>
+    pub loggers: Vec<Box<dyn TransmissionRoundLogger>>
 }
 
 impl Default for TransmissionRoundStats {
@@ -29,7 +29,7 @@ impl Default for TransmissionRoundStats {
         Self {
             start_time: Instant::now(),
             profiled_frames: Vec::new(),
-            logger: Box::new(TransmissionRoundConsoleLogger { })
+            loggers: vec![Box::new(TransmissionRoundConsoleLogger { })]
         }
     }
 }
@@ -45,7 +45,9 @@ impl TransmissionRoundStats {
     }
 
     pub fn log(&mut self) {
-        self.logger.log(&mut self.profiled_frames);
+        for i in 0..self.loggers.len() {
+            self.loggers[i].log(&self.profiled_frames);
+        }
     }
 }
 

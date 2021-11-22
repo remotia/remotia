@@ -5,6 +5,7 @@ use crate::profiling::{TransmissionRoundStats, TransmittedFrameStats};
 
 use super::TransmissionRoundLogger;
 
+#[derive(Default)]
 pub struct TransmissionRoundConsoleLogger { }
 
 impl TransmissionRoundLogger for TransmissionRoundConsoleLogger {

@@ -5,6 +5,7 @@ use crate::profiling::{ReceptionRoundStats, ReceivedFrameStats};
 
 use super::ReceptionRoundLogger;
 
+#[derive(Default)]
 pub struct ReceptionRoundConsoleLogger { }
 
 impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {

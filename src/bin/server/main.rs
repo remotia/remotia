@@ -31,6 +31,7 @@ use crate::encode::ffmpeg::h264rgb::H264RGBEncoder;
 use crate::encode::ffmpeg::h265::H265Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::encode::yuv420p::YUV420PEncoder;
+use crate::profiling::logging::console::TransmissionRoundConsoleLogger;
 use crate::profiling::logging::csv::TransmissionRoundCSVLogger;
 use crate::profiling::TransmissionRoundStats;
 use crate::send::tcp::TCPFrameSender;
@@ -115,9 +116,12 @@ fn setup_round_stats() -> Result<TransmissionRoundStats, std::io::Error> {
         let datetime = Utc::now();
 
         TransmissionRoundStats {
-            logger: Box::new(TransmissionRoundCSVLogger::new(
-                format!("csv_logs/server/{}.csv", datetime).as_str(),
-            )?),
+            loggers: vec![
+                Box::new(TransmissionRoundCSVLogger::new(
+                    format!("csv_logs/server/{}.csv", datetime).as_str(),
+                )?),
+                Box::new(TransmissionRoundConsoleLogger::default()),
+            ],
 
             ..Default::default()
         }

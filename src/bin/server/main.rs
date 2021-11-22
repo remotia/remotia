@@ -16,6 +16,7 @@ use std::thread::{self};
 use std::time::{Duration, Instant};
 
 use chrono::Utc;
+use clap::Parser;
 use log::{debug, error, info};
 use profiling::TransmittedFrameStats;
 
@@ -36,31 +37,19 @@ use crate::profiling::logging::csv::TransmissionRoundCSVLogger;
 use crate::profiling::TransmissionRoundStats;
 use crate::send::tcp::TCPFrameSender;
 use crate::send::FrameSender;
-use crate::utils::encoding::setup_encoding_env;
+use crate::utils::encoding::{packed_bgra_to_packed_bgr, setup_encoding_env};
 
-#[allow(dead_code)]
-fn enstablish_udp_connection() -> std::io::Result<(UdpSocket, SocketAddr)> {
-    let socket = UdpSocket::bind("127.0.0.1:5001")?;
-
-    info!("Socket bound, waiting for hello message...");
-
-    let mut hello_buffer = [0; 16];
-    let (bytes_received, client_address) = socket.recv_from(&mut hello_buffer)?;
-    assert_eq!(bytes_received, 16);
-    // let client_address = SocketAddr::from_str("127.0.0.1:5000").unwrap();
-
-    info!("Hello message received correctly. Streaming...");
-    socket
-        .set_read_timeout(Some(Duration::from_millis(200)))
-        .unwrap();
-
-    Ok((socket, client_address))
+#[derive(Parser)]
+#[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
+struct Options {
+    #[clap(short, long, default_value = "h264rgb")]
+    encoder_name: String
 }
 
 fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let args: Vec<String> = env::args().collect();
+    let options = Options::parse();
 
     let display = Display::primary().expect("Couldn't find primary display.");
     let mut capturer = Capturer::new(display).expect("Couldn't begin capture.");
@@ -72,7 +61,7 @@ fn main() -> std::io::Result<()> {
     let (udp_socket, client_address) = enstablish_udp_connection()?;
     let mut frame_sender = UDPFrameSender::new(&udp_socket, PACKET_SIZE, &client_address);*/
 
-    let (mut packed_bgr_frame_buffer, mut encoder) = setup_encoding_env(&capturer, &args[1]);
+    let (mut packed_bgr_frame_buffer, mut encoder) = setup_encoding_env(&capturer, &options.encoder_name);
 
     let listener = TcpListener::bind("127.0.0.1:5001")?;
     info!("Waiting for client connection...");
@@ -193,14 +182,4 @@ fn transmit_frame(
         total_time,
         encoded_size,
     })
-}
-
-fn packed_bgra_to_packed_bgr(packed_bgra_buffer: &[u8], packed_bgr_buffer: &mut [u8]) {
-    let pixels_count = packed_bgra_buffer.len() / 4;
-
-    for i in 0..pixels_count {
-        packed_bgr_buffer[i * 3] = packed_bgra_buffer[i * 4];
-        packed_bgr_buffer[i * 3 + 1] = packed_bgra_buffer[i * 4 + 1];
-        packed_bgr_buffer[i * 3 + 2] = packed_bgra_buffer[i * 4 + 2];
-    }
 }

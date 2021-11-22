@@ -4,8 +4,8 @@
 extern crate scrap;
 
 mod capture;
-mod profiling;
 mod encode;
+mod profiling;
 mod send;
 
 mod utils;
@@ -15,6 +15,7 @@ use std::env;
 use std::thread::{self};
 use std::time::{Duration, Instant};
 
+use chrono::Utc;
 use log::{debug, error, info};
 use profiling::TransmittedFrameStats;
 
@@ -30,8 +31,8 @@ use crate::encode::ffmpeg::h264rgb::H264RGBEncoder;
 use crate::encode::ffmpeg::h265::H265Encoder;
 use crate::encode::identity::IdentityEncoder;
 use crate::encode::yuv420p::YUV420PEncoder;
-use crate::profiling::TransmissionRoundStats;
 use crate::profiling::logging::csv::TransmissionRoundCSVLogger;
+use crate::profiling::TransmissionRoundStats;
 use crate::send::tcp::TCPFrameSender;
 use crate::send::FrameSender;
 use crate::utils::encoding::setup_encoding_env;
@@ -80,11 +81,7 @@ fn main() -> std::io::Result<()> {
     let round_duration = Duration::from_secs(1);
     let mut last_frame_transmission_time = 0;
 
-    let mut round_stats: TransmissionRoundStats = TransmissionRoundStats {
-        logger: Box::new(TransmissionRoundCSVLogger::new("logs.csv")?),
-
-        ..Default::default()
-    };
+    let mut round_stats = setup_round_stats()?;
 
     loop {
         thread::sleep(Duration::from_millis(
@@ -111,6 +108,21 @@ fn main() -> std::io::Result<()> {
             Err(e) => error!("Frame transmission error: {}", e),
         };
     }
+}
+
+fn setup_round_stats() -> Result<TransmissionRoundStats, std::io::Error> {
+    let round_stats: TransmissionRoundStats = {
+        let datetime = Utc::now();
+
+        TransmissionRoundStats {
+            logger: Box::new(TransmissionRoundCSVLogger::new(
+                format!("csv_logs/server/{}.csv", datetime).as_str(),
+            )?),
+
+            ..Default::default()
+        }
+    };
+    Ok(round_stats)
 }
 
 fn transmit_frame(

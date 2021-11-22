@@ -4,24 +4,24 @@ use log::info;
 use remotia::{field_vec, vec_avg};
 use csv::Writer;
 
-use crate::profiling::{TransmissionRoundStats, TransmittedFrameStats};
+use crate::profiling::{ReceptionRoundStats, ReceivedFrameStats};
 
-use super::TransmissionRoundLogger;
+use super::ReceptionRoundLogger;
 
-pub struct TransmissionRoundCSVLogger { 
+pub struct ReceptionRoundCSVLogger { 
     writer: Writer<File>
 }
 
-impl TransmissionRoundCSVLogger {
+impl ReceptionRoundCSVLogger {
     pub fn new(path: &str) -> Result<Self, csv::Error> {
-        Ok(TransmissionRoundCSVLogger {
+        Ok(ReceptionRoundCSVLogger {
             writer: csv::Writer::from_path(path)?
         })
     }
 }
 
-impl TransmissionRoundLogger for TransmissionRoundCSVLogger {
-    fn log(&mut self, profiled_frames: &Vec<TransmittedFrameStats>) {
+impl ReceptionRoundLogger for ReceptionRoundCSVLogger {
+    fn log(&mut self, profiled_frames: &Vec<ReceivedFrameStats>) {
         profiled_frames.iter().for_each(|frame| {
             self.writer.serialize(frame).unwrap();
         });
@@ -29,3 +29,4 @@ impl TransmissionRoundLogger for TransmissionRoundCSVLogger {
         self.writer.flush().unwrap();
     }
 }
+

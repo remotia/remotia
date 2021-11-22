@@ -19,6 +19,7 @@ use std::time::Instant;
 
 use beryllium::*;
 
+use chrono::Utc;
 use log::info;
 use log::{debug, error, warn};
 use pixels::wgpu;
@@ -30,6 +31,7 @@ use zstring::zstr;
 
 use crate::decode::Decoder;
 use crate::error::ClientError;
+use crate::profiling::logging::csv::ReceptionRoundCSVLogger;
 use crate::profiling::ReceptionRoundStats;
 use crate::receive::udp::UDPFrameReceiver;
 use crate::receive::FrameReceiver;
@@ -110,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting to receive stream...");
 
     let round_duration = Duration::from_secs(1);
-    let mut round_stats = ReceptionRoundStats::default();
+    let mut round_stats = setup_round_stats()?;
 
     loop {
         match receive_frame(
@@ -126,15 +128,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let current_round_duration = round_stats.start_time.elapsed();
 
                 if current_round_duration.gt(&round_duration) {
-                    round_stats.print_round_stats();
+                    round_stats.log();
                     round_stats.reset();
                 }
-            },
+            }
             ControlFlow::Break(_) => break,
         };
     }
 
     Ok(())
+}
+
+fn setup_round_stats() -> Result<ReceptionRoundStats, std::io::Error> {
+    let round_stats: ReceptionRoundStats = {
+        let datetime = Utc::now();
+
+        ReceptionRoundStats {
+            logger: Box::new(ReceptionRoundCSVLogger::new(
+                format!("csv_logs/client/{}.csv", datetime).as_str(),
+            )?),
+
+            ..Default::default()
+        }
+    };
+    Ok(round_stats)
 }
 
 fn receive_frame(
@@ -180,7 +197,7 @@ fn receive_frame(
         decoding_time,
         rendering_time,
         total_time,
-        rendered
+        rendered,
     })
 }
 

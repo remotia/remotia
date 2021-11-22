@@ -10,7 +10,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::encode::{yuv420p::YUV420PEncoder, Encoder};
+use crate::server::encode::Encoder;
 
 use super::{FFMpegEncodingBridge, frame_builders::{bgr::BGRAVFrameBuilder, yuv420p::YUV420PAVFrameBuilder}};
 

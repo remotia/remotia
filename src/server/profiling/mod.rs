@@ -1,10 +1,10 @@
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 
-use log::info;
-use remotia::{field_vec, vec_avg};
 use serde::Serialize;
 
-use self::logging::{TransmissionRoundLogger, console::TransmissionRoundConsoleLogger};
+use crate::server::profiling::logging::console::TransmissionRoundConsoleLogger;
+
+use self::logging::TransmissionRoundLogger;
 
 pub mod logging;
 
@@ -18,8 +18,8 @@ pub struct TransmittedFrameStats {
 }
 
 pub struct TransmissionRoundStats {
-    pub(super) start_time: Instant,
-    pub(super) profiled_frames: Vec<TransmittedFrameStats>,
+    pub start_time: Instant,
+    pub profiled_frames: Vec<TransmittedFrameStats>,
 
     pub loggers: Vec<Box<dyn TransmissionRoundLogger>>
 }

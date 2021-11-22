@@ -4,26 +4,24 @@ use log::debug;
 
 use super::FrameSender;
 
-pub struct UDPFrameSender<'a> {
-    socket: &'a UdpSocket,
+pub struct UDPFrameSender {
+    socket: UdpSocket,
     pixels_packet_size: usize,
-    client_address: &'a SocketAddr
+    client_address: SocketAddr
 }
 
-impl<'a> UDPFrameSender<'a> {
+impl UDPFrameSender {
     pub fn new(
-        socket: &'a UdpSocket, 
+        socket: UdpSocket, 
         packet_size: usize,
-        client_address: &'a SocketAddr
-    ) -> UDPFrameSender<'a> {
-        UDPFrameSender {
+        client_address: SocketAddr
+    ) -> Self {
+        Self {
             socket: socket,
             pixels_packet_size: packet_size,
             client_address: client_address
         }
     }
-
-    
 
     fn send_whole_frame_header(&self) {
         debug!("Sending whole frame header...");
@@ -63,7 +61,7 @@ impl<'a> UDPFrameSender<'a> {
             .unwrap();
     }
 
-    fn send_frame_pixels(&self, frame_buffer: &'a [u8]) {
+    fn send_frame_pixels(&self, frame_buffer: &[u8]) {
         debug!("Sending frame pixels...");
 
         let mut total_sent_bytes = 0;
@@ -87,7 +85,7 @@ impl<'a> UDPFrameSender<'a> {
     }
 }
 
-impl<'a> FrameSender for UDPFrameSender<'a> {
+impl FrameSender for UDPFrameSender {
     fn send_frame(&mut self, frame_buffer: & [u8]) {
         self.send_whole_frame_header();
 

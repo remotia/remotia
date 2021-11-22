@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
     avutil::{AVDictionary, AVFrame},
@@ -10,11 +9,11 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::encode::{yuv420p::YUV420PEncoder, Encoder};
+use crate::server::encode::Encoder;
 
 use super::{FFMpegEncodingBridge, frame_builders::yuv420p::YUV420PAVFrameBuilder};
 
-pub struct H264Encoder {
+pub struct H265Encoder {
 
     encode_context: AVCodecContext,
 
@@ -25,14 +24,14 @@ pub struct H264Encoder {
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
 }
 
-impl H264Encoder {
+impl H265Encoder {
     pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
-        H264Encoder {
+        H265Encoder {
             width: width,
             height: height,
 
             encode_context: {
-                let encoder = AVCodec::find_encoder_by_name(cstr!("libx264")).unwrap();
+                let encoder = AVCodec::find_encoder_by_name(cstr!("libx265")).unwrap();
                 let mut encode_context = AVCodecContext::new(&encoder);
 
                 encode_context.set_width(width);
@@ -58,7 +57,7 @@ impl H264Encoder {
     }
 }
 
-impl Encoder for H264Encoder {
+impl Encoder for H265Encoder {
     fn encode(&mut self, frame_buffer: &[u8]) -> usize {
         let avframe = self
             .yuv420_avframe_builder

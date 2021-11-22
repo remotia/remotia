@@ -74,7 +74,7 @@ mod tests {
     use test::bench::BenchSamples;
     use test::Bencher;
 
-    use crate::encode::utils::bgr2yuv::raster;
+    use crate::server::encode::utils::bgr2yuv::raster;
 
     #[test]
     fn bgr_to_yuv_simple_test() {

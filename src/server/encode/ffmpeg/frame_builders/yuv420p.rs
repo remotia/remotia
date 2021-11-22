@@ -1,7 +1,7 @@
 use log::debug;
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
 
-use crate::encode::{utils::bgr2yuv::raster, yuv420p::YUV420PEncoder, Encoder};
+use crate::server::encode::utils::bgr2yuv::raster;
 
 pub struct YUV420PAVFrameBuilder {
     frame_count: i64,

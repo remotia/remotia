@@ -2,15 +2,15 @@ use std::{io::Write, net::TcpStream};
 
 use super::FrameSender;
 
-pub struct TCPFrameSender<'a> {
-    stream: &'a mut TcpStream
+pub struct TCPFrameSender {
+    stream: TcpStream
 }
 
-impl<'a> TCPFrameSender<'a> {
+impl TCPFrameSender {
     pub fn new(
-        stream: &'a mut TcpStream
-    ) -> TCPFrameSender<'a> {
-        TCPFrameSender {
+        stream: TcpStream
+    ) -> Self {
+        Self {
             stream
         }
     }
@@ -21,7 +21,7 @@ impl<'a> TCPFrameSender<'a> {
     }
 }
 
-impl<'a> FrameSender for TCPFrameSender<'a> {
+impl FrameSender for TCPFrameSender {
     fn send_frame(&mut self, frame_buffer: & [u8]) {
         self.send_packet_header(frame_buffer.len());
         self.stream.write_all(frame_buffer).unwrap();

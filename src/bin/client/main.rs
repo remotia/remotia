@@ -28,6 +28,7 @@ use pixels::PixelsBuilder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use profiling::ReceivedFrameStats;
 use receive::tcp::TCPFrameReceiver;
+use remotia::common::command_line::parse_canvas_resolution_str;
 use zstring::zstr;
 
 use crate::decode::Decoder;
@@ -63,27 +64,12 @@ fn enstablish_udp_connection(server_address: &SocketAddr) -> std::io::Result<Udp
     Ok(socket)
 }
 
-fn parse_canvas_resolution_arg(arg: &String) -> (u32, u32) {
-    let canvas_resolution_split: Vec<&str> = arg.split("x").collect();
-
-    let width_str = canvas_resolution_split[0];
-    let height_str = canvas_resolution_split[1];
-
-    let canvas_width: u32 = u32::from_str(width_str)
-        .unwrap_or_else(|e| panic!("Unable to parse width '{}': {}", width_str, e));
-
-    let canvas_height: u32 = u32::from_str(height_str)
-        .unwrap_or_else(|e| panic!("Unable to parse height '{}': {}", height_str, e));
-
-    (canvas_width, canvas_height)
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let options = Options::parse();
 
-    let (canvas_width, canvas_height) = parse_canvas_resolution_arg(&options.resolution);
+    let (canvas_width, canvas_height) = parse_canvas_resolution_str(&options.resolution);
     let expected_frame_size: usize = (canvas_width as usize) * (canvas_height as usize) * 3;
 
     // Init display

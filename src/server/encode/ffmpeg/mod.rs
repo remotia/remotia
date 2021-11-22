@@ -1,8 +1,6 @@
 use log::debug;
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
 
-use super::{yuv420p::YUV420PEncoder, Encoder};
-
 pub mod frame_builders;
 
 pub mod h264;

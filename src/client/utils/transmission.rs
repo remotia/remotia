@@ -38,7 +38,7 @@ pub fn receive_frame(
         handle_error(e, &mut state.consecutive_connection_losses);
     });
 
-    if state.consecutive_connection_losses >= 100 {
+    if state.consecutive_connection_losses >= config.maximum_consecutive_connection_losses {
         error!("Too much consecutive connection losses, closing stream");
         return ControlFlow::Break(());
     }

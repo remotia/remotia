@@ -20,6 +20,12 @@ pub struct CommandLineServerOptions {
 
     #[clap(short, long, default_value = "1280x720")]
     resolution: String,
+
+    #[clap(long)]
+    console_profiling: bool,
+
+    #[clap(long)]
+    csv_profiling: bool,
 }
 
 fn main() -> std::io::Result<()> {
@@ -30,5 +36,7 @@ fn main() -> std::io::Result<()> {
     run_with_configuration(ServerConfiguration {
         encoder: setup_encoder_by_name(width as usize, height as usize, &options.encoder_name),
         frame_sender: setup_frame_sender_by_name(&options.frame_sender_name)?,
+        console_profiling: options.console_profiling,
+        csv_profiling: options.csv_profiling,
     })
 }

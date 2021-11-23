@@ -46,7 +46,10 @@ pub struct ClientConfiguration {
     pub canvas_width: u32,
     pub canvas_height: u32,
 
-    pub maximum_consecutive_connection_losses: u32
+    pub maximum_consecutive_connection_losses: u32,
+
+    pub console_profiling: bool,
+    pub csv_profiling: bool,
 }
 
 pub struct ClientState {
@@ -84,7 +87,7 @@ pub fn run_with_configuration(mut config: ClientConfiguration) -> Result<(), Box
     info!("Starting to receive stream...");
 
     let round_duration = Duration::from_secs(1);
-    let mut round_stats = setup_round_stats()?;
+    let mut round_stats = setup_round_stats(&config)?;
 
     loop {
         match receive_frame(

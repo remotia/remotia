@@ -31,6 +31,12 @@ struct Options {
 
     #[clap(short, long, default_value = "100")]
     maximum_consecutive_connection_losses: u32,
+
+    #[clap(long)]
+    console_profiling: bool,
+
+    #[clap(long)]
+    csv_profiling: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -48,6 +54,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?,
         canvas_width: canvas_width,
         canvas_height: canvas_height,
-        maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses
+        maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
+        console_profiling: options.console_profiling,
+        csv_profiling: options.csv_profiling,
     })
 }

@@ -27,7 +27,10 @@ use self::send::FrameSender;
 
 pub struct ServerConfiguration {
     pub encoder: Box<dyn Encoder>,
-    pub frame_sender: Box<dyn FrameSender>
+    pub frame_sender: Box<dyn FrameSender>,
+
+    pub console_profiling: bool,
+    pub csv_profiling: bool,
 }
 
 pub fn run_with_configuration(
@@ -45,7 +48,7 @@ pub fn run_with_configuration(
     let round_duration = Duration::from_secs(1);
     let mut last_frame_transmission_time = 0;
 
-    let mut round_stats = setup_round_stats()?;
+    let mut round_stats = setup_round_stats(&config)?;
 
     loop {
         thread::sleep(Duration::from_millis(

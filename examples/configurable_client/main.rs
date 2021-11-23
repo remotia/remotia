@@ -28,6 +28,9 @@ struct Options {
 
     #[clap(short, long, default_value = "5002")]
     binding_port: String,
+
+    #[clap(short, long, default_value = "100")]
+    maximum_consecutive_connection_losses: u32,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -45,5 +48,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?,
         canvas_width: canvas_width,
         canvas_height: canvas_height,
+        maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses
     })
 }

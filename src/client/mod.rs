@@ -45,6 +45,14 @@ pub struct ClientConfiguration {
 
     pub canvas_width: u32,
     pub canvas_height: u32,
+
+    pub maximum_consecutive_connection_losses: u32
+}
+
+pub struct ClientState {
+    pub pixels: Pixels,
+    pub consecutive_connection_losses: u32,
+    pub encoded_frame_buffer: Vec<u8>
 }
 
 pub fn run_with_configuration(mut config: ClientConfiguration) -> Result<(), Box<dyn std::error::Error>> {
@@ -61,25 +69,17 @@ pub fn run_with_configuration(mut config: ClientConfiguration) -> Result<(), Box
         0,
     )?;
 
-    let mut pixels = {
-        let surface_texture = SurfaceTexture::new(config.canvas_width, config.canvas_height, &window);
-        PixelsBuilder::new(config.canvas_width, config.canvas_height, surface_texture)
-            .build()?
+    let mut state = ClientState {
+        pixels: {
+            let surface_texture = SurfaceTexture::new(config.canvas_width, config.canvas_height, &window);
+            PixelsBuilder::new(config.canvas_width, config.canvas_height, surface_texture)
+                .build()?
+        },
+        consecutive_connection_losses: 0,
+        encoded_frame_buffer: vec![0 as u8; expected_frame_size],
     };
 
-    pixels.render()?;
-
-    /*let server_address = SocketAddr::from_str("127.0.0.1:5001")?;
-
-    let socket = enstablish_udp_connection(&server_address)?;
-    let mut frame_receiver = UDPFrameReceiver::create(&socket, &server_address);
-
-    let mut stream = TcpStream::connect(server_address)?;
-    let mut frame_receiver = TCPFrameReceiver::create(&mut stream);*/
-
-    let mut consecutive_connection_losses = 0;
-
-    let mut encoded_frame_buffer = vec![0 as u8; expected_frame_size];
+    state.pixels.render()?;
 
     info!("Starting to receive stream...");
 
@@ -88,11 +88,8 @@ pub fn run_with_configuration(mut config: ClientConfiguration) -> Result<(), Box
 
     loop {
         match receive_frame(
-            &mut config.decoder,
-            &mut pixels,
-            &mut config.frame_receiver,
-            &mut encoded_frame_buffer,
-            &mut consecutive_connection_losses,
+            &mut config,
+            &mut state
         ) {
             ControlFlow::Continue(frame_stats) => {
                 round_stats.profile_frame(frame_stats);

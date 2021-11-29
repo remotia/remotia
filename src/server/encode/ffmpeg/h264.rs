@@ -41,8 +41,7 @@ impl H264Encoder {
                 encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV420P);
 
                 let options = AVDictionary::new(cstr!("preset"), cstr!("ultrafast"), 0)
-                    .set(cstr!("tune"), cstr!("zerolatency"), 0)
-                    .set(cstr!("keyint"), cstr!("5"), 0);
+                    .set(cstr!("tune"), cstr!("zerolatency"), 0);
 
                 encode_context.open(Some(options)).unwrap();
 

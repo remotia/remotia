@@ -1,4 +1,8 @@
-use std::{io::Read, net::TcpStream, time::{Duration, Instant}};
+use std::{
+    io::Read,
+    net::TcpStream,
+    time::{Duration, Instant},
+};
 
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -44,7 +48,7 @@ impl SRTFrameReceiver {
                     warn!("None packet");
                     Err(ClientError::InvalidPacket)
                 }
-            },
+            }
             Err(_) => {
                 warn!("Timeout");
                 return Err(ClientError::Timeout);
@@ -52,41 +56,25 @@ impl SRTFrameReceiver {
         }
     }
 
-    async fn receive_frame_header(&mut self) -> Result<usize, ClientError> {
-        debug!("Receiving frame header...");
-
-        match self.receive_with_timeout().await {
-            Ok(binarized_obj) => {
-                if let Ok(header) = bincode::deserialize::<FrameHeader>(&binarized_obj) {
-                    Ok(header.frame_size)
-                } else {
-                    warn!("Corrupted header");
-                    Err(ClientError::InvalidPacketHeader)
-                }
-            }
-            Err(_) => Err(ClientError::InvalidPacketHeader),
-        }
-    }
-
     async fn receive_frame_pixels(
         &mut self,
         frame_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
-        debug!("Receiving {} encoded frame bytes...", frame_buffer.len());
+        debug!("Receiving encoded frame bytes...");
 
         match self.receive_with_timeout().await {
             Ok(binarized_obj) => {
-                match bincode::deserialize::<FrameBody>(&binarized_obj) {
+                match bincode::deserialize::<Vec<u8>>(&binarized_obj) {
                     Ok(body) => {
-                        frame_buffer.copy_from_slice(&body.frame_pixels);
+                        let frame_buffer = &mut frame_buffer[..body.len()];
+                        frame_buffer.copy_from_slice(&body);
                         Ok(frame_buffer.len())
-                    },
+                    }
                     Err(err) => {
                         warn!("Corrupted body ({:?})", err);
                         Err(ClientError::InvalidPacket)
-                    },
+                    }
                 }
-
             }
             Err(_e) => Err(ClientError::InvalidPacket),
         }
@@ -99,8 +87,6 @@ impl FrameReceiver for SRTFrameReceiver {
         &mut self,
         frame_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
-        let frame_size = self.receive_frame_header().await?;
-        self.receive_frame_pixels(&mut frame_buffer[..frame_size])
-            .await
+        self.receive_frame_pixels(frame_buffer).await
     }
 }

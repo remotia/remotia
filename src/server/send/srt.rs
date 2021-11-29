@@ -51,25 +51,16 @@ impl SRTFrameSender {
         let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
 
         if let Err(_) = timeout(Duration::from_millis(50), self.send_item(binarized_obj)).await {
-            warn!("Timeout");
+            debug!("Timeout");
             Err(ServerError::Timeout)
         } else {
             Ok(())
         }
     }
 
-    async fn send_frame_header(&mut self, frame_size: usize) -> Result<(), ServerError> {
-        let header = FrameHeader { frame_size };
-        debug!("Sending frame header: {:?}", header);
-        self.send_with_timeout(header).await
-    }
-
     async fn send_frame_body(&mut self, frame_buffer: &[u8]) -> Result<(), ServerError> {
         debug!("Sending frame body...");
-        let body = FrameBody {
-            frame_pixels: frame_buffer.to_vec(),
-        };
-        self.send_with_timeout(body).await
+        self.send_with_timeout(frame_buffer.to_vec()).await
     }
 }
 
@@ -84,7 +75,6 @@ macro_rules! phase {
 #[async_trait]
 impl FrameSender for SRTFrameSender {
     async fn send_frame(&mut self, frame_buffer: &[u8]) {
-        phase!(self.send_frame_header(frame_buffer.len()));
         phase!(self.send_frame_body(frame_buffer));
     }
 }

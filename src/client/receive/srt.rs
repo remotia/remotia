@@ -6,7 +6,10 @@ use futures::TryStreamExt;
 use log::{debug, info, warn};
 use srt_tokio::{SrtSocket, SrtSocketBuilder};
 
-use crate::{client::error::ClientError, common::network::{FrameBody, FrameHeader}};
+use crate::{
+    client::error::ClientError,
+    common::network::{FrameBody, FrameHeader},
+};
 
 use super::FrameReceiver;
 
@@ -32,21 +35,22 @@ impl SRTFrameReceiver {
 
         match self.socket.try_next().await {
             Ok(received_packet) => {
-                let frame_size = if let Some((_, binarized_header)) = received_packet {
+                if let Some((_, binarized_header)) = received_packet {
                     let header: FrameHeader = bincode::deserialize(&binarized_header).unwrap();
-                    header.frame_size
+                    Ok(header.frame_size)
                 } else {
                     warn!("None packet");
-                    0
-                };
-
-                Ok(frame_size)
+                    Err(ClientError::InvalidPacketHeader)
+                }
             }
             Err(_e) => Err(ClientError::InvalidPacketHeader),
         }
     }
 
-    async fn receive_frame_pixels(&mut self, frame_buffer: &mut [u8]) -> Result<usize, ClientError> {
+    async fn receive_frame_pixels(
+        &mut self,
+        frame_buffer: &mut [u8],
+    ) -> Result<usize, ClientError> {
         debug!("Receiving {} encoded frame bytes...", frame_buffer.len());
 
         match self.socket.try_next().await {
@@ -74,6 +78,7 @@ impl FrameReceiver for SRTFrameReceiver {
         frame_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
         let frame_size = self.receive_frame_header().await?;
-        self.receive_frame_pixels(&mut frame_buffer[..frame_size]).await
+        self.receive_frame_pixels(&mut frame_buffer[..frame_size])
+            .await
     }
 }

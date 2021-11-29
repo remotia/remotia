@@ -6,7 +6,7 @@ use scrap::{Capturer, Frame};
 use crate::server::{capture, encode::Encoder, profiling::TransmittedFrameStats, send::FrameSender, utils::encoding::packed_bgra_to_packed_bgr};
 
 
-pub fn transmit_frame(
+pub async fn transmit_frame(
     capturer: &mut Capturer,
     packed_bgr_frame_buffer: &mut [u8],
     encoder: &mut dyn Encoder,
@@ -56,7 +56,7 @@ pub fn transmit_frame(
         encoder.get_encoded_frame().len()
     );
 
-    frame_sender.send_frame(encoder.get_encoded_frame());
+    frame_sender.send_frame(encoder.get_encoded_frame()).await;
 
     let transfer_time = transfer_start_time.elapsed().as_millis();
     debug!("Transfer time: {}", transfer_time);

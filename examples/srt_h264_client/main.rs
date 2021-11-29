@@ -25,19 +25,22 @@ struct Options {
     csv_profiling: bool,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let options = Options::parse();
     let (canvas_width, canvas_height) = parse_canvas_resolution_str(&options.resolution);
 
+    let receiver = Box::new(SRTFrameReceiver::new(&options.server_address).await);
+
     run_with_configuration(ClientConfiguration {
         decoder: Box::new(H264Decoder::new(canvas_width as usize, canvas_height as usize)),
-        frame_receiver: Box::new(SRTFrameReceiver::new()),
+        frame_receiver: receiver,
         canvas_width: canvas_width,
         canvas_height: canvas_height,
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    })
+    }).await
 }

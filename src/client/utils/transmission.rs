@@ -3,11 +3,14 @@ use std::{ops::ControlFlow, time::Instant};
 use log::{debug, error, warn};
 use pixels::Pixels;
 
-use crate::client::{ClientConfiguration, ClientState, decode::Decoder, error::ClientError, profiling::ReceivedFrameStats, receive::FrameReceiver, utils::decoding::packed_bgr_to_packed_rgba};
+use crate::client::{
+    decode::Decoder, error::ClientError, profiling::ReceivedFrameStats, receive::FrameReceiver,
+    utils::decoding::packed_bgr_to_packed_rgba, ClientConfiguration, ClientState,
+};
 
-pub fn receive_frame(
+pub async fn receive_frame(
     config: &mut ClientConfiguration,
-    state: &mut ClientState
+    state: &mut ClientState,
 ) -> ControlFlow<(), ReceivedFrameStats> {
     debug!("Waiting for next frame...");
 
@@ -16,7 +19,8 @@ pub fn receive_frame(
     let reception_start_time = Instant::now();
     let receive_result = config
         .frame_receiver
-        .receive_encoded_frame(&mut state.encoded_frame_buffer);
+        .receive_encoded_frame(&mut state.encoded_frame_buffer)
+        .await;
     let reception_time = reception_start_time.elapsed().as_millis();
 
     let decoding_start_time = Instant::now();
@@ -29,8 +33,13 @@ pub fn receive_frame(
     let decoding_time = decoding_start_time.elapsed().as_millis();
 
     let rendering_start_time = Instant::now();
-    let render_result = decode_result
-        .and_then(|_| render_task(&mut config.decoder, &mut state.pixels, &mut state.consecutive_connection_losses));
+    let render_result = decode_result.and_then(|_| {
+        render_task(
+            &mut config.decoder,
+            &mut state.pixels,
+            &mut state.consecutive_connection_losses,
+        )
+    });
     let rendering_time = rendering_start_time.elapsed().as_millis();
 
     let rendered = render_result.is_ok();

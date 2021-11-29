@@ -16,12 +16,15 @@ pub struct CommandLineServerOptions {
     csv_profiling: bool,
 }
 
-fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
     env_logger::init();
     let options = CommandLineServerOptions::parse();
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
     let frame_size = width * height * 3;
+
+    let srt_sender = Box::new(SRTFrameSender::new(5001).await);
 
     run_with_configuration(ServerConfiguration {
         encoder: Box::new(H264Encoder::new(
@@ -29,8 +32,8 @@ fn main() -> std::io::Result<()> {
             width as i32,
             height as i32,
         )),
-        frame_sender: Box::new(SRTFrameSender::new()),
+        frame_sender: srt_sender,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    })
+    }).await
 }

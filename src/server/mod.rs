@@ -11,7 +11,6 @@ use std::cmp::max;
 use std::thread::{self};
 use std::time::Duration;
 
-use crate::server::send::tcp::TCPFrameSender;
 use crate::server::utils::encoding::{setup_packed_bgr_frame_buffer};
 use crate::server::utils::profilation::setup_round_stats;
 use crate::server::utils::transmission::transmit_frame;
@@ -33,7 +32,7 @@ pub struct ServerConfiguration {
     pub csv_profiling: bool,
 }
 
-pub fn run_with_configuration(
+pub async fn run_with_configuration(
     mut config: ServerConfiguration,
 ) -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
@@ -60,7 +59,7 @@ pub fn run_with_configuration(
             &mut packed_bgr_frame_buffer,
             &mut *config.encoder,
             &mut *config.frame_sender,
-        ) {
+        ).await {
             Ok(frame_stats) => {
                 last_frame_transmission_time = frame_stats.total_time as i64;
                 round_stats.profile_frame(frame_stats);

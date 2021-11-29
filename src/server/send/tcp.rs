@@ -1,5 +1,7 @@
 use std::{io::Write, net::TcpStream};
 
+use async_trait::async_trait;
+
 use super::FrameSender;
 
 pub struct TCPFrameSender {
@@ -21,8 +23,9 @@ impl TCPFrameSender {
     }
 }
 
+#[async_trait]
 impl FrameSender for TCPFrameSender {
-    fn send_frame(&mut self, frame_buffer: & [u8]) {
+    async fn send_frame(&mut self, frame_buffer: & [u8]) {
         self.send_packet_header(frame_buffer.len());
         self.stream.write_all(frame_buffer).unwrap();
     }

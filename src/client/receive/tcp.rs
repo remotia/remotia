@@ -1,5 +1,7 @@
 use std::{io::Read, net::{TcpStream}};
 
+use async_trait::async_trait;
+
 use log::debug;
 
 use crate::client::error::ClientError;
@@ -59,8 +61,9 @@ impl TCPFrameReceiver {
     }
 }
 
+#[async_trait]
 impl FrameReceiver for TCPFrameReceiver {
-    fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
+    async fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
         let frame_size = self.receive_frame_header()?;
 
         self.receive_frame_pixels(&mut frame_buffer[..frame_size])

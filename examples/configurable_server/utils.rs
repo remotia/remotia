@@ -1,7 +1,18 @@
-use std::{net::{TcpListener, UdpSocket}, time::Duration};
+use std::{
+    net::{TcpListener, UdpSocket},
+    time::Duration,
+};
 
 use log::info;
-use remotia::server::{encode::{Encoder, ffmpeg::{h264::H264Encoder, h264rgb::H264RGBEncoder, h265::H265Encoder}, identity::IdentityEncoder, yuv420p::YUV420PEncoder}, send::{FrameSender, tcp::TCPFrameSender, udp::UDPFrameSender}};
+use remotia::server::{
+    encode::{
+        ffmpeg::{h264::H264Encoder, h264rgb::H264RGBEncoder, h265::H265Encoder},
+        identity::IdentityEncoder,
+        yuv420p::YUV420PEncoder,
+        Encoder,
+    },
+    send::{tcp::TCPFrameSender, udp::UDPFrameSender, FrameSender},
+};
 
 pub fn setup_encoder_by_name(width: usize, height: usize, encoder_name: &str) -> Box<dyn Encoder> {
     info!("Setting up encoder...");
@@ -20,7 +31,9 @@ pub fn setup_encoder_by_name(width: usize, height: usize, encoder_name: &str) ->
     encoder
 }
 
-pub fn setup_frame_sender_by_name(frame_sender_name: &str) -> std::io::Result<Box<dyn FrameSender>> {
+pub fn setup_frame_sender_by_name(
+    frame_sender_name: &str,
+) -> std::io::Result<Box<dyn FrameSender>> {
     match frame_sender_name {
         "udp" => {
             const PACKET_SIZE: usize = 512;
@@ -37,15 +50,19 @@ pub fn setup_frame_sender_by_name(frame_sender_name: &str) -> std::io::Result<Bo
                 .set_read_timeout(Some(Duration::from_millis(200)))
                 .unwrap();
 
-            Ok(Box::new(UDPFrameSender::new(socket, PACKET_SIZE, client_address)))
-        },
+            Ok(Box::new(UDPFrameSender::new(
+                socket,
+                PACKET_SIZE,
+                client_address,
+            )))
+        }
         "tcp" => {
             let listener = TcpListener::bind("127.0.0.1:5001")?;
             info!("Waiting for client connection...");
             let (stream, _client_address) = listener.accept()?;
 
             Ok(Box::new(TCPFrameSender::new(stream)))
-        },
-        _ => panic!("Unknown frame sender")
+        }
+        _ => panic!("Unknown frame sender"),
     }
 }

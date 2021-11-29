@@ -4,8 +4,8 @@ use async_trait::async_trait;
 
 use crate::client::error::ClientError;
 
-// pub mod udp;
-// pub mod tcp;
+pub mod udp;
+pub mod tcp;
 pub mod srt;
 
 #[async_trait]

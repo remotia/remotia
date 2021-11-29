@@ -1,5 +1,7 @@
 use std::{net::{SocketAddr, UdpSocket}};
 
+use async_trait::async_trait;
+
 use log::debug;
 
 use crate::client::error::ClientError;
@@ -110,8 +112,9 @@ impl UDPFrameReceiver {
 
 }
 
+#[async_trait]
 impl FrameReceiver for UDPFrameReceiver {
-    fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
+    async fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
         self.receive_whole_frame_header()?;
         self.send_whole_frame_header_receipt();
         self.receive_frame_pixels(frame_buffer)?;

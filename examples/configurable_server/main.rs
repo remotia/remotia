@@ -28,7 +28,8 @@ pub struct CommandLineServerOptions {
     csv_profiling: bool,
 }
 
-fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
     env_logger::init();
     let options = CommandLineServerOptions::parse();
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
@@ -38,5 +39,5 @@ fn main() -> std::io::Result<()> {
         frame_sender: setup_frame_sender_by_name(&options.frame_sender_name)?,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    })
+    }).await
 }

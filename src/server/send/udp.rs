@@ -1,5 +1,7 @@
 use std::{cmp, net::{SocketAddr, UdpSocket}};
 
+use async_trait::async_trait;
+
 use log::debug;
 
 use super::FrameSender;
@@ -85,8 +87,9 @@ impl UDPFrameSender {
     }
 }
 
+#[async_trait]
 impl FrameSender for UDPFrameSender {
-    fn send_frame(&mut self, frame_buffer: & [u8]) {
+    async fn send_frame(&mut self, frame_buffer: & [u8]) {
         self.send_whole_frame_header();
 
         if self.receive_whole_frame_header_receipt().is_err() {

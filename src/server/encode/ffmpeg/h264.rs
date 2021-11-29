@@ -12,10 +12,9 @@ use cstr::cstr;
 
 use crate::server::encode::Encoder;
 
-use super::{FFMpegEncodingBridge, frame_builders::yuv420p::YUV420PAVFrameBuilder};
+use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
 pub struct H264Encoder {
-
     encode_context: AVCodecContext,
 
     width: i32,
@@ -41,11 +40,9 @@ impl H264Encoder {
                 encode_context.set_framerate(ffi::AVRational { num: 60, den: 1 });
                 encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV420P);
 
-                let options = AVDictionary::new(cstr!("preset"), cstr!("ultrafast"), 0).set(
-                    cstr!("tune"),
-                    cstr!("zerolatency"),
-                    0,
-                );
+                let options = AVDictionary::new(cstr!("preset"), cstr!("ultrafast"), 0)
+                    .set(cstr!("tune"), cstr!("zerolatency"), 0)
+                    .set(cstr!("keyint"), cstr!("5"), 0);
 
                 encode_context.open(Some(options)).unwrap();
 
@@ -53,7 +50,7 @@ impl H264Encoder {
             },
 
             yuv420_avframe_builder: YUV420PAVFrameBuilder::new(width as usize, height as usize),
-            ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size)
+            ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size),
         }
     }
 }
@@ -64,8 +61,8 @@ impl Encoder for H264Encoder {
             .yuv420_avframe_builder
             .create_avframe(&mut self.encode_context, frame_buffer);
 
-        
-        self.ffmpeg_encoding_bridge.encode_avframe(&mut self.encode_context, avframe)
+        self.ffmpeg_encoding_bridge
+            .encode_avframe(&mut self.encode_context, avframe)
     }
 
     fn get_encoded_frame(&self) -> &[u8] {

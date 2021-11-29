@@ -36,7 +36,7 @@ impl SRTFrameReceiver {
     async fn receive_with_timeout(&mut self) -> Result<Bytes, ClientError> {
         let receive_job = self.socket.try_next();
 
-        match timeout(Duration::from_secs(1), receive_job).await {
+        match timeout(Duration::from_millis(50), receive_job).await {
             Ok(packet) => {
                 if let Some((_, binarized_obj)) = packet.unwrap() {
                     Ok(binarized_obj)
@@ -76,13 +76,17 @@ impl SRTFrameReceiver {
 
         match self.receive_with_timeout().await {
             Ok(binarized_obj) => {
-                if let Ok(body) = bincode::deserialize::<FrameBody>(&binarized_obj) {
-                    frame_buffer.copy_from_slice(body.frame_pixels);
-                    Ok(frame_buffer.len())
-                } else {
-                    warn!("Corrupted body");
-                    Err(ClientError::InvalidPacket)
+                match bincode::deserialize::<FrameBody>(&binarized_obj) {
+                    Ok(body) => {
+                        frame_buffer.copy_from_slice(&body.frame_pixels);
+                        Ok(frame_buffer.len())
+                    },
+                    Err(err) => {
+                        warn!("Corrupted body ({:?})", err);
+                        Err(ClientError::InvalidPacket)
+                    },
                 }
+
             }
             Err(_e) => Err(ClientError::InvalidPacket),
         }

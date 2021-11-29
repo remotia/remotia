@@ -6,6 +6,6 @@ pub struct FrameHeader {
 } 
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct FrameBody<'a> {
-    pub frame_pixels: &'a [u8]
+pub struct FrameBody {
+    pub frame_pixels: Vec<u8>
 }

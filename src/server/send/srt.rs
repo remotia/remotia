@@ -1,14 +1,23 @@
-use std::{io::Write, net::TcpStream, time::{Duration, Instant}};
+use std::{
+    io::Write,
+    net::TcpStream,
+    time::{Duration, Instant},
+};
 
 use async_trait::async_trait;
 
 use bytes::Bytes;
 use futures::{stream, SinkExt, StreamExt};
 
-use log::{debug, info};
+use log::{debug, info, warn};
+use serde::Serialize;
 use srt_tokio::{SrtSocket, SrtSocketBuilder};
+use tokio::time::timeout;
 
-use crate::common::network::{FrameBody, FrameHeader};
+use crate::{
+    common::network::{FrameBody, FrameHeader},
+    server::error::ServerError,
+};
 
 use super::FrameSender;
 
@@ -38,27 +47,44 @@ impl SRTFrameSender {
             .unwrap();
     }
 
-    async fn send_frame_header(&mut self, frame_size: usize) {
-        let header = FrameHeader { frame_size };
-        debug!("Sending frame header: {:?}", header);
-        let binarized_header = Bytes::from(bincode::serialize(&header).unwrap());
-        self.send_item(binarized_header).await;
+    async fn send_with_timeout<T: Serialize>(&mut self, obj: T) -> Result<(), ServerError> {
+        let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
+
+        if let Err(_) = timeout(Duration::from_millis(50), self.send_item(binarized_obj)).await {
+            warn!("Timeout");
+            Err(ServerError::Timeout)
+        } else {
+            Ok(())
+        }
     }
 
-    async fn send_frame_body(&mut self, frame_buffer: &[u8]) {
+    async fn send_frame_header(&mut self, frame_size: usize) -> Result<(), ServerError> {
+        let header = FrameHeader { frame_size };
+        debug!("Sending frame header: {:?}", header);
+        self.send_with_timeout(header).await
+    }
+
+    async fn send_frame_body(&mut self, frame_buffer: &[u8]) -> Result<(), ServerError> {
         debug!("Sending frame body...");
         let body = FrameBody {
-            frame_pixels: frame_buffer,
+            frame_pixels: frame_buffer.to_vec(),
         };
-        let binarized_body = Bytes::from(bincode::serialize(&body).unwrap());
-        self.send_item(binarized_body).await;
+        self.send_with_timeout(body).await
     }
+}
+
+macro_rules! phase {
+    ($future: expr) => {
+        if let Err(_) = $future.await {
+            return;
+        }
+    };
 }
 
 #[async_trait]
 impl FrameSender for SRTFrameSender {
     async fn send_frame(&mut self, frame_buffer: &[u8]) {
-        self.send_frame_header(frame_buffer.len()).await;
-        self.send_frame_body(frame_buffer).await;
+        phase!(self.send_frame_header(frame_buffer.len()));
+        phase!(self.send_frame_body(frame_buffer));
     }
 }

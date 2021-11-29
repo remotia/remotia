@@ -3,10 +3,10 @@ use std::{io::Read, net::TcpStream};
 use async_trait::async_trait;
 
 use futures::TryStreamExt;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use srt_tokio::{SrtSocket, SrtSocketBuilder};
 
-use crate::{client::error::ClientError, common::network::FrameHeader};
+use crate::{client::error::ClientError, common::network::{FrameBody, FrameHeader}};
 
 use super::FrameReceiver;
 
@@ -16,10 +16,13 @@ pub struct SRTFrameReceiver {
 
 impl SRTFrameReceiver {
     pub async fn new(server_address: &str) -> Self {
+        info!("Connecting...");
         let srt_socket = SrtSocketBuilder::new_connect(server_address)
             .connect()
             .await
             .unwrap();
+
+        info!("Connected");
 
         Self { socket: srt_socket }
     }
@@ -39,16 +42,28 @@ impl SRTFrameReceiver {
 
                 Ok(frame_size)
             }
-            Err(e) => Err(ClientError::InvalidPacketHeader),
+            Err(_e) => Err(ClientError::InvalidPacketHeader),
         }
     }
 
-    fn receive_frame_pixels(&mut self, frame_buffer: &mut [u8]) -> Result<usize, ClientError> {
+    async fn receive_frame_pixels(&mut self, frame_buffer: &mut [u8]) -> Result<usize, ClientError> {
         debug!("Receiving {} encoded frame bytes...", frame_buffer.len());
 
-        let mut total_read_bytes = 0;
+        match self.socket.try_next().await {
+            Ok(received_packet) => {
+                let read_bytes = if let Some((_, binarized_body)) = received_packet {
+                    let body: FrameBody = bincode::deserialize(&binarized_body).unwrap();
+                    frame_buffer.copy_from_slice(body.frame_pixels);
+                    frame_buffer.len()
+                } else {
+                    warn!("None packet");
+                    0
+                };
 
-        Ok(total_read_bytes)
+                Ok(read_bytes)
+            }
+            Err(_e) => Err(ClientError::InvalidPacket),
+        }
     }
 }
 
@@ -59,6 +74,6 @@ impl FrameReceiver for SRTFrameReceiver {
         frame_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
         let frame_size = self.receive_frame_header().await?;
-        self.receive_frame_pixels(&mut frame_buffer[..frame_size])
+        self.receive_frame_pixels(&mut frame_buffer[..frame_size]).await
     }
 }

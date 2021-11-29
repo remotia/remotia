@@ -19,4 +19,7 @@ pub enum ClientError {
 
     #[error("H264 Send packet error")]
     FFMpegSendPacketError,
+
+    #[error("Timeout")]
+    Timeout,
 }

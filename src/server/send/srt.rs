@@ -1,4 +1,4 @@
-use std::{io::Write, net::TcpStream, time::Instant};
+use std::{io::Write, net::TcpStream, time::{Duration, Instant}};
 
 use async_trait::async_trait;
 
@@ -20,6 +20,7 @@ impl SRTFrameSender {
     pub async fn new(port: u16) -> Self {
         info!("Listening...");
         let srt_socket = SrtSocketBuilder::new_listen()
+            .latency(Duration::from_millis(10))
             .local_port(port)
             .connect()
             .await

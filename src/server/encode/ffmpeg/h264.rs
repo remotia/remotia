@@ -55,16 +55,12 @@ impl H264Encoder {
 }
 
 impl Encoder for H264Encoder {
-    fn encode(&mut self, frame_buffer: &[u8]) -> usize {
+    fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
         let avframe = self
             .yuv420_avframe_builder
-            .create_avframe(&mut self.encode_context, frame_buffer);
+            .create_avframe(&mut self.encode_context, input_buffer);
 
         self.ffmpeg_encoding_bridge
-            .encode_avframe(&mut self.encode_context, avframe)
-    }
-
-    fn get_encoded_frame(&self) -> &[u8] {
-        self.ffmpeg_encoding_bridge.get_encoded_frame()
+            .encode_avframe(&mut self.encode_context, avframe, output_buffer)
     }
 }

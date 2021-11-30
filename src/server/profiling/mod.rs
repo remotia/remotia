@@ -8,7 +8,7 @@ use self::logging::TransmissionRoundLogger;
 
 pub mod logging;
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub struct TransmittedFrameStats {
     pub capture_time: u128,
     pub encoding_time: u128,

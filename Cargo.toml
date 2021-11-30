@@ -42,3 +42,5 @@ futures = "0.3.18"
 bytes = "1.1.0"
 bincode = "1.3.3"
 async-trait = "0.1.51"
+
+object-pool = "0.5.4"

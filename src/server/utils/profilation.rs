@@ -1,8 +1,8 @@
 use chrono::Utc;
 
-use crate::server::{ServerConfiguration, profiling::{TransmissionRoundStats, logging::{TransmissionRoundLogger, console::TransmissionRoundConsoleLogger, csv::TransmissionRoundCSVLogger}}};
+use crate::server::{profiling::{TransmissionRoundStats, logging::{TransmissionRoundLogger, console::TransmissionRoundConsoleLogger, csv::TransmissionRoundCSVLogger}}};
 
-pub fn setup_round_stats(config: &ServerConfiguration) -> Result<TransmissionRoundStats, std::io::Error> {
+pub fn setup_round_stats(csv_profiling: bool, console_profiling: bool) -> Result<TransmissionRoundStats, std::io::Error> {
     let round_stats: TransmissionRoundStats = {
         let datetime = Utc::now();
 
@@ -10,13 +10,13 @@ pub fn setup_round_stats(config: &ServerConfiguration) -> Result<TransmissionRou
             loggers: {
                 let mut loggers: Vec<Box<dyn TransmissionRoundLogger>> = Vec::new();
 
-                if config.csv_profiling  {
+                if csv_profiling  {
                     loggers.push(Box::new(TransmissionRoundCSVLogger::new(
                         format!("csv_logs/server/{}.csv", datetime).as_str(),
                     )?));
                 }
 
-                if config.console_profiling  {
+                if console_profiling  {
                     loggers.push(Box::new(TransmissionRoundConsoleLogger::default()));
                 }
 

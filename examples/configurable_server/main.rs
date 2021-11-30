@@ -3,10 +3,7 @@ extern crate scrap;
 mod utils;
 
 use clap::Parser;
-use remotia::{
-    common::command_line::parse_canvas_resolution_str,
-    server::{run_with_configuration, ServerConfiguration},
-};
+use remotia::{common::command_line::parse_canvas_resolution_str, server::pipeline::waterfall::{WaterfallPipeline, WaterfallServerConfiguration}};
 use utils::{setup_encoder_by_name, setup_frame_sender_by_name};
 
 #[derive(Parser)]
@@ -34,10 +31,14 @@ async fn main() -> std::io::Result<()> {
     let options = CommandLineServerOptions::parse();
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
-    run_with_configuration(ServerConfiguration {
+    let pipeline = WaterfallPipeline::new(WaterfallServerConfiguration {
         encoder: setup_encoder_by_name(width as usize, height as usize, &options.encoder_name),
         frame_sender: setup_frame_sender_by_name(&options.frame_sender_name)?,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    }).await
+    });
+
+    pipeline.run().await;
+
+    Ok(())
 }

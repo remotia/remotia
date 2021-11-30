@@ -22,6 +22,12 @@ pub struct CommandLineServerOptions {
 
     #[clap(long)]
     csv_profiling: bool,
+
+    #[clap(long, default_value = "100")]
+    latency: u64,
+
+    #[clap(long, default_value = "15")]
+    timeout: u64,
 }
 
 #[tokio::main]
@@ -33,7 +39,12 @@ async fn main() -> std::io::Result<()> {
     let frame_size = width * height * 3;
 
     let srt_sender = Box::new(
-        SRTFrameSender::new(5001, Duration::from_millis(100), Duration::from_millis(15)).await,
+        SRTFrameSender::new(
+            5001,
+            Duration::from_millis(options.latency),
+            Duration::from_millis(options.timeout),
+        )
+        .await,
     );
 
     run_with_configuration(ServerConfiguration {

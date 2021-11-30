@@ -1,3 +1,3 @@
 pub mod decoding;
-pub mod transmission;
+pub mod reception;
 pub mod profilation;

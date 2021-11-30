@@ -1,7 +1,13 @@
-use std::{net::SocketAddr, str::FromStr};
+use std::{net::SocketAddr, str::FromStr, time::Duration};
 
 use clap::Parser;
-use remotia::{client::{ClientConfiguration, decode::h264::H264Decoder, receive::srt::SRTFrameReceiver, run_with_configuration}, common::command_line::parse_canvas_resolution_str};
+use remotia::{
+    client::{
+        decode::h264::H264Decoder, receive::srt::SRTFrameReceiver, run_with_configuration,
+        ClientConfiguration,
+    },
+    common::command_line::parse_canvas_resolution_str,
+};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -32,15 +38,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = Options::parse();
     let (canvas_width, canvas_height) = parse_canvas_resolution_str(&options.resolution);
 
-    let receiver = Box::new(SRTFrameReceiver::new(&options.server_address).await);
+    let receiver = Box::new(
+        SRTFrameReceiver::new(
+            &options.server_address,
+            Duration::from_millis(100),
+            Duration::from_millis(15),
+        )
+        .await,
+    );
 
     run_with_configuration(ClientConfiguration {
-        decoder: Box::new(H264Decoder::new(canvas_width as usize, canvas_height as usize)),
+        decoder: Box::new(H264Decoder::new(
+            canvas_width as usize,
+            canvas_height as usize,
+        )),
         frame_receiver: receiver,
         canvas_width: canvas_width,
         canvas_height: canvas_height,
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    }).await
+    })
+    .await
 }

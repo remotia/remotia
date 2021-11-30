@@ -23,13 +23,15 @@ use super::FrameSender;
 
 pub struct SRTFrameSender {
     socket: SrtSocket,
+
+    timeout: Duration,
 }
 
 impl SRTFrameSender {
-    pub async fn new(port: u16) -> Self {
+    pub async fn new(port: u16, latency: Duration, timeout: Duration) -> Self {
         info!("Listening...");
-        let srt_socket = SrtSocketBuilder::new_listen()
-            .latency(Duration::from_millis(10))
+        let socket = SrtSocketBuilder::new_listen()
+            .latency(latency)
             .local_port(port)
             .connect()
             .await
@@ -37,7 +39,7 @@ impl SRTFrameSender {
 
         info!("Connected");
 
-        Self { socket: srt_socket }
+        Self { socket, timeout }
     }
 
     async fn send_item(&mut self, binarized_item: Bytes) {
@@ -50,7 +52,7 @@ impl SRTFrameSender {
     async fn send_with_timeout<T: Serialize>(&mut self, obj: T) -> Result<(), ServerError> {
         let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
 
-        if let Err(_) = timeout(Duration::from_millis(50), self.send_item(binarized_obj)).await {
+        if let Err(_) = timeout(self.timeout, self.send_item(binarized_obj)).await {
             debug!("Timeout");
             Err(ServerError::Timeout)
         } else {

@@ -21,26 +21,28 @@ use super::FrameReceiver;
 
 pub struct SRTFrameReceiver {
     socket: SrtSocket,
+
+    timeout: Duration,
 }
 
 impl SRTFrameReceiver {
-    pub async fn new(server_address: &str) -> Self {
+    pub async fn new(server_address: &str, latency: Duration, timeout: Duration) -> Self {
         info!("Connecting...");
-        let srt_socket = SrtSocketBuilder::new_connect(server_address)
-            .latency(Duration::from_millis(10))
+        let socket = SrtSocketBuilder::new_connect(server_address)
+            .latency(latency)
             .connect()
             .await
             .unwrap();
 
         info!("Connected");
 
-        Self { socket: srt_socket }
+        Self { socket, timeout }
     }
 
     async fn receive_with_timeout(&mut self) -> Result<Bytes, ClientError> {
         let receive_job = self.socket.try_next();
 
-        match timeout(Duration::from_millis(50), receive_job).await {
+        match timeout(self.timeout, receive_job).await {
             Ok(packet) => {
                 if let Some((_, binarized_obj)) = packet.unwrap() {
                     Ok(binarized_obj)
@@ -50,7 +52,7 @@ impl SRTFrameReceiver {
                 }
             }
             Err(_) => {
-                warn!("Timeout");
+                debug!("Timeout");
                 return Err(ClientError::Timeout);
             }
         }
@@ -63,19 +65,17 @@ impl SRTFrameReceiver {
         debug!("Receiving encoded frame bytes...");
 
         match self.receive_with_timeout().await {
-            Ok(binarized_obj) => {
-                match bincode::deserialize::<Vec<u8>>(&binarized_obj) {
-                    Ok(body) => {
-                        let frame_buffer = &mut frame_buffer[..body.len()];
-                        frame_buffer.copy_from_slice(&body);
-                        Ok(frame_buffer.len())
-                    }
-                    Err(err) => {
-                        warn!("Corrupted body ({:?})", err);
-                        Err(ClientError::InvalidPacket)
-                    }
+            Ok(binarized_obj) => match bincode::deserialize::<Vec<u8>>(&binarized_obj) {
+                Ok(body) => {
+                    let frame_buffer = &mut frame_buffer[..body.len()];
+                    frame_buffer.copy_from_slice(&body);
+                    Ok(frame_buffer.len())
                 }
-            }
+                Err(err) => {
+                    warn!("Corrupted body ({:?})", err);
+                    Err(ClientError::InvalidPacket)
+                }
+            },
             Err(_e) => Err(ClientError::InvalidPacket),
         }
     }

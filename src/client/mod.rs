@@ -33,7 +33,7 @@ use crate::client::profiling::ReceptionRoundStats;
 use crate::client::profiling::logging::console::ReceptionRoundConsoleLogger;
 use crate::client::profiling::logging::csv::ReceptionRoundCSVLogger;
 use crate::client::utils::profilation::setup_round_stats;
-use crate::client::utils::transmission::receive_frame;
+use crate::client::utils::reception::receive_frame;
 
 use self::decode::Decoder;
 use self::receive::FrameReceiver;

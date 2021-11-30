@@ -72,7 +72,7 @@ fn handle_error(error: ClientError, consecutive_connection_losses: &mut u32) {
         _ => *consecutive_connection_losses += 1,
     }
 
-    warn!(
+    debug!(
         "Error while receiving frame: {}, dropping (consecutive connection losses: {})",
         error, consecutive_connection_losses
     );

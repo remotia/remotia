@@ -3,7 +3,7 @@ extern crate scrap;
 use std::time::Duration;
 
 use clap::Parser;
-use remotia::{common::command_line::parse_canvas_resolution_str, server::{encode::ffmpeg::h264::H264Encoder, pipeline::waterfall::{WaterfallPipeline, WaterfallServerConfiguration}, send::srt::SRTFrameSender}};
+use remotia::{common::command_line::parse_canvas_resolution_str, server::{capture::scrap::ScrapFrameCapturer, encode::ffmpeg::h264::H264Encoder, pipeline::waterfall::{WaterfallPipeline, WaterfallServerConfiguration}, send::srt::SRTFrameSender}};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -42,6 +42,7 @@ async fn main() -> std::io::Result<()> {
     );
 
     let pipeline = WaterfallPipeline::new(WaterfallServerConfiguration {
+        frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),
         encoder: Box::new(H264Encoder::new(
             frame_size as usize,
             width as i32,

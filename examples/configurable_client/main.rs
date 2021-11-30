@@ -1,10 +1,7 @@
 use std::{net::SocketAddr, str::FromStr};
 
 use clap::Parser;
-use remotia::{
-    client::{run_with_configuration, ClientConfiguration},
-    common::command_line::parse_canvas_resolution_str,
-};
+use remotia::{client::pipeline::waterfall::{WaterfallClientConfiguration, WaterfallClientPipeline}, common::command_line::parse_canvas_resolution_str};
 use utils::setup_frame_receiver_by_name;
 
 use crate::utils::setup_decoder_from_name;
@@ -46,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = Options::parse();
     let (canvas_width, canvas_height) = parse_canvas_resolution_str(&options.resolution);
 
-    run_with_configuration(ClientConfiguration {
+    let pipeline = WaterfallClientPipeline::new(WaterfallClientConfiguration {
         decoder: setup_decoder_from_name(canvas_width, canvas_height, &options.decoder_name),
         frame_receiver: setup_frame_receiver_by_name(
             SocketAddr::from_str(&options.server_address)?,
@@ -58,5 +55,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    }).await
+    });
+
+    pipeline.run().await;
+    
+    Ok(())
 }

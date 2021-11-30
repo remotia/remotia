@@ -29,12 +29,12 @@ pub struct WaterfallServerConfiguration {
     pub csv_profiling: bool,
 }
 
-pub struct WaterfallPipeline {
+pub struct WaterfallServerPipeline {
     config: WaterfallServerConfiguration,
 }
 
-impl WaterfallPipeline {
-    pub fn new(config: WaterfallServerConfiguration) -> WaterfallPipeline {
+impl WaterfallServerPipeline {
+    pub fn new(config: WaterfallServerConfiguration) -> WaterfallServerPipeline {
         Self { config }
     }
 

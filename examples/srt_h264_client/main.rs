@@ -1,13 +1,7 @@
 use std::{time::Duration};
 
 use clap::Parser;
-use remotia::{
-    client::{
-        decode::h264::H264Decoder, receive::srt::SRTFrameReceiver, run_with_configuration,
-        ClientConfiguration,
-    },
-    common::command_line::parse_canvas_resolution_str,
-};
+use remotia::{client::{decode::h264::H264Decoder, pipeline::waterfall::{WaterfallClientConfiguration, WaterfallClientPipeline}, receive::srt::SRTFrameReceiver}, common::command_line::parse_canvas_resolution_str};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -53,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await,
     );
 
-    run_with_configuration(ClientConfiguration {
+    let pipeline = WaterfallClientPipeline::new(WaterfallClientConfiguration {
         decoder: Box::new(H264Decoder::new(
             canvas_width as usize,
             canvas_height as usize,
@@ -64,6 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    })
-    .await
+    });
+    pipeline.run().await;
+    Ok(())
 }

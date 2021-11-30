@@ -10,6 +10,7 @@ pub mod logging;
 
 #[derive(Serialize)]
 pub struct TransmittedFrameStats {
+    pub capture_time: u128,
     pub encoding_time: u128,
     pub transfer_time: u128,
     pub total_time: u128,

@@ -15,7 +15,9 @@ pub async fn transmit_frame(
     let loop_start_time = Instant::now();
 
     // Capture frame
+    let capture_start_time = Instant::now();
     let result = capture::capture_frame(capturer);
+    let capture_time = capture_start_time.elapsed().as_millis();
 
     debug!("Frame captured");
 
@@ -65,6 +67,7 @@ pub async fn transmit_frame(
     debug!("Total time: {}", total_time);
 
     Ok(TransmittedFrameStats {
+        capture_time,
         encoding_time,
         transfer_time,
         total_time,

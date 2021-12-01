@@ -24,6 +24,10 @@ pub struct H264Encoder {
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
 }
 
+// TODO: Evaluate a safer way to move the encoder to another thread
+// Necessary for multi-threaded pipelines
+unsafe impl Send for H264Encoder { }
+
 impl H264Encoder {
     pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
         H264Encoder {

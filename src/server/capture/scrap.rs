@@ -9,6 +9,10 @@ pub struct ScrapFrameCapturer {
     capturer: Capturer,
 }
 
+// TODO: Evaluate a safer way to move the capturer to another thread
+// Necessary for multi-threaded pipelines
+unsafe impl Send for ScrapFrameCapturer { }
+
 impl ScrapFrameCapturer {
     pub fn new(capturer: Capturer) -> Self {
         Self { capturer }

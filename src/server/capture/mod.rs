@@ -6,3 +6,4 @@ pub trait FrameCapturer {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
 }
+

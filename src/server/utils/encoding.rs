@@ -1,8 +1,3 @@
-use log::info;
-use scrap::Capturer;
-
-use crate::server::encode::{Encoder, ffmpeg::{h264::H264Encoder, h264rgb::H264RGBEncoder, h265::H265Encoder}, identity::IdentityEncoder, yuv420p::YUV420PEncoder};
-
 pub fn setup_packed_bgr_frame_buffer(width: usize, height: usize) -> Vec<u8> {
     let frame_size = width * height * 3;
     let packed_bgr_frame_buffer: Vec<u8> = vec![0; frame_size];

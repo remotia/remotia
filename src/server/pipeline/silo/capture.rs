@@ -34,7 +34,10 @@ pub fn launch_capture_thread(
                 spin_time - last_frame_capture_time,
             ) as u64));
 
+            let raw_frame_buffer_wait_start_time = Instant::now();
             let raw_frame_buffer = raw_frame_buffers_receiver.recv().await;
+            let raw_frame_buffer_wait_time = raw_frame_buffer_wait_start_time.elapsed().as_millis();
+
             if raw_frame_buffer.is_none() {
                 debug!("Raw frame buffers channel closed, terminating.");
                 break;
@@ -56,6 +59,7 @@ pub fn launch_capture_thread(
 
             last_frame_capture_time = capture_start_time.elapsed().as_millis() as i64;
             frame_stats.capture_time = last_frame_capture_time as u128;
+            frame_stats.capturer_idle_time = raw_frame_buffer_wait_time;
 
             let send_result = capture_result_sender
                 .send(CaptureResult {

@@ -27,7 +27,10 @@ pub fn launch_transfer_thread(
         loop {
             debug!("Transferring...");
 
+            let encode_result_wait_start_time = Instant::now();
             let encode_result = encode_result_receiver.recv().await;
+            let encode_result_wait_time = encode_result_wait_start_time.elapsed().as_millis();
+
             if encode_result.is_none() {
                 debug!("Encode channel has been closed, terminating...");
                 break;
@@ -53,6 +56,7 @@ pub fn launch_transfer_thread(
             };
 
             frame_stats.transfer_time = transfer_start_time.elapsed().as_millis();
+            frame_stats.transferrer_idle_time = encode_result_wait_time;
 
             let send_result = transfer_result_sender
                 .send(TransferResult { frame_stats })

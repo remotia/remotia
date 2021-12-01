@@ -59,18 +59,6 @@ impl SiloServerPipeline {
         const FPS: i64 = 60;
         let spin_time = 1000 / FPS;
 
-        /*let raw_frame_buffers_pool = Arc::new(Pool::new(1, || {
-            let mut buf = BytesMut::with_capacity(frame_size);
-            buf.resize(frame_size, 0);
-            buf
-        }));
-
-        let encoded_frame_buffers_pool = Arc::new(Pool::new(1, || {
-            let mut buf = BytesMut::with_capacity(frame_size);
-            buf.resize(frame_size, 0);
-            buf
-        }));*/
-
         const MAXIMUM_RAW_FRAME_BUFFERS: usize = 1;
         const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 1;
 
@@ -94,9 +82,9 @@ impl SiloServerPipeline {
         let round_duration = Duration::from_secs(1);
         // let mut last_frame_transmission_time = 0;
 
-        let (capture_result_sender, capture_result_receiver) = mpsc::channel::<CaptureResult>(1);
-        let (encode_result_sender, encode_result_receiver) = mpsc::channel::<EncodeResult>(1);
-        let (transfer_result_sender, transfer_result_receiver) = mpsc::channel::<TransferResult>(1);
+        let (capture_result_sender, capture_result_receiver) = mpsc::channel::<CaptureResult>(32);
+        let (encode_result_sender, encode_result_receiver) = mpsc::channel::<EncodeResult>(32);
+        let (transfer_result_sender, transfer_result_receiver) = mpsc::channel::<TransferResult>(32);
 
         let capture_handle = launch_capture_thread(
             spin_time,

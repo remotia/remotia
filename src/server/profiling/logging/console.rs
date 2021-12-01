@@ -5,15 +5,12 @@ use crate::{field_vec, server::profiling::TransmittedFrameStats, vec_avg};
 use super::TransmissionRoundLogger;
 
 #[derive(Default)]
-pub struct TransmissionRoundConsoleLogger { }
+pub struct TransmissionRoundConsoleLogger {}
 
 impl TransmissionRoundLogger for TransmissionRoundConsoleLogger {
     fn log(&mut self, profiled_frames: &Vec<TransmittedFrameStats>) {
         info!("Transmission round stats: ");
-        info!(
-            "Transmitted {} frames",
-            profiled_frames.len()
-        );
+        info!("Transmitted {} frames", profiled_frames.len());
 
         info!(
             "Average capture time: {}ms",
@@ -29,6 +26,25 @@ impl TransmissionRoundLogger for TransmissionRoundConsoleLogger {
             "Average transfer time: {}ms",
             vec_avg!(field_vec!(profiled_frames, transfer_time, u128), u128)
         );
+
+        info!(
+            "Average capturer idle time: {}ms",
+            vec_avg!(field_vec!(profiled_frames, capturer_idle_time, u128), u128)
+        );
+
+        info!(
+            "Average encoder idle time: {}ms",
+            vec_avg!(field_vec!(profiled_frames, encoder_idle_time, u128), u128)
+        );
+
+        info!(
+            "Average transferrer idle time: {}ms",
+            vec_avg!(
+                field_vec!(profiled_frames, transferrer_idle_time, u128),
+                u128
+            )
+        );
+
         info!(
             "Average total time: {}ms",
             vec_avg!(field_vec!(profiled_frames, total_time, u128), u128)

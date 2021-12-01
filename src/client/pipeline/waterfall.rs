@@ -93,7 +93,19 @@ impl WaterfallClientPipeline {
         let mut round_stats =
             setup_round_stats(self.config.csv_profiling, self.config.console_profiling).unwrap();
 
+        const FPS: i64 = 60;
+        let spin_time = 1000 / FPS;
+
+        let mut last_frame_dispatching_time = 0;
+
         loop {
+            std::thread::sleep(Duration::from_millis(std::cmp::max(
+                0,
+                spin_time - last_frame_dispatching_time,
+            ) as u64));
+
+            let frame_dispatch_start_time = Instant::now();
+
             match self.receive_frame(&mut state).await {
                 ControlFlow::Continue(frame_stats) => {
                     round_stats.profile_frame(frame_stats);
@@ -107,6 +119,8 @@ impl WaterfallClientPipeline {
                 }
                 ControlFlow::Break(_) => break,
             };
+
+            last_frame_dispatching_time = frame_dispatch_start_time.elapsed().as_millis() as i64;
         }
     }
 

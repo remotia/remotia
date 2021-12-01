@@ -12,7 +12,6 @@ use tokio::sync::mpsc::{self, Receiver, Sender};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
-use object_pool::Pool;
 use tokio::task::JoinHandle;
 
 use std::cmp::max;
@@ -60,9 +59,7 @@ impl SiloServerPipeline {
         const FPS: i64 = 60;
         let spin_time = 1000 / FPS;
 
-        let frame_size = self.config.width * self.config.height * 3;
-
-        let raw_frame_buffers_pool = Arc::new(Pool::new(1, || {
+        /*let raw_frame_buffers_pool = Arc::new(Pool::new(1, || {
             let mut buf = BytesMut::with_capacity(frame_size);
             buf.resize(frame_size, 0);
             buf
@@ -72,7 +69,27 @@ impl SiloServerPipeline {
             let mut buf = BytesMut::with_capacity(frame_size);
             buf.resize(frame_size, 0);
             buf
-        }));
+        }));*/
+
+        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 1;
+        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 1;
+
+        let frame_size = self.config.width * self.config.height * 3;
+
+        let (raw_frame_buffers_sender,  raw_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_RAW_FRAME_BUFFERS);
+        let (encoded_frame_buffers_sender,  encoded_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_ENCODED_FRAME_BUFFERS);
+
+        for _ in 0..MAXIMUM_RAW_FRAME_BUFFERS {
+            let mut buf = BytesMut::with_capacity(frame_size);
+            buf.resize(frame_size, 0);
+            raw_frame_buffers_sender.send(buf).await.unwrap();
+        }
+
+        for _ in 0..MAXIMUM_ENCODED_FRAME_BUFFERS {
+            let mut buf = BytesMut::with_capacity(frame_size);
+            buf.resize(frame_size, 0);
+            encoded_frame_buffers_sender.send(buf).await.unwrap();
+        }
 
         let round_duration = Duration::from_secs(1);
         // let mut last_frame_transmission_time = 0;
@@ -83,22 +100,22 @@ impl SiloServerPipeline {
 
         let capture_handle = launch_capture_thread(
             spin_time,
-            raw_frame_buffers_pool.clone(),
+            raw_frame_buffers_receiver,
             capture_result_sender,
             self.config.frame_capturer,
         );
 
         let encode_handle = launch_encode_thread(
             self.config.encoder,
-            raw_frame_buffers_pool.clone(),
-            encoded_frame_buffers_pool.clone(),
+            raw_frame_buffers_sender,
+            encoded_frame_buffers_receiver,
             capture_result_receiver,
             encode_result_sender,
         );
 
         let transfer_handle = launch_transfer_thread(
             self.config.frame_sender,
-            encoded_frame_buffers_pool.clone(),
+            encoded_frame_buffers_sender,
             encode_result_receiver,
             transfer_result_sender,
         );

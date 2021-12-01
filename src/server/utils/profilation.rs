@@ -8,7 +8,7 @@ pub fn setup_round_stats(csv_profiling: bool, console_profiling: bool) -> Result
 
         TransmissionRoundStats {
             loggers: {
-                let mut loggers: Vec<Box<dyn TransmissionRoundLogger>> = Vec::new();
+                let mut loggers: Vec<Box<dyn TransmissionRoundLogger + Send>> = Vec::new();
 
                 if csv_profiling  {
                     loggers.push(Box::new(TransmissionRoundCSVLogger::new(

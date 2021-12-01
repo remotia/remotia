@@ -22,7 +22,7 @@ pub struct TransmissionRoundStats {
     pub start_time: Instant,
     pub profiled_frames: Vec<TransmittedFrameStats>,
 
-    pub loggers: Vec<Box<dyn TransmissionRoundLogger>>
+    pub loggers: Vec<Box<dyn TransmissionRoundLogger + Send>>
 }
 
 impl Default for TransmissionRoundStats {

@@ -65,6 +65,7 @@ pub fn launch_encode_thread(
                 frame_stats.encoding_time = encoding_start_time.elapsed().as_millis();
                 frame_stats.encoder_idle_time =
                     capture_result_wait_time + encoded_frame_buffer_wait_time;
+                frame_stats.capture_delay = capture_delay;
 
                 let send_result = encode_result_sender
                     .send(EncodeResult {

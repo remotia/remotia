@@ -46,6 +46,11 @@ impl TransmissionRoundLogger for TransmissionRoundConsoleLogger {
         );
 
         info!(
+            "Average capture delay: {}ms",
+            vec_avg!(field_vec!(profiled_frames, capture_delay, u128), u128)
+        );
+
+        info!(
             "Average total time: {}ms",
             vec_avg!(field_vec!(profiled_frames, total_time, u128), u128)
         );

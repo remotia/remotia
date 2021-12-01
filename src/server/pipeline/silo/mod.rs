@@ -60,7 +60,7 @@ impl SiloServerPipeline {
         let spin_time = 1000 / FPS;
 
         const MAXIMUM_CAPTURE_DELAY: u128 = 30;
-        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 16;
+        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 2;
         const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;
 
         let raw_frame_size = self.config.width * self.config.height * 3;

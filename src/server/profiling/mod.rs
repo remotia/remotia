@@ -19,6 +19,8 @@ pub struct TransmittedFrameStats {
     pub encoder_idle_time: u128,
     pub transferrer_idle_time: u128,
 
+    pub capture_delay: u128,
+
     pub encoded_size: usize,
 }
 

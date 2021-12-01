@@ -1,11 +1,9 @@
 use std::{sync::{Arc, Mutex}, thread, time::{Duration, Instant}};
 
 use bytes::BytesMut;
+use chrono::Utc;
 use log::{debug, info, warn};
-use tokio::{
-    sync::mpsc::{Receiver, Sender},
-    task::JoinHandle,
-};
+use tokio::{sync::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender}, task::JoinHandle};
 
 use crate::server::{
     capture::FrameCapturer, profiling::TransmittedFrameStats,
@@ -21,8 +19,8 @@ pub struct CaptureResult {
 
 pub fn launch_capture_thread(
     spin_time: i64,
-    mut raw_frame_buffers_receiver: Receiver<BytesMut>,
-    capture_result_sender: Sender<CaptureResult>,
+    mut raw_frame_buffers_receiver: UnboundedReceiver<BytesMut>,
+    capture_result_sender: UnboundedSender<CaptureResult>,
     mut frame_capturer: Box<dyn FrameCapturer + Send>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -31,10 +29,10 @@ pub fn launch_capture_thread(
         loop {
             debug!("Capturing frame...");
 
-            thread::sleep(Duration::from_millis(std::cmp::max(
+            tokio::time::sleep(Duration::from_millis(std::cmp::max(
                 0,
                 spin_time - last_frame_capture_time,
-            ) as u64));
+            ) as u64)).await;
 
             let raw_frame_buffer_wait_start_time = Instant::now();
             let raw_frame_buffer = raw_frame_buffers_receiver.recv().await;
@@ -68,8 +66,7 @@ pub fn launch_capture_thread(
                     capture_time: capture_start_time,
                     raw_frame_buffer,
                     frame_stats,
-                })
-                .await;
+                });
 
             if let Err(e) = send_result {
                 warn!("Capture result send error: {}", e);

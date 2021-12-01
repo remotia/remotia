@@ -8,7 +8,7 @@ mod transfer;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -60,32 +60,35 @@ impl SiloServerPipeline {
         let spin_time = 1000 / FPS;
 
         const MAXIMUM_CAPTURE_DELAY: u128 = 30;
-        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 8;
-        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 8;
+        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 16;
+        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;
 
         let raw_frame_size = self.config.width * self.config.height * 3;
         let maximum_encoded_frame_size = self.config.width * self.config.height * 3;
 
-        let (raw_frame_buffers_sender,  raw_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_RAW_FRAME_BUFFERS);
-        let (encoded_frame_buffers_sender,  encoded_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_ENCODED_FRAME_BUFFERS);
+        // let (raw_frame_buffers_sender,  raw_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_ENCODED_FRAME_BUFFERS);
+        // let (encoded_frame_buffers_sender,  encoded_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_ENCODED_FRAME_BUFFERS);
+
+        let (raw_frame_buffers_sender,  raw_frame_buffers_receiver,) = mpsc::unbounded_channel::<BytesMut>();
+        let (encoded_frame_buffers_sender,  encoded_frame_buffers_receiver,) = mpsc::unbounded_channel::<BytesMut>();
 
         for _ in 0..MAXIMUM_RAW_FRAME_BUFFERS {
             let mut buf = BytesMut::with_capacity(raw_frame_size);
             buf.resize(raw_frame_size, 0);
-            raw_frame_buffers_sender.send(buf).await.unwrap();
+            raw_frame_buffers_sender.send(buf).unwrap();
         }
 
         for _ in 0..MAXIMUM_ENCODED_FRAME_BUFFERS {
             let mut buf = BytesMut::with_capacity(maximum_encoded_frame_size);
             buf.resize(maximum_encoded_frame_size, 0);
-            encoded_frame_buffers_sender.send(buf).await.unwrap();
+            encoded_frame_buffers_sender.send(buf).unwrap();
         }
 
         let round_duration = Duration::from_secs(1);
 
-        let (capture_result_sender, capture_result_receiver) = mpsc::channel::<CaptureResult>(32);
-        let (encode_result_sender, encode_result_receiver) = mpsc::channel::<EncodeResult>(32);
-        let (transfer_result_sender, transfer_result_receiver) = mpsc::channel::<TransferResult>(32);
+        let (capture_result_sender, capture_result_receiver) = mpsc::unbounded_channel::<CaptureResult>();
+        let (encode_result_sender, encode_result_receiver) = mpsc::unbounded_channel::<EncodeResult>();
+        let (transfer_result_sender, transfer_result_receiver) = mpsc::unbounded_channel::<TransferResult>();
 
         let capture_handle = launch_capture_thread(
             spin_time,

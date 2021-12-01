@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use bytes::BytesMut;
 use log::debug;
-use tokio::{sync::mpsc::Receiver, task::JoinHandle};
+use tokio::{sync::mpsc::{Receiver, UnboundedReceiver}, task::JoinHandle};
 
 use crate::server::{profiling::{TransmissionRoundStats, TransmittedFrameStats}, utils::profilation::setup_round_stats};
 
@@ -15,7 +15,7 @@ use super::transfer::TransferResult;
 pub fn launch_profile_thread(
     csv_profiling: bool, 
     console_profiling: bool,
-    mut transfer_result_receiver: Receiver<TransferResult>,
+    mut transfer_result_receiver: UnboundedReceiver<TransferResult>,
     round_duration: Duration
 ) -> JoinHandle<()> {
     tokio::spawn(async move {

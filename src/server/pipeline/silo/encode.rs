@@ -4,7 +4,7 @@ use bytes::BytesMut;
 use log::{debug, info, warn};
 use object_pool::{Pool, Reusable};
 use tokio::{
-    sync::mpsc::{Receiver, Sender},
+    sync::mpsc::{Receiver, UnboundedSender, UnboundedReceiver},
     task::JoinHandle,
 };
 
@@ -19,11 +19,11 @@ pub struct EncodeResult {
 
 pub fn launch_encode_thread(
     mut encoder: Box<dyn Encoder + Send>,
-    raw_frame_buffers_sender: Sender<BytesMut>,
-    mut encoded_frame_buffers_receiver: Receiver<BytesMut>,
-    mut capture_result_receiver: Receiver<CaptureResult>,
-    encode_result_sender: Sender<EncodeResult>,
-    maximum_capture_delay: u128
+    raw_frame_buffers_sender: UnboundedSender<BytesMut>,
+    mut encoded_frame_buffers_receiver: UnboundedReceiver<BytesMut>,
+    mut capture_result_receiver: UnboundedReceiver<CaptureResult>,
+    encode_result_sender: UnboundedSender<EncodeResult>,
+    maximum_capture_delay: u128,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
@@ -70,8 +70,7 @@ pub fn launch_encode_thread(
                     .send(EncodeResult {
                         encoded_frame_buffer,
                         frame_stats,
-                    })
-                    .await;
+                    });
 
                 if let Err(_) = send_result {
                     warn!("Transfer result sender error");
@@ -81,7 +80,7 @@ pub fn launch_encode_thread(
                 debug!("Dropping frame (capture delay: {})", capture_delay);
             }
 
-            let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer).await;
+            let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer);
             if let Err(_) = buffer_return_result {
                 warn!("Buffer return error");
                 break;

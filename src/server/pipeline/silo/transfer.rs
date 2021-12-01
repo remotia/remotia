@@ -4,7 +4,7 @@ use std::time::Instant;
 use bytes::BytesMut;
 use log::{debug, warn};
 use object_pool::{Pool, Reusable};
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
 use crate::server::profiling::TransmittedFrameStats;
@@ -19,9 +19,9 @@ pub struct TransferResult {
 
 pub fn launch_transfer_thread(
     mut frame_sender: Box<dyn FrameSender + Send>,
-    encoded_frame_buffers_sender: Sender<BytesMut>,
-    mut encode_result_receiver: Receiver<EncodeResult>,
-    transfer_result_sender: Sender<TransferResult>,
+    encoded_frame_buffers_sender: UnboundedSender<BytesMut>,
+    mut encode_result_receiver: UnboundedReceiver<EncodeResult>,
+    transfer_result_sender: UnboundedSender<TransferResult>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
@@ -46,9 +46,7 @@ pub fn launch_transfer_thread(
                 .send_frame(&encoded_frame_buffer[..frame_stats.encoded_size])
                 .await;
 
-            let buffer_return_result = encoded_frame_buffers_sender
-                .send(encoded_frame_buffer)
-                .await;
+            let buffer_return_result = encoded_frame_buffers_sender.send(encoded_frame_buffer);
 
             if let Err(_) = buffer_return_result {
                 warn!("Buffer return error");
@@ -59,8 +57,7 @@ pub fn launch_transfer_thread(
             frame_stats.transferrer_idle_time = encode_result_wait_time;
 
             let send_result = transfer_result_sender
-                .send(TransferResult { frame_stats })
-                .await;
+                .send(TransferResult { frame_stats });
 
             if let Err(_) = send_result {
                 warn!("Transfer result sender error");

@@ -59,28 +59,29 @@ impl SiloServerPipeline {
         const FPS: i64 = 60;
         let spin_time = 1000 / FPS;
 
-        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 1;
-        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 1;
+        const MAXIMUM_CAPTURE_DELAY: u128 = 30;
+        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 8;
+        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 8;
 
-        let frame_size = self.config.width * self.config.height * 3;
+        let raw_frame_size = self.config.width * self.config.height * 3;
+        let maximum_encoded_frame_size = self.config.width * self.config.height * 3;
 
         let (raw_frame_buffers_sender,  raw_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_RAW_FRAME_BUFFERS);
         let (encoded_frame_buffers_sender,  encoded_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_ENCODED_FRAME_BUFFERS);
 
         for _ in 0..MAXIMUM_RAW_FRAME_BUFFERS {
-            let mut buf = BytesMut::with_capacity(frame_size);
-            buf.resize(frame_size, 0);
+            let mut buf = BytesMut::with_capacity(raw_frame_size);
+            buf.resize(raw_frame_size, 0);
             raw_frame_buffers_sender.send(buf).await.unwrap();
         }
 
         for _ in 0..MAXIMUM_ENCODED_FRAME_BUFFERS {
-            let mut buf = BytesMut::with_capacity(frame_size);
-            buf.resize(frame_size, 0);
+            let mut buf = BytesMut::with_capacity(maximum_encoded_frame_size);
+            buf.resize(maximum_encoded_frame_size, 0);
             encoded_frame_buffers_sender.send(buf).await.unwrap();
         }
 
         let round_duration = Duration::from_secs(1);
-        // let mut last_frame_transmission_time = 0;
 
         let (capture_result_sender, capture_result_receiver) = mpsc::channel::<CaptureResult>(32);
         let (encode_result_sender, encode_result_receiver) = mpsc::channel::<EncodeResult>(32);
@@ -99,6 +100,7 @@ impl SiloServerPipeline {
             encoded_frame_buffers_receiver,
             capture_result_receiver,
             encode_result_sender,
+            MAXIMUM_CAPTURE_DELAY
         );
 
         let transfer_handle = launch_transfer_thread(

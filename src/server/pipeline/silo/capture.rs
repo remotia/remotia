@@ -13,6 +13,8 @@ use crate::server::{
 };
 
 pub struct CaptureResult {
+    pub capture_time: Instant,
+
     pub raw_frame_buffer: BytesMut,
     pub frame_stats: TransmittedFrameStats,
 }
@@ -63,6 +65,7 @@ pub fn launch_capture_thread(
 
             let send_result = capture_result_sender
                 .send(CaptureResult {
+                    capture_time: capture_start_time,
                     raw_frame_buffer,
                     frame_stats,
                 })

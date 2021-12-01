@@ -1,4 +1,4 @@
-use std::{sync::{Arc, Mutex}, thread, time::{Duration, Instant}};
+use std::{sync::{Arc, Mutex}, thread, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
 
 use bytes::BytesMut;
 use chrono::Utc;
@@ -11,6 +11,7 @@ use crate::server::{
 };
 
 pub struct CaptureResult {
+    pub capture_timestamp: u128,
     pub capture_time: Instant,
 
     pub raw_frame_buffer: BytesMut,
@@ -47,6 +48,7 @@ pub fn launch_capture_thread(
 
             let capture_start_time = Instant::now();
 
+            let capture_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
             let result = frame_capturer.capture();
 
             debug!("Frame captured");
@@ -63,6 +65,7 @@ pub fn launch_capture_thread(
 
             let send_result = capture_result_sender
                 .send(CaptureResult {
+                    capture_timestamp,
                     capture_time: capture_start_time,
                     raw_frame_buffer,
                     frame_stats,

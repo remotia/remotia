@@ -43,7 +43,7 @@ pub fn launch_transfer_thread(
             let transfer_start_time = Instant::now();
 
             frame_sender
-                .send_frame(&encoded_frame_buffer[..frame_stats.encoded_size])
+                .send_frame(encode_result.capture_timestamp, &encoded_frame_buffer[..frame_stats.encoded_size])
                 .await;
 
             let buffer_return_result = encoded_frame_buffers_sender.send(encoded_frame_buffer);

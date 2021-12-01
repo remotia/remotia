@@ -21,9 +21,9 @@ use zstring::zstr;
 
 use crate::client::decode::Decoder;
 use crate::client::error::ClientError;
-use crate::client::profiling::ReceivedFrameStats;
 use crate::client::profiling::logging::console::ReceptionRoundConsoleLogger;
 use crate::client::profiling::logging::csv::ReceptionRoundCSVLogger;
+use crate::client::profiling::ReceivedFrameStats;
 use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
@@ -75,11 +75,18 @@ impl WaterfallClientPipeline {
 
         let mut state = WaterfallClientState {
             pixels: {
-                let surface_texture =
-                    SurfaceTexture::new(self.config.canvas_width, self.config.canvas_height, &window);
-                PixelsBuilder::new(self.config.canvas_width, self.config.canvas_height, surface_texture)
-                    .build()
-                    .unwrap()
+                let surface_texture = SurfaceTexture::new(
+                    self.config.canvas_width,
+                    self.config.canvas_height,
+                    &window,
+                );
+                PixelsBuilder::new(
+                    self.config.canvas_width,
+                    self.config.canvas_height,
+                    surface_texture,
+                )
+                .build()
+                .unwrap()
             },
             consecutive_connection_losses: 0,
             encoded_frame_buffer: vec![0 as u8; expected_frame_size],
@@ -99,10 +106,10 @@ impl WaterfallClientPipeline {
         let mut last_frame_dispatching_time = 0;
 
         loop {
-            std::thread::sleep(Duration::from_millis(std::cmp::max(
-                0,
-                spin_time - last_frame_dispatching_time,
-            ) as u64));
+            let current_frame_spin_time = spin_time - last_frame_dispatching_time;
+            std::thread::sleep(Duration::from_millis(
+                std::cmp::max(0, current_frame_spin_time) as u64,
+            ));
 
             let frame_dispatch_start_time = Instant::now();
 
@@ -126,14 +133,15 @@ impl WaterfallClientPipeline {
 
     async fn receive_frame(
         &mut self,
-        state: &mut WaterfallClientState
+        state: &mut WaterfallClientState,
     ) -> ControlFlow<(), ReceivedFrameStats> {
         debug!("Waiting for next frame...");
 
         let total_start_time = Instant::now();
 
         let reception_start_time = Instant::now();
-        let receive_result = self.config
+        let receive_result = self
+            .config
             .frame_receiver
             .receive_encoded_frame(&mut state.encoded_frame_buffer)
             .await;
@@ -163,7 +171,8 @@ impl WaterfallClientPipeline {
             handle_error(e, &mut state.consecutive_connection_losses);
         });
 
-        if state.consecutive_connection_losses >= self.config.maximum_consecutive_connection_losses {
+        if state.consecutive_connection_losses >= self.config.maximum_consecutive_connection_losses
+        {
             error!("Too much consecutive connection losses, closing stream");
             return ControlFlow::Break(());
         }
@@ -181,38 +190,40 @@ impl WaterfallClientPipeline {
 }
 
 fn handle_error(error: ClientError, consecutive_connection_losses: &mut u32) {
-        match error {
-            ClientError::InvalidWholeFrameHeader => *consecutive_connection_losses = 0,
-            ClientError::FFMpegSendPacketError => {
-                debug!("H264 Send packet error")
-            }
-            _ => *consecutive_connection_losses += 1,
+    match error {
+        ClientError::InvalidWholeFrameHeader | ClientError::StaleFrame => {
+            *consecutive_connection_losses = 0
         }
-
-        debug!(
-            "Error while receiving frame: {}, dropping (consecutive connection losses: {})",
-            error, consecutive_connection_losses
-        );
+        ClientError::FFMpegSendPacketError => {
+            debug!("H264 Send packet error")
+        }
+        _ => *consecutive_connection_losses += 1,
     }
 
-    fn decode_task(
-        decoder: &mut Box<dyn Decoder>,
-        encoded_frame_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
-        debug!("Decoding {} received bytes", encoded_frame_buffer.len());
-        decoder.decode(encoded_frame_buffer)
-    }
+    debug!(
+        "Error while receiving frame: {}, dropping (consecutive connection losses: {})",
+        error, consecutive_connection_losses
+    );
+}
 
-    fn render_task(
-        decoder: &mut Box<dyn Decoder>,
-        pixels: &mut Pixels,
-        consecutive_connection_losses: &mut u32,
-    ) -> Result<(), ClientError> {
-        packed_bgr_to_packed_rgba(decoder.get_decoded_frame(), pixels.get_frame());
+fn decode_task(
+    decoder: &mut Box<dyn Decoder>,
+    encoded_frame_buffer: &mut [u8],
+) -> Result<usize, ClientError> {
+    debug!("Decoding {} received bytes", encoded_frame_buffer.len());
+    decoder.decode(encoded_frame_buffer)
+}
 
-        *consecutive_connection_losses = 0;
-        pixels.render().unwrap();
-        debug!("[SUCCESS] Frame rendered on screen");
+fn render_task(
+    decoder: &mut Box<dyn Decoder>,
+    pixels: &mut Pixels,
+    consecutive_connection_losses: &mut u32,
+) -> Result<(), ClientError> {
+    packed_bgr_to_packed_rgba(decoder.get_decoded_frame(), pixels.get_frame());
 
-        Ok(())
-    }
+    *consecutive_connection_losses = 0;
+    pixels.render().unwrap();
+    debug!("[SUCCESS] Frame rendered on screen");
+
+    Ok(())
+}

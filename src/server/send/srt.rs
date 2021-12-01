@@ -60,9 +60,12 @@ impl SRTFrameSender {
         }
     }
 
-    async fn send_frame_body(&mut self, frame_buffer: &[u8]) -> Result<(), ServerError> {
+    async fn send_frame_body(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) -> Result<(), ServerError> {
         debug!("Sending frame body...");
-        self.send_with_timeout(frame_buffer.to_vec()).await
+        self.send_with_timeout(FrameBody {
+            capture_timestamp,
+            frame_pixels: frame_buffer.to_vec(),
+        }).await
     }
 }
 
@@ -76,7 +79,7 @@ macro_rules! phase {
 
 #[async_trait]
 impl FrameSender for SRTFrameSender {
-    async fn send_frame(&mut self, frame_buffer: &[u8]) {
-        phase!(self.send_frame_body(frame_buffer));
+    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) {
+        phase!(self.send_frame_body(capture_timestamp, frame_buffer));
     }
 }

@@ -13,6 +13,8 @@ use crate::server::{encode::Encoder, profiling::TransmittedFrameStats};
 use super::capture::CaptureResult;
 
 pub struct EncodeResult {
+    pub capture_timestamp: u128,
+
     pub encoded_frame_buffer: BytesMut,
     pub frame_stats: TransmittedFrameStats,
 }
@@ -69,6 +71,7 @@ pub fn launch_encode_thread(
 
                 let send_result = encode_result_sender
                     .send(EncodeResult {
+                        capture_timestamp: capture_result.capture_timestamp,
                         encoded_frame_buffer,
                         frame_stats,
                     });

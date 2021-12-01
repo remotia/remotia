@@ -7,5 +7,6 @@ pub struct FrameHeader {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FrameBody {
+    pub capture_timestamp: u128,
     pub frame_pixels: Vec<u8>
 }

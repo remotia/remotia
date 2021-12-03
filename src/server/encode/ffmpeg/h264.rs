@@ -26,7 +26,7 @@ pub struct H264Encoder {
 
 // TODO: Evaluate a safer way to move the encoder to another thread
 // Necessary for multi-threaded pipelines
-unsafe impl Send for H264Encoder { }
+unsafe impl Send for H264Encoder {}
 
 impl H264Encoder {
     pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
@@ -44,7 +44,8 @@ impl H264Encoder {
                 encode_context.set_framerate(ffi::AVRational { num: 60, den: 1 });
                 encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV420P);
 
-                let options = AVDictionary::new(cstr!("preset"), cstr!("ultrafast"), 0)
+                let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
+                    .set(cstr!("preset"), cstr!("ultrafast"), 0)
                     .set(cstr!("tune"), cstr!("zerolatency"), 0);
 
                 encode_context.open(Some(options)).unwrap();

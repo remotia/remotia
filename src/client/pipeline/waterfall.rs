@@ -100,21 +100,23 @@ impl WaterfallClientPipeline {
         let mut round_stats =
             setup_round_stats(self.config.csv_profiling, self.config.console_profiling).unwrap();
 
-        const FPS: i64 = 60;
-        let spin_time = 1000 / FPS;
+        const TARGET_FPS: f64 = 60.0;
+        let mut fps: f64 = recalculate_fps(0.0, TARGET_FPS, None);
 
         let mut last_frame_dispatching_time = 0;
 
         loop {
-            let current_frame_spin_time = spin_time - last_frame_dispatching_time;
+            let spin_time = (1000 / (fps as i64)) - last_frame_dispatching_time;
             std::thread::sleep(Duration::from_millis(
-                std::cmp::max(0, current_frame_spin_time) as u64,
+                std::cmp::max(0, spin_time) as u64,
             ));
 
             let frame_dispatch_start_time = Instant::now();
 
             match self.receive_frame(&mut state).await {
                 ControlFlow::Continue(frame_stats) => {
+                    fps = recalculate_fps(fps, TARGET_FPS, frame_stats.error.as_ref());
+
                     round_stats.profile_frame(frame_stats);
 
                     let current_round_duration = round_stats.start_time.elapsed();
@@ -166,12 +168,13 @@ impl WaterfallClientPipeline {
         });
         let rendering_time = rendering_start_time.elapsed().as_millis();
 
-        let error = render_result.map_or_else(|e| {
-            handle_error(&e, &mut state.consecutive_connection_losses);
-            Some(e)
-        }, |_| {
-            None
-        });
+        let error = render_result.map_or_else(
+            |e| {
+                handle_error(&e, &mut state.consecutive_connection_losses);
+                Some(e)
+            },
+            |_| None,
+        );
 
         if state.consecutive_connection_losses >= self.config.maximum_consecutive_connection_losses
         {
@@ -186,8 +189,21 @@ impl WaterfallClientPipeline {
             decoding_time,
             rendering_time,
             total_time,
-            error
+            error,
         })
+    }
+}
+
+fn recalculate_fps(current_fps: f64, target_fps: f64, frame_error: Option<&ClientError>) -> f64 {
+    if let Some(error) = frame_error {
+        match error {
+            ClientError::Timeout => current_fps * 0.6,
+            _ => current_fps,
+        }
+    } else {
+        let fps_increment = (target_fps - current_fps) / 2.0;
+        let next_round_fps = current_fps + fps_increment;
+        next_round_fps
     }
 }
 

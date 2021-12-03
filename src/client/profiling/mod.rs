@@ -7,6 +7,8 @@ use serde::Serialize;
 
 use self::logging::{ReceptionRoundLogger, console::ReceptionRoundConsoleLogger};
 
+use super::error::ClientError;
+
 #[derive(Serialize)]
 pub struct ReceivedFrameStats {
     pub reception_time: u128,
@@ -14,7 +16,7 @@ pub struct ReceivedFrameStats {
     pub rendering_time: u128,
     pub total_time: u128,
 
-    pub rendered: bool,
+    pub error: Option<ClientError>,
 }
 
 pub struct ReceptionRoundStats {

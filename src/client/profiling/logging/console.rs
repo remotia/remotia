@@ -1,28 +1,52 @@
 use log::info;
 
-use crate::{client::profiling::{ReceptionRoundStats, ReceivedFrameStats}, field_vec, vec_avg};
+use crate::{
+    client::{
+        error::ClientError,
+        profiling::{ReceivedFrameStats, ReceptionRoundStats},
+    },
+    field_vec, vec_avg,
+};
 
 use super::ReceptionRoundLogger;
 
+macro_rules! is_error_of_type {
+    ($frame_error: expr, $expected_error: path) => {
+        if let Some(error) = $frame_error {
+            let result = match error {
+                $expected_error => true,
+                _ => false,
+            };
+
+            result
+        } else {
+            false
+        }
+    };
+}
+
 #[derive(Default)]
-pub struct ReceptionRoundConsoleLogger { }
+pub struct ReceptionRoundConsoleLogger {}
 
 impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
     fn log(&mut self, profiled_frames: &Vec<ReceivedFrameStats>) {
         info!("Reception round stats: ");
 
-        info!(
-            "Received {} frames",
-            profiled_frames.len(),
-        );
+        info!("Received {} frames", profiled_frames.len(),);
 
-        info!(
-            "Dropped frames: {}",
-            profiled_frames
-                .iter()
-                .filter(|frame| !frame.rendered)
-                .count()
-        );
+        let dropped_frames = profiled_frames
+            .iter()
+            .filter(|frame| frame.error.is_some())
+            .count();
+
+        info!("Total dropped frames: {}, of which:", dropped_frames);
+
+        let timed_out_frames = profiled_frames
+            .iter()
+            .filter(|frame| is_error_of_type!(&frame.error, ClientError::Timeout))
+            .count();
+
+        info!("Timeouts: {}", timed_out_frames);
 
         info!(
             "Average reception time: {}ms",

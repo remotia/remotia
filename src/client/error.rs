@@ -1,6 +1,7 @@
+use serde::Serialize;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize, Clone, PartialEq, Eq)]
 pub enum ClientError {
     #[error("Invalid whole frame header")]
     InvalidWholeFrameHeader,

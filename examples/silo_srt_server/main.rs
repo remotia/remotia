@@ -49,13 +49,15 @@ async fn main() -> std::io::Result<()> {
         .await,
     );
 
-    let pipeline = SiloServerPipeline::new(SiloServerConfiguration {
-        frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),
-        encoder: Box::new(H264Encoder::new(
+    let encoder = Box::new(H264Encoder::new(
             frame_size as usize,
             width as i32,
             height as i32,
-        )),
+        ));
+
+    let pipeline = SiloServerPipeline::new(SiloServerConfiguration {
+        frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),
+        encoder: encoder,
         frame_sender: srt_sender,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,

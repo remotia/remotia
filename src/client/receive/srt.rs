@@ -67,13 +67,13 @@ impl SRTFrameReceiver {
                     let frame_buffer = &mut frame_buffer[..body.frame_pixels.len()];
                     frame_buffer.copy_from_slice(&body.frame_pixels);
 
-                    let frame_delay = SystemTime::now()
+                    /*let frame_delay = SystemTime::now()
                         .duration_since(UNIX_EPOCH)
                         .unwrap()
                         .as_millis()
                         - body.capture_timestamp;
 
-                    info!("Frame delay: {}", frame_delay);
+                    info!("Frame delay: {}", frame_delay);*/
 
                     /*if frame_delay > 150 {
                         debug!("Stale frame");
@@ -87,7 +87,7 @@ impl SRTFrameReceiver {
                     Err(ClientError::InvalidPacket)
                 }
             },
-            Err(_e) => Err(ClientError::InvalidPacket),
+            Err(e) => Err(e),
         }
     }
 }

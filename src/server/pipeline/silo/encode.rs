@@ -46,8 +46,6 @@ pub fn launch_encode_thread(
             let raw_frame_buffer = capture_result.raw_frame_buffer;
 
             if capture_delay < maximum_capture_delay {
-                let encoding_start_time = Instant::now();
-
                 let mut frame_stats = capture_result.frame_stats;
 
                 let encoded_frame_buffer_wait_start_time = Instant::now();
@@ -60,6 +58,8 @@ pub fn launch_encode_thread(
                     break;
                 }
                 let mut encoded_frame_buffer = encoded_frame_buffer.unwrap();
+
+                let encoding_start_time = Instant::now();
 
                 frame_stats.encoded_size =
                     encoder.encode(&raw_frame_buffer, &mut encoded_frame_buffer);

@@ -166,9 +166,11 @@ impl WaterfallClientPipeline {
         });
         let rendering_time = rendering_start_time.elapsed().as_millis();
 
-        let rendered = render_result.is_ok();
-        render_result.unwrap_or_else(|e| {
-            handle_error(e, &mut state.consecutive_connection_losses);
+        let error = render_result.map_or_else(|e| {
+            handle_error(&e, &mut state.consecutive_connection_losses);
+            Some(e)
+        }, |_| {
+            None
         });
 
         if state.consecutive_connection_losses >= self.config.maximum_consecutive_connection_losses
@@ -184,12 +186,12 @@ impl WaterfallClientPipeline {
             decoding_time,
             rendering_time,
             total_time,
-            rendered,
+            error
         })
     }
 }
 
-fn handle_error(error: ClientError, consecutive_connection_losses: &mut u32) {
+fn handle_error(error: &ClientError, consecutive_connection_losses: &mut u32) {
     match error {
         ClientError::InvalidWholeFrameHeader | ClientError::StaleFrame => {
             *consecutive_connection_losses = 0

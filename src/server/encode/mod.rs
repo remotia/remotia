@@ -1,4 +1,4 @@
-// pub mod identity;
+pub mod identity;
 pub mod ffmpeg;
 // pub mod yuv420p;
 

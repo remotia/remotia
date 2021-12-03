@@ -7,6 +7,8 @@ use std::ops::ControlFlow;
 use std::str::FromStr;
 use std::time::Duration;
 use std::time::Instant;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 use beryllium::*;
 
@@ -149,11 +151,24 @@ impl WaterfallClientPipeline {
             .await;
         let reception_time = reception_start_time.elapsed().as_millis();
 
+        let frame_delay = if receive_result.is_ok() {
+            let capture_timestamp = receive_result.as_ref().unwrap().capture_timestamp;
+            let frame_delay = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                        - capture_timestamp;
+
+            frame_delay
+        } else {
+            0
+        };
+
         let decoding_start_time = Instant::now();
-        let decode_result = receive_result.and_then(|received_data_length| {
+        let decode_result = receive_result.and_then(|received_frame| {
             decode_task(
                 &mut self.config.decoder,
-                &mut state.encoded_frame_buffer[..received_data_length],
+                &mut state.encoded_frame_buffer[..received_frame.buffer_size],
             )
         });
         let decoding_time = decoding_start_time.elapsed().as_millis();
@@ -184,11 +199,13 @@ impl WaterfallClientPipeline {
 
         let total_time = total_start_time.elapsed().as_millis();
 
+
         ControlFlow::Continue(ReceivedFrameStats {
             reception_time,
             decoding_time,
             rendering_time,
             total_time,
+            frame_delay,
             error,
         })
     }

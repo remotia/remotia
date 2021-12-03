@@ -13,7 +13,7 @@ use crate::{
     common::network::{FrameBody, FrameHeader},
 };
 
-use super::FrameReceiver;
+use super::{FrameReceiver, ReceivedFrame};
 
 pub struct SRTFrameReceiver {
     socket: SrtSocket,
@@ -58,7 +58,7 @@ impl SRTFrameReceiver {
     async fn receive_frame_pixels(
         &mut self,
         frame_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
+    ) -> Result<ReceivedFrame, ClientError> {
         debug!("Receiving encoded frame bytes...");
 
         match self.receive_with_timeout().await {
@@ -80,7 +80,10 @@ impl SRTFrameReceiver {
                         return Err(ClientError::StaleFrame);
                     }*/
 
-                    Ok(frame_buffer.len())
+                    Ok(ReceivedFrame {
+                        buffer_size: frame_buffer.len(),
+                        capture_timestamp: body.capture_timestamp,
+                    })
                 }
                 Err(err) => {
                     warn!("Corrupted body ({:?})", err);
@@ -97,7 +100,7 @@ impl FrameReceiver for SRTFrameReceiver {
     async fn receive_encoded_frame(
         &mut self,
         frame_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
+    ) -> Result<ReceivedFrame, ClientError> {
         self.receive_frame_pixels(frame_buffer).await
     }
 }

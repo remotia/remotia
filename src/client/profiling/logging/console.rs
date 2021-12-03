@@ -32,12 +32,14 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
     fn log(&mut self, profiled_frames: &Vec<ReceivedFrameStats>) {
         info!("Reception round stats: ");
 
-        info!("Received {} frames", profiled_frames.len(),);
+        info!("Profiled {} frame receptions", profiled_frames.len());
 
         let dropped_frames = profiled_frames
             .iter()
             .filter(|frame| frame.error.is_some())
             .count();
+
+        info!("Total rendered frames: {}", profiled_frames.len() - dropped_frames);
 
         info!("Total dropped frames: {}, of which:", dropped_frames);
 
@@ -66,6 +68,11 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
         info!(
             "Average total time: {}ms",
             vec_avg!(field_vec!(profiled_frames, total_time, u128), u128)
+        );
+
+        info!(
+            "Average frame delay: {}ms",
+            vec_avg!(field_vec!(profiled_frames, frame_delay, u128), u128)
         );
     }
 }

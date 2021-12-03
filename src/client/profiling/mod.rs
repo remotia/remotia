@@ -16,6 +16,8 @@ pub struct ReceivedFrameStats {
     pub rendering_time: u128,
     pub total_time: u128,
 
+    pub frame_delay: u128,
+
     pub error: Option<ClientError>,
 }
 

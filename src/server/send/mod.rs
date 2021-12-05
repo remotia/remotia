@@ -5,7 +5,7 @@ use std::time::Instant;
 use async_trait::async_trait;
 
 // pub mod udp;
-// pub mod tcp;
+pub mod tcp;
 pub mod srt;
 
 #[async_trait]

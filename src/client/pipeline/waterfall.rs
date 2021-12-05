@@ -108,7 +108,7 @@ impl WaterfallClientPipeline {
         let mut last_frame_dispatching_time = 0;
 
         loop {
-            let spin_time = (1000 / (fps as i64)) - last_frame_dispatching_time;
+            let spin_time = (1000 / std::cmp::max(fps as i64, 1)) - last_frame_dispatching_time;
             std::thread::sleep(Duration::from_millis(
                 std::cmp::max(0, spin_time) as u64,
             ));

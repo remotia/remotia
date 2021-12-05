@@ -1,6 +1,9 @@
 use std::{io::Write, net::TcpStream};
 
 use async_trait::async_trait;
+use bytes::Bytes;
+
+use crate::common::network::FrameBody;
 
 use super::FrameSender;
 
@@ -25,8 +28,16 @@ impl TCPFrameSender {
 
 #[async_trait]
 impl FrameSender for TCPFrameSender {
-    async fn send_frame(&mut self, frame_buffer: & [u8]) {
-        self.send_packet_header(frame_buffer.len());
-        self.stream.write_all(frame_buffer).unwrap();
+    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) {
+        let frame_body = FrameBody {
+            capture_timestamp,
+            frame_pixels: frame_buffer.to_vec(),
+        };
+
+        let binarized_obj = Bytes::from(bincode::serialize(&frame_body).unwrap());
+
+        self.send_packet_header(binarized_obj.len());
+
+        self.stream.write_all(&binarized_obj).unwrap();
     }
 }

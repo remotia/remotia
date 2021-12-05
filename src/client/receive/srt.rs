@@ -1,4 +1,8 @@
-use std::{io::Read, net::TcpStream, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
+use std::{
+    io::Read,
+    net::TcpStream,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+};
 
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -19,7 +23,7 @@ pub struct SRTFrameReceiver {
     socket: SrtSocket,
 
     timeout: Duration,
-    last_receive: Instant
+    last_receive: Instant,
 }
 
 impl SRTFrameReceiver {
@@ -33,7 +37,11 @@ impl SRTFrameReceiver {
 
         info!("Connected");
 
-        Self { socket, timeout, last_receive: Instant::now() }
+        Self {
+            socket,
+            timeout,
+            last_receive: Instant::now(),
+        }
     }
 
     async fn receive_with_timeout(&mut self) -> Result<Bytes, ClientError> {
@@ -79,6 +87,15 @@ impl SRTFrameReceiver {
                         debug!("Stale frame");
                         return Err(ClientError::StaleFrame);
                     }*/
+
+                    info!(
+                        "Received buffer size: {}, Timestamp: {:?}",
+                        frame_buffer.len(),
+                        SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis()
+                    );
 
                     Ok(ReceivedFrame {
                         buffer_size: frame_buffer.len(),

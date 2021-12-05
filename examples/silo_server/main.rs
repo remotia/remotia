@@ -1,17 +1,10 @@
 extern crate scrap;
 
-use std::time::Duration;
+use std::{net::TcpListener, time::Duration};
 
 use clap::Parser;
-use remotia::{
-    common::command_line::parse_canvas_resolution_str,
-    server::{
-        capture::scrap::ScrapFrameCapturer,
-        encode::ffmpeg::h264::H264Encoder,
-        pipeline::silo::{SiloServerConfiguration, SiloServerPipeline},
-        send::srt::SRTFrameSender,
-    },
-};
+use log::info;
+use remotia::{common::command_line::parse_canvas_resolution_str, server::{capture::scrap::ScrapFrameCapturer, encode::ffmpeg::h264::H264Encoder, pipeline::silo::{SiloServerConfiguration, SiloServerPipeline}, send::{srt::SRTFrameSender, tcp::TCPFrameSender}}};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -40,30 +33,36 @@ async fn main() -> std::io::Result<()> {
 
     let frame_size = width * height * 3;
 
-    let srt_sender = Box::new(
+    /*let frame_sender = Box::new(
         SRTFrameSender::new(
             5001,
             Duration::from_millis(options.latency),
             Duration::from_millis(options.timeout),
         )
         .await,
-    );
+    );*/
+
+    let listener = TcpListener::bind("127.0.0.1:5001")?;
+    info!("Waiting for client connection...");
+    let (stream, _client_address) = listener.accept()?;
+
+    let frame_sender = Box::new(TCPFrameSender::new(stream));
 
     let encoder = Box::new(H264Encoder::new(
-            frame_size as usize,
-            width as i32,
-            height as i32,
-        ));
+        frame_size as usize,
+        width as i32,
+        height as i32,
+    ));
 
     let pipeline = SiloServerPipeline::new(SiloServerConfiguration {
         frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),
         encoder: encoder,
-        frame_sender: srt_sender,
+        frame_sender: frame_sender,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
 
         width: width as usize,
-        height: height as usize
+        height: height as usize,
     });
 
     pipeline.run().await;

@@ -1,7 +1,7 @@
 use std::{
     io::Write,
     net::TcpStream,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use async_trait::async_trait;
@@ -60,12 +60,17 @@ impl SRTFrameSender {
         }
     }
 
-    async fn send_frame_body(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) -> Result<(), ServerError> {
+    async fn send_frame_body(
+        &mut self,
+        capture_timestamp: u128,
+        frame_buffer: &[u8],
+    ) -> Result<(), ServerError> {
         debug!("Sending frame body...");
         self.send_with_timeout(FrameBody {
             capture_timestamp,
             frame_pixels: frame_buffer.to_vec(),
-        }).await
+        })
+        .await
     }
 }
 
@@ -81,5 +86,13 @@ macro_rules! phase {
 impl FrameSender for SRTFrameSender {
     async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) {
         phase!(self.send_frame_body(capture_timestamp, frame_buffer));
+        info!(
+            "Buffer size: {}, Timestamp: {:?}",
+            frame_buffer.len(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+        );
     }
 }

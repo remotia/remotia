@@ -3,13 +3,10 @@ use std::{
     time::Duration,
 };
 
-use remotia::client::{
-    decode::{
+use crate::client::{decode::{
         h264::H264Decoder, h264rgb::H264RGBDecoder, h265::H265Decoder, identity::IdentityDecoder,
         yuv420p::YUV420PDecoder, Decoder,
-    },
-    receive::{tcp::TCPFrameReceiver, udp::UDPFrameReceiver, FrameReceiver},
-};
+    }, receive::{FrameReceiver, srt::SRTFrameReceiver, tcp::TCPFrameReceiver, udp::UDPFrameReceiver}};
 
 pub fn setup_decoder_from_name(
     canvas_width: u32,
@@ -43,7 +40,7 @@ pub fn setup_decoder_from_name(
     decoder
 }
 
-pub fn setup_frame_receiver_by_name(
+pub async fn setup_frame_receiver_by_name(
     server_address: SocketAddr,
     binding_port: &str,
     frame_receiver_name: &str,
@@ -65,6 +62,16 @@ pub fn setup_frame_receiver_by_name(
         "tcp" => {
             let stream = TcpStream::connect(server_address)?;
             Ok(Box::new(TCPFrameReceiver::create(stream)))
+        }
+        "srt" => {
+            Ok(Box::new(
+                SRTFrameReceiver::new(
+                    &server_address.to_string(),
+                    Duration::from_millis(100),
+                    Duration::from_millis(50),
+                )
+                .await
+            ))
         }
         _ => panic!("Unknown frame receiver name"),
     }

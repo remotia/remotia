@@ -6,7 +6,7 @@ use log::debug;
 
 use crate::client::error::ClientError;
 
-use super::FrameReceiver;
+use super::{FrameReceiver, ReceivedFrame};
 
 pub struct UDPFrameReceiver {
     socket: UdpSocket,
@@ -114,11 +114,14 @@ impl UDPFrameReceiver {
 
 #[async_trait]
 impl FrameReceiver for UDPFrameReceiver {
-    async fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
+    async fn receive_encoded_frame(&mut self, encoded_frame_buffer: & mut[u8]) -> Result<ReceivedFrame, ClientError> {
         self.receive_whole_frame_header()?;
         self.send_whole_frame_header_receipt();
-        self.receive_frame_pixels(frame_buffer)?;
+        self.receive_frame_pixels(encoded_frame_buffer)?;
 
-        Ok(frame_buffer.len())
+        Ok(ReceivedFrame {
+            buffer_size: 0,
+            capture_timestamp: 0
+        })
     }
 }

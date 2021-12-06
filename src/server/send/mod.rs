@@ -7,6 +7,7 @@ use async_trait::async_trait;
 // pub mod udp;
 pub mod tcp;
 pub mod srt;
+pub mod srt_manual_fragmentation;
 
 #[async_trait]
 pub trait FrameSender {

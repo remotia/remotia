@@ -10,7 +10,8 @@ pub mod srt;
 
 pub struct ReceivedFrame {
     pub buffer_size: usize,
-    pub capture_timestamp: u128
+    pub capture_timestamp: u128,
+    pub reception_delay: u128
 }
 
 #[async_trait]

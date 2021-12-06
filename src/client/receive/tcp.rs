@@ -66,7 +66,8 @@ impl TCPFrameReceiver {
 
         Ok(ReceivedFrame {
             buffer_size: total_read_bytes,
-            capture_timestamp: frame_body.capture_timestamp
+            capture_timestamp: frame_body.capture_timestamp,
+            reception_delay: 0
         })
     }
 }

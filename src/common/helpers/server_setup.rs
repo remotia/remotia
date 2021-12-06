@@ -63,7 +63,7 @@ pub async fn setup_frame_sender_by_name(
             Ok(Box::new(
                 SRTFrameSender::new(
                     5001,
-                    Duration::from_millis(100),
+                    Duration::from_millis(10),
                     Duration::from_millis(50),
                 )
                 .await,

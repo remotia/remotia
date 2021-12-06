@@ -86,7 +86,7 @@ macro_rules! phase {
 impl FrameSender for SRTFrameSender {
     async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) {
         phase!(self.send_frame_body(capture_timestamp, frame_buffer));
-        info!(
+        debug!(
             "Buffer size: {}, Timestamp: {:?}",
             frame_buffer.len(),
             SystemTime::now()

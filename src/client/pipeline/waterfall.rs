@@ -151,17 +151,19 @@ impl WaterfallClientPipeline {
             .await;
         let reception_time = reception_start_time.elapsed().as_millis();
 
-        let frame_delay = if receive_result.is_ok() {
-            let capture_timestamp = receive_result.as_ref().unwrap().capture_timestamp;
+        let (reception_delay, frame_delay) = if receive_result.is_ok() {
+            let received_frame= receive_result.as_ref().unwrap();
+            let capture_timestamp = received_frame.capture_timestamp;
             let frame_delay = SystemTime::now()
                         .duration_since(UNIX_EPOCH)
                         .unwrap()
                         .as_millis()
                         - capture_timestamp;
 
-            frame_delay
+
+            (received_frame.reception_delay, frame_delay)
         } else {
-            0
+            (0, 0)
         };
 
         let decoding_start_time = Instant::now();
@@ -206,6 +208,7 @@ impl WaterfallClientPipeline {
             rendering_time,
             total_time,
             frame_delay,
+            reception_delay,
             error,
         })
     }

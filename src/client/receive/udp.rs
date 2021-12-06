@@ -121,7 +121,8 @@ impl FrameReceiver for UDPFrameReceiver {
 
         Ok(ReceivedFrame {
             buffer_size: 0,
-            capture_timestamp: 0
+            capture_timestamp: 0,
+            reception_delay: 0
         })
     }
 }

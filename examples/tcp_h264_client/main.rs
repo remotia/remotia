@@ -50,6 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas_width: canvas_width,
         canvas_height: canvas_height,
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
+        target_fps: 60,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
     });

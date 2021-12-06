@@ -40,6 +40,8 @@ pub struct WaterfallClientConfiguration {
 
     pub maximum_consecutive_connection_losses: u32,
 
+    pub target_fps: u32,
+
     pub console_profiling: bool,
     pub csv_profiling: bool,
 }
@@ -102,8 +104,8 @@ impl WaterfallClientPipeline {
         let mut round_stats =
             setup_round_stats(self.config.csv_profiling, self.config.console_profiling).unwrap();
 
-        const TARGET_FPS: f64 = 60.0;
-        let mut fps: f64 = recalculate_fps(0.0, TARGET_FPS, None);
+        let target_fps = self.config.target_fps as f64;
+        let mut fps: f64 = recalculate_fps(0.0, target_fps, None);
 
         let mut last_frame_dispatching_time = 0;
 
@@ -117,7 +119,7 @@ impl WaterfallClientPipeline {
 
             match self.receive_frame(&mut state).await {
                 ControlFlow::Continue(frame_stats) => {
-                    fps = recalculate_fps(fps, TARGET_FPS, frame_stats.error.as_ref());
+                    fps = recalculate_fps(fps, target_fps, frame_stats.error.as_ref());
 
                     round_stats.profile_frame(frame_stats);
 

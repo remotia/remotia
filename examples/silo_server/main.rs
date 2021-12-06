@@ -1,9 +1,6 @@
 extern crate scrap;
 
-use std::{net::TcpListener, time::Duration};
-
 use clap::Parser;
-use log::info;
 use remotia::{
     common::{
         command_line::parse_canvas_resolution_str,
@@ -11,9 +8,7 @@ use remotia::{
     },
     server::{
         capture::scrap::ScrapFrameCapturer,
-        encode::ffmpeg::h264::H264Encoder,
         pipeline::silo::{SiloServerConfiguration, SiloServerPipeline},
-        send::{srt::SRTFrameSender, tcp::TCPFrameSender},
     },
 };
 
@@ -34,6 +29,9 @@ pub struct CommandLineServerOptions {
 
     #[clap(long)]
     csv_profiling: bool,
+
+    #[clap(long, default_value = "60")]
+    target_fps: u32,
 
     #[clap(long, default_value = "100")]
     latency: u64,
@@ -59,6 +57,8 @@ async fn main() -> std::io::Result<()> {
         frame_sender: frame_sender,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
+
+        target_fps: options.target_fps,
 
         width: width as usize,
         height: height as usize,

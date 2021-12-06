@@ -42,6 +42,8 @@ pub struct SiloServerConfiguration {
     pub console_profiling: bool,
     pub csv_profiling: bool,
 
+    pub target_fps: u32,
+
     pub width: usize,
     pub height: usize,
 }
@@ -56,8 +58,7 @@ impl SiloServerPipeline {
     }
 
     pub async fn run(self) {
-        const FPS: i64 = 60;
-        let spin_time = 1000 / FPS;
+        let spin_time = (1000 / self.config.target_fps) as i64;
 
         const MAXIMUM_CAPTURE_DELAY: u128 = 30;
         const MAXIMUM_RAW_FRAME_BUFFERS: usize = 64;

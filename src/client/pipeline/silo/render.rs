@@ -30,6 +30,8 @@ pub fn launch_render_thread(
         let target_fps = target_fps as f64;
         let mut fps: f64 = recalculate_fps(0.0, target_fps, None);
 
+        let mut last_spin_time: u64 = 0;
+
         loop {
             let frame_dispatch_start_time = Instant::now();
 
@@ -71,6 +73,7 @@ pub fn launch_render_thread(
             frame_stats.rendering_time = rendering_time;
             frame_stats.frame_delay = frame_delay;
             frame_stats.renderer_idle_time = decode_result_wait_time;
+            frame_stats.spin_time = last_spin_time; 
 
             fps = recalculate_fps(fps, target_fps, frame_stats.error.as_ref());
 
@@ -87,7 +90,8 @@ pub fn launch_render_thread(
             };
 
             let spin_time = (1000 / std::cmp::max(fps as i64, 1)) - frame_dispatch_time;
-            tokio::time::sleep(Duration::from_millis(std::cmp::max(0, spin_time) as u64)).await;
+            last_spin_time = std::cmp::max(0, spin_time) as u64;
+            tokio::time::sleep(Duration::from_millis(last_spin_time)).await;
         }
     })
 }

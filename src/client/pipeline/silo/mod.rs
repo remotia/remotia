@@ -142,6 +142,7 @@ impl SiloClientPipeline {
         );
 
         let render_handle = launch_render_thread(
+            self.config.target_fps,
             pixels,
             raw_frame_buffers_sender,
             decode_result_receiver,

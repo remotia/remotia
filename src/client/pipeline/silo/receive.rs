@@ -35,42 +35,25 @@ pub fn launch_receive_thread(
 
             let mut encoded_frame_buffer = encoded_frame_buffer.unwrap();
 
-            let (reception_time, reception_delay, frame_delay, received_frame) = loop {
-                let reception_start_time = Instant::now();
-                let receive_result = frame_receiver
-                    .receive_encoded_frame(&mut encoded_frame_buffer)
-                    .await;
-                let reception_time = reception_start_time.elapsed().as_millis();
+            let reception_start_time = Instant::now();
+            let receive_result = frame_receiver
+                .receive_encoded_frame(&mut encoded_frame_buffer)
+                .await;
+            let reception_time = reception_start_time.elapsed().as_millis();
 
-                let (reception_delay, frame_delay) = if receive_result.is_ok() {
-                    let received_frame= receive_result.as_ref().unwrap();
-                    let capture_timestamp = received_frame.capture_timestamp;
-                    let frame_delay = SystemTime::now()
-                                .duration_since(UNIX_EPOCH)
-                                .unwrap()
-                                .as_millis()
-                                - capture_timestamp;
-
-
-                    (received_frame.reception_delay, frame_delay)
-                } else {
-                    (0, 0)
-                };
-
-                /*if frame_delay > 100 {
-                    warn!("Stale frame ({})", frame_delay);
-                    continue;
-                }*/
-
-                let received_frame = receive_result.unwrap();
-
-                break (reception_time, reception_delay, frame_delay, received_frame);
+            let reception_delay  = if receive_result.is_ok() {
+                let received_frame= receive_result.as_ref().unwrap();
+                received_frame.reception_delay
+            } else {
+                0
             };
 
+            let received_frame = receive_result.unwrap();
+
             let mut frame_stats = ReceivedFrameStats::default();
+            frame_stats.capture_timestamp = received_frame.capture_timestamp;
             frame_stats.reception_time = reception_time;
             frame_stats.reception_delay = reception_delay;
-            frame_stats.frame_delay = frame_delay;
             frame_stats.receiver_idle_time = encoded_frame_buffer_wait_time;
 
             let send_result = receive_result_sender.send(ReceiveResult {

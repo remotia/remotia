@@ -11,6 +11,8 @@ use super::error::ClientError;
 
 #[derive(Serialize, Default)]
 pub struct ReceivedFrameStats {
+    pub capture_timestamp: u128,
+
     pub reception_time: u128,
     pub decoding_time: u128,
     pub rendering_time: u128,

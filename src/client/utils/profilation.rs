@@ -8,7 +8,7 @@ pub fn setup_round_stats(csv_profiling: bool, console_profiling: bool) -> Result
 
         ReceptionRoundStats {
             loggers: {
-                let mut loggers: Vec<Box<dyn ReceptionRoundLogger>> = Vec::new();
+                let mut loggers: Vec<Box<dyn ReceptionRoundLogger + Send>> = Vec::new();
 
                 if csv_profiling  {
                     loggers.push(Box::new(ReceptionRoundCSVLogger::new(

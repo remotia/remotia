@@ -10,26 +10,23 @@ use cstr::cstr;
 
 use crate::client::error::ClientError;
 
-use super::{Decoder, yuv420p::YUV420PDecoder};
+use super::{Decoder, utils::yuv2bgr::raster};
 
 pub struct H264Decoder {
-    decoded_frame_buffer: Vec<u8>,
     decode_context: AVCodecContext,
 
     parsed_offset: usize,
     parser_context: AVCodecParserContext,
-
-    yuv420p_decoder: YUV420PDecoder
 }
 
-impl H264Decoder {
-    pub fn new(width: usize, height: usize) -> Self {
-        let frame_buffer_size = width * height * 3;
+// TODO: Fix all those unsafe impl
+unsafe impl Send for H264Decoder { }
 
+impl H264Decoder {
+    pub fn new() -> Self {
         let decoder = AVCodec::find_decoder_by_name(cstr!("h264")).unwrap();
 
         H264Decoder {
-            decoded_frame_buffer: vec![0 as u8; frame_buffer_size],
             decode_context: {
                 let mut decode_context = AVCodecContext::new(&decoder);
                 decode_context.open(None).unwrap();
@@ -39,8 +36,6 @@ impl H264Decoder {
 
             parsed_offset: 0,
             parser_context: AVCodecParserContext::find(decoder.id).unwrap(),
-
-            yuv420p_decoder: YUV420PDecoder::new(width, height)
         }
     }
 
@@ -48,24 +43,25 @@ impl H264Decoder {
         &mut self,
         y_frame_buffer: &[u8],
         u_frame_buffer: &[u8],
-        v_frame_buffer: &[u8]
+        v_frame_buffer: &[u8],
+        output_buffer: &mut [u8],
     ) {
         // TODO: Remove fill
-        self.decoded_frame_buffer.fill(0);
-
         let mut yuv420p_frame_buffer = Vec::new();
         yuv420p_frame_buffer.extend_from_slice(y_frame_buffer);
         yuv420p_frame_buffer.extend_from_slice(u_frame_buffer);
         yuv420p_frame_buffer.extend_from_slice(v_frame_buffer);
 
-        self.yuv420p_decoder.decode(&yuv420p_frame_buffer).unwrap();
-
-        self.decoded_frame_buffer.copy_from_slice(&self.yuv420p_decoder.get_decoded_frame());
+        raster::yuv_to_bgr(&yuv420p_frame_buffer, output_buffer);
     }
 }
 
 impl Decoder for H264Decoder {
-    fn decode(&mut self, encoded_frame_buffer: &[u8]) -> Result<usize, ClientError> {
+    fn decode(
+        &mut self,
+        input_buffer: &[u8],
+        output_buffer: &mut [u8],
+    ) -> Result<usize, ClientError> {
         let mut packet = AVPacket::new();
 
         loop {
@@ -74,7 +70,7 @@ impl Decoder for H264Decoder {
                 .parse_packet(
                     &mut self.decode_context,
                     &mut packet,
-                    &encoded_frame_buffer[self.parsed_offset..],
+                    &input_buffer[self.parsed_offset..],
                 )
                 .unwrap();
 
@@ -114,8 +110,7 @@ impl Decoder for H264Decoder {
                         std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr)
                     };
 
-                    self.decoded_yuv_to_rgb(y_data, cb_data, cr_data);
-                    // self.decoded_frame_buffer.copy_from_slice(yuv_frame_buffer);
+                    self.decoded_yuv_to_rgb(y_data, cb_data, cr_data, output_buffer);
                 }
             } else {
                 break Ok(0);
@@ -123,9 +118,5 @@ impl Decoder for H264Decoder {
 
             self.parsed_offset += offset;
         }
-    }
-
-    fn get_decoded_frame(&self) -> &[u8] {
-        self.decoded_frame_buffer.as_slice()
     }
 }

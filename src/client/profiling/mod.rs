@@ -9,7 +9,7 @@ use self::logging::{ReceptionRoundLogger, console::ReceptionRoundConsoleLogger};
 
 use super::error::ClientError;
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub struct ReceivedFrameStats {
     pub reception_time: u128,
     pub decoding_time: u128,
@@ -19,6 +19,10 @@ pub struct ReceivedFrameStats {
     pub frame_delay: u128,
     pub reception_delay: u128,
 
+    pub receiver_idle_time: u128,
+    pub decoder_idle_time: u128,
+    pub renderer_idle_time: u128,
+
     pub error: Option<ClientError>,
 }
 
@@ -26,7 +30,7 @@ pub struct ReceptionRoundStats {
     pub start_time: Instant,
     pub profiled_frames: Vec<ReceivedFrameStats>,
 
-    pub loggers: Vec<Box<dyn ReceptionRoundLogger>>
+    pub loggers: Vec<Box<dyn ReceptionRoundLogger + Send>>
 }
 
 impl Default for ReceptionRoundStats {

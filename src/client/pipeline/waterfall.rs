@@ -212,6 +212,8 @@ impl WaterfallClientPipeline {
             frame_delay,
             reception_delay,
             error,
+
+            ..Default::default()
         })
     }
 }

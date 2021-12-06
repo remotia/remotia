@@ -4,21 +4,17 @@ use std::{
 };
 
 use crate::client::{decode::{
-        h264::H264Decoder, h264rgb::H264RGBDecoder, h265::H265Decoder, identity::IdentityDecoder,
-        yuv420p::YUV420PDecoder, Decoder,
+        h264::H264Decoder, Decoder,
     }, receive::{FrameReceiver, srt::SRTFrameReceiver, tcp::TCPFrameReceiver, udp::UDPFrameReceiver}};
 
 pub fn setup_decoder_from_name(
-    canvas_width: u32,
-    canvas_height: u32,
+    _canvas_width: u32,
+    _canvas_height: u32,
     decoder_name: &str,
-) -> Box<dyn Decoder> {
-    let decoder: Box<dyn Decoder> = match decoder_name {
-        "h264" => Box::new(H264Decoder::new(
-            canvas_width as usize,
-            canvas_height as usize,
-        )),
-        "h264rgb" => Box::new(H264RGBDecoder::new(
+) -> Box<dyn Decoder + Send> {
+    let decoder: Box<dyn Decoder + Send> = match decoder_name {
+        "h264" => Box::new(H264Decoder::new()),
+        /*"h264rgb" => Box::new(H264RGBDecoder::new(
             canvas_width as usize,
             canvas_height as usize,
         )),
@@ -33,7 +29,7 @@ pub fn setup_decoder_from_name(
         "yuv420p" => Box::new(YUV420PDecoder::new(
             canvas_width as usize,
             canvas_height as usize,
-        )),
+        )),*/
         _ => panic!("Unknown decoder name"),
     };
 
@@ -44,7 +40,7 @@ pub async fn setup_frame_receiver_by_name(
     server_address: SocketAddr,
     binding_port: &str,
     frame_receiver_name: &str,
-) -> std::io::Result<Box<dyn FrameReceiver>> {
+) -> std::io::Result<Box<dyn FrameReceiver + Send>> {
     match frame_receiver_name {
         "udp" => {
             let binding_address = format!("127.0.0.1:{}", binding_port);

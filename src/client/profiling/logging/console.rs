@@ -34,14 +34,16 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
 
         info!("Profiled {} frame receptions", profiled_frames.len());
 
-        let dropped_frames = profiled_frames
+        let rendered_frames: Vec<&ReceivedFrameStats> = profiled_frames
             .iter()
-            .filter(|frame| frame.error.is_some())
-            .count();
+            .filter(|frame| frame.error.is_none())
+            .collect();
 
-        info!("Total rendered frames: {}", profiled_frames.len() - dropped_frames);
+        let dropped_frames_count = profiled_frames.len() - rendered_frames.len();
 
-        info!("Total dropped frames: {}, of which:", dropped_frames);
+        info!("Total rendered frames: {}", rendered_frames.len());
+
+        info!("Total dropped frames: {}, of which:", dropped_frames_count);
 
         let timed_out_frames = profiled_frames
             .iter()
@@ -52,32 +54,32 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
 
         info!(
             "Average reception time: {}ms",
-            vec_avg!(field_vec!(profiled_frames, reception_time, u128), u128)
+            vec_avg!(field_vec!(rendered_frames, reception_time, u128), u128)
         );
 
         info!(
             "Average decoding time: {}ms",
-            vec_avg!(field_vec!(profiled_frames, decoding_time, u128), u128)
+            vec_avg!(field_vec!(rendered_frames, decoding_time, u128), u128)
         );
 
         info!(
             "Average rendering time: {}ms",
-            vec_avg!(field_vec!(profiled_frames, rendering_time, u128), u128)
+            vec_avg!(field_vec!(rendered_frames, rendering_time, u128), u128)
         );
 
         info!(
             "Average total time: {}ms",
-            vec_avg!(field_vec!(profiled_frames, total_time, u128), u128)
+            vec_avg!(field_vec!(rendered_frames, total_time, u128), u128)
         );
 
         info!(
             "Average frame delay: {}ms",
-            vec_avg!(field_vec!(profiled_frames, frame_delay, u128), u128)
+            vec_avg!(field_vec!(rendered_frames, frame_delay, u128), u128)
         );
 
         info!(
             "Average reception delay: {}ms",
-            vec_avg!(field_vec!(profiled_frames, reception_delay, u128), u128)
+            vec_avg!(field_vec!(rendered_frames, reception_delay, u128), u128)
         );
     }
 }

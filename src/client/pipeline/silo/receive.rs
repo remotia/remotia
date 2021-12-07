@@ -11,7 +11,7 @@ use crate::client::receive::{FrameReceiver, ReceivedFrame};
 use crate::common::helpers::silo::channel_pull;
 
 pub struct ReceiveResult {
-    pub received_frame: ReceivedFrame,
+    pub received_frame: Option<ReceivedFrame>,
     pub encoded_frame_buffer: BytesMut,
 
     pub frame_stats: ReceivedFrameStats,
@@ -42,13 +42,27 @@ pub fn launch_receive_thread(
                 0
             };
 
-            let received_frame = receive_result.unwrap();
+            let (received_frame, error) = match receive_result {
+                Ok(received_frame) => (Some(received_frame), None),
+                Err(err) => (None, Some(err)),
+            };
+
+
 
             let mut frame_stats = ReceivedFrameStats::default();
-            frame_stats.capture_timestamp = received_frame.capture_timestamp;
             frame_stats.reception_time = reception_time;
             frame_stats.reception_delay = reception_delay;
             frame_stats.receiver_idle_time = encoded_frame_buffer_wait_time;
+            frame_stats.error = error;
+
+            let received_frame = if received_frame.is_some() {
+                let received_frame = received_frame.unwrap();
+                frame_stats.capture_timestamp = received_frame.capture_timestamp;
+
+                Some(received_frame)
+            } else {
+                None
+            };
 
             let send_result = receive_result_sender.send(ReceiveResult {
                 received_frame,

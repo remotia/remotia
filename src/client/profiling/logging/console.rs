@@ -73,6 +73,21 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
         );
 
         info!(
+            "Average receiver idle time: {}ms",
+            vec_avg!(field_vec!(rendered_frames, receiver_idle_time, u128), u128)
+        );
+
+        info!(
+            "Average decoder idle time: {}ms",
+            vec_avg!(field_vec!(rendered_frames, decoder_idle_time, u128), u128)
+        );
+
+        info!(
+            "Average renderer idle time: {}ms",
+            vec_avg!(field_vec!(rendered_frames, renderer_idle_time, u128), u128)
+        );
+
+        info!(
             "Average frame delay: {}ms",
             vec_avg!(field_vec!(rendered_frames, frame_delay, u128), u128)
         );

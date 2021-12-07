@@ -4,7 +4,7 @@ use bytes::BytesMut;
 use log::debug;
 use tokio::{sync::mpsc::{Receiver, UnboundedReceiver}, task::JoinHandle};
 
-use crate::server::{profiling::{TransmissionRoundStats, TransmittedFrameStats}, utils::profilation::setup_round_stats};
+use crate::{common::helpers::silo::channel_pull, server::{profiling::{TransmissionRoundStats, TransmittedFrameStats}, utils::profilation::setup_round_stats}};
 
 use super::transfer::TransferResult;
 
@@ -22,15 +22,10 @@ pub fn launch_profile_thread(
         let mut round_stats = setup_round_stats(csv_profiling, console_profiling).unwrap();
 
         loop {
-            let result_receive_start_time = Instant::now();
-            let transfer_result = transfer_result_receiver.recv().await;
-            let total_time = result_receive_start_time.elapsed().as_millis(); 
-
-            if transfer_result.is_none() {
-                debug!("Transfer channel has been closed, terminating.");
-                break;
-            }
-            let transfer_result = transfer_result.unwrap();
+            let (transfer_result, total_time) =
+                channel_pull(&mut transfer_result_receiver)
+                    .await
+                    .expect("Transfer result channel closed, terminating.");
 
             let mut frame_stats = transfer_result.frame_stats;
             frame_stats.total_time = total_time;

@@ -4,11 +4,14 @@ use bytes::BytesMut;
 use log::{debug, info, warn};
 use object_pool::{Pool, Reusable};
 use tokio::{
-    sync::mpsc::{Receiver, UnboundedSender, UnboundedReceiver},
+    sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender},
     task::JoinHandle,
 };
 
-use crate::server::{encode::Encoder, profiling::TransmittedFrameStats};
+use crate::{
+    common::helpers::silo::channel_pull,
+    server::{encode::Encoder, profiling::TransmittedFrameStats},
+};
 
 use super::capture::CaptureResult;
 
@@ -29,17 +32,10 @@ pub fn launch_encode_thread(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
-            debug!("Encoding...");
-
-            let capture_result_wait_start_time = Instant::now();
-            let capture_result = capture_result_receiver.recv().await;
-            let capture_result_wait_time = capture_result_wait_start_time.elapsed().as_millis();
-
-            if capture_result.is_none() {
-                debug!("Capture channel has been closed, terminating");
-                break;
-            }
-            let capture_result = capture_result.unwrap();
+            let (capture_result, capture_result_wait_time) =
+                channel_pull(&mut capture_result_receiver)
+                    .await
+                    .expect("Capture channel closed, terminating.");
 
             let capture_delay = capture_result.capture_time.elapsed().as_millis();
 
@@ -48,16 +44,10 @@ pub fn launch_encode_thread(
             if capture_delay < maximum_capture_delay {
                 let mut frame_stats = capture_result.frame_stats;
 
-                let encoded_frame_buffer_wait_start_time = Instant::now();
-                let encoded_frame_buffer = encoded_frame_buffers_receiver.recv().await;
-                let encoded_frame_buffer_wait_time =
-                    encoded_frame_buffer_wait_start_time.elapsed().as_millis();
-
-                if encoded_frame_buffer.is_none() {
-                    debug!("Raw frame buffers channel closed, terminating.");
-                    break;
-                }
-                let mut encoded_frame_buffer = encoded_frame_buffer.unwrap();
+                let (mut encoded_frame_buffer, encoded_frame_buffer_wait_time) =
+                    channel_pull(&mut encoded_frame_buffers_receiver)
+                        .await
+                        .expect("Encoded frame buffers channel closed, terminating.");
 
                 let encoding_start_time = Instant::now();
 
@@ -69,12 +59,11 @@ pub fn launch_encode_thread(
                     capture_result_wait_time + encoded_frame_buffer_wait_time;
                 frame_stats.capture_delay = capture_delay;
 
-                let send_result = encode_result_sender
-                    .send(EncodeResult {
-                        capture_timestamp: capture_result.capture_timestamp,
-                        encoded_frame_buffer,
-                        frame_stats,
-                    });
+                let send_result = encode_result_sender.send(EncodeResult {
+                    capture_timestamp: capture_result.capture_timestamp,
+                    encoded_frame_buffer,
+                    frame_stats,
+                });
 
                 if let Err(_) = send_result {
                     warn!("Transfer result sender error");
@@ -84,11 +73,8 @@ pub fn launch_encode_thread(
                 debug!("Dropping frame (capture delay: {})", capture_delay);
             }
 
-            let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer);
-            if let Err(_) = buffer_return_result {
-                warn!("Buffer return error");
-                break;
-            };
+            raw_frame_buffers_sender.send(raw_frame_buffer)
+                .expect("Raw buffer return error");
         }
     })
 }

@@ -8,10 +8,10 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::client::{
+use crate::{client::{
     decode::Decoder, error::ClientError, profiling::ReceivedFrameStats,
     utils::decoding::packed_bgr_to_packed_rgba,
-};
+}, common::helpers::silo::channel_pull};
 
 use super::decode::DecodeResult;
 
@@ -35,14 +35,10 @@ pub fn launch_render_thread(
         loop {
             let frame_dispatch_start_time = Instant::now();
 
-            let decode_result_wait_start_time = Instant::now();
-            let decode_result = decode_result_receiver.recv().await;
-            let decode_result_wait_time = decode_result_wait_start_time.elapsed().as_millis();
-            if decode_result.is_none() {
-                debug!("Decode channel has been closed, terminating");
-                break;
-            }
-            let decode_result = decode_result.unwrap();
+            let (decode_result, decode_result_wait_time) =
+                channel_pull(&mut decode_result_receiver)
+                    .await
+                    .expect("Decode channel has been closed, terminating");
 
             let raw_frame_buffer = decode_result.raw_frame_buffer;
 

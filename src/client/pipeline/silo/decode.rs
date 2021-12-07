@@ -7,7 +7,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::client::{decode::Decoder, error::ClientError, profiling::ReceivedFrameStats};
+use crate::{client::{decode::Decoder, error::ClientError, profiling::ReceivedFrameStats}, common::helpers::silo::channel_pull};
 
 use super::receive::ReceiveResult;
 
@@ -26,23 +26,15 @@ pub fn launch_decode_thread(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
-            let receive_result_wait_start_time = Instant::now();
-            let receive_result = receive_result_receiver.recv().await;
-            let receive_result_wait_time = receive_result_wait_start_time.elapsed().as_millis();
-            if receive_result.is_none() {
-                debug!("Receive channel has been closed, terminating");
-                break;
-            }
-            let receive_result = receive_result.unwrap();
+            let (receive_result, receive_result_wait_time) =
+                channel_pull(&mut receive_result_receiver)
+                    .await
+                    .expect("Receive channel has been closed, terminating");
 
-            let raw_frame_buffer_wait_start_time = Instant::now();
-            let raw_frame_buffer = raw_frame_buffers_receiver.recv().await;
-            let raw_frame_buffer_wait_time = raw_frame_buffer_wait_start_time.elapsed().as_millis();
-            if raw_frame_buffer.is_none() {
-                debug!("Encoded frame buffers channel closed, terminating.");
-                break;
-            }
-            let mut raw_frame_buffer = raw_frame_buffer.unwrap();
+            let (mut raw_frame_buffer, raw_frame_buffer_wait_time) =
+                channel_pull(&mut raw_frame_buffers_receiver)
+                    .await
+                    .expect("Raw frame buffer channel has been closed, terminating");
 
             let encoded_frame_buffer = receive_result.encoded_frame_buffer;
             let received_frame = receive_result.received_frame;

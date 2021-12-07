@@ -7,6 +7,7 @@ use object_pool::{Pool, Reusable};
 use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
+use crate::common::helpers::silo::channel_pull;
 use crate::server::profiling::TransmittedFrameStats;
 use crate::server::send::FrameSender;
 
@@ -25,17 +26,10 @@ pub fn launch_transfer_thread(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
-            debug!("Transferring...");
-
-            let encode_result_wait_start_time = Instant::now();
-            let encode_result = encode_result_receiver.recv().await;
-            let encode_result_wait_time = encode_result_wait_start_time.elapsed().as_millis();
-
-            if encode_result.is_none() {
-                debug!("Encode channel has been closed, terminating...");
-                break;
-            }
-            let encode_result = encode_result.unwrap();
+            let (encode_result, encode_result_wait_time) =
+                channel_pull(&mut encode_result_receiver)
+                    .await
+                    .expect("Encode result channel closed, terminating.");
 
             let encoded_frame_buffer = encode_result.encoded_frame_buffer;
             let mut frame_stats = encode_result.frame_stats;
@@ -46,12 +40,8 @@ pub fn launch_transfer_thread(
                 .send_frame(encode_result.capture_timestamp, &encoded_frame_buffer[..frame_stats.encoded_size])
                 .await;
 
-            let buffer_return_result = encoded_frame_buffers_sender.send(encoded_frame_buffer);
-
-            if let Err(_) = buffer_return_result {
-                warn!("Buffer return error");
-                break;
-            };
+            encoded_frame_buffers_sender.send(encoded_frame_buffer)
+                .expect("Encoded frame buffer return error");
 
             frame_stats.transfer_time = transfer_start_time.elapsed().as_millis();
             frame_stats.transferrer_idle_time = encode_result_wait_time;

@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use log::debug;
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 
-use crate::client::utils::profilation::setup_round_stats;
+use crate::{client::utils::profilation::setup_round_stats, common::helpers::silo::channel_pull};
 
 use super::render::RenderResult;
 
@@ -19,14 +19,10 @@ pub fn launch_profile_thread(
             setup_round_stats(csv_profiling, console_profiling).unwrap();
 
         loop {
-            let result_receive_start_time = Instant::now();
-            let render_result = render_result_receiver.recv().await;
-            let total_time = result_receive_start_time.elapsed().as_millis();
-            if render_result.is_none() {
-                debug!("Render channel has been closed, terminating");
-                break;
-            }
-            let render_result = render_result.unwrap();
+            let (render_result, total_time) =
+                channel_pull(&mut render_result_receiver)
+                    .await
+                    .expect("Render channel has been closed, terminating");
 
             let mut frame_stats = render_result.frame_stats;
             frame_stats.total_time = total_time;

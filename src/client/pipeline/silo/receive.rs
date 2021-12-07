@@ -8,6 +8,7 @@ use tokio::task::JoinHandle;
 use crate::client::error::ClientError;
 use crate::client::profiling::ReceivedFrameStats;
 use crate::client::receive::{FrameReceiver, ReceivedFrame};
+use crate::common::helpers::silo::channel_pull;
 
 pub struct ReceiveResult {
     pub received_frame: ReceivedFrame,
@@ -23,17 +24,10 @@ pub fn launch_receive_thread(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
-            let encoded_frame_buffer_wait_start_time = Instant::now();
-            let encoded_frame_buffer = encoded_frame_buffers_receiver.recv().await;
-            let encoded_frame_buffer_wait_time =
-                encoded_frame_buffer_wait_start_time.elapsed().as_millis();
-
-            if encoded_frame_buffer.is_none() {
-                debug!("Encoded frame buffers channel closed, terminating.");
-                break;
-            }
-
-            let mut encoded_frame_buffer = encoded_frame_buffer.unwrap();
+            let (mut encoded_frame_buffer, encoded_frame_buffer_wait_time) =
+                channel_pull(&mut encoded_frame_buffers_receiver)
+                    .await
+                    .expect("Encoded frame buffers channel closed, terminating.");
 
             let reception_start_time = Instant::now();
             let receive_result = frame_receiver
@@ -41,8 +35,8 @@ pub fn launch_receive_thread(
                 .await;
             let reception_time = reception_start_time.elapsed().as_millis();
 
-            let reception_delay  = if receive_result.is_ok() {
-                let received_frame= receive_result.as_ref().unwrap();
+            let reception_delay = if receive_result.is_ok() {
+                let received_frame = receive_result.as_ref().unwrap();
                 received_frame.reception_delay
             } else {
                 0

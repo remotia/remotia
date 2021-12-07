@@ -5,10 +5,10 @@ use chrono::Utc;
 use log::{debug, info, warn};
 use tokio::{sync::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender}, task::JoinHandle};
 
-use crate::server::{
+use crate::{common::helpers::silo::channel_pull, server::{
     capture::FrameCapturer, profiling::TransmittedFrameStats,
     utils::encoding::packed_bgra_to_packed_bgr,
-};
+}};
 
 pub struct CaptureResult {
     pub capture_timestamp: u128,
@@ -35,16 +35,10 @@ pub fn launch_capture_thread(
                 spin_time - last_frame_capture_time,
             ) as u64)).await;
 
-            let raw_frame_buffer_wait_start_time = Instant::now();
-            let raw_frame_buffer = raw_frame_buffers_receiver.recv().await;
-            let raw_frame_buffer_wait_time = raw_frame_buffer_wait_start_time.elapsed().as_millis();
-
-            if raw_frame_buffer.is_none() {
-                debug!("Raw frame buffers channel closed, terminating.");
-                break;
-            }
-
-            let mut raw_frame_buffer = raw_frame_buffer.unwrap();
+            let (mut raw_frame_buffer, raw_frame_buffer_wait_time) =
+                channel_pull(&mut raw_frame_buffers_receiver)
+                    .await
+                    .expect("Raw frame buffers channel closed, terminating.");
 
             let capture_start_time = Instant::now();
 

@@ -50,6 +50,7 @@ pub struct WaterfallClientState {
     pub pixels: Pixels,
     pub consecutive_connection_losses: u32,
     pub encoded_frame_buffer: Vec<u8>,
+    pub raw_frame_buffer: Vec<u8>
 }
 
 pub struct WaterfallClientPipeline {
@@ -94,6 +95,7 @@ impl WaterfallClientPipeline {
             },
             consecutive_connection_losses: 0,
             encoded_frame_buffer: vec![0 as u8; expected_frame_size],
+            raw_frame_buffer: vec![0 as u8; expected_frame_size],
         };
 
         state.pixels.render().unwrap();
@@ -172,6 +174,7 @@ impl WaterfallClientPipeline {
         let decode_result = receive_result.and_then(|received_frame| {
             decode_task(
                 &mut self.config.decoder,
+                &mut state.raw_frame_buffer,
                 &mut state.encoded_frame_buffer[..received_frame.buffer_size],
             )
         });
@@ -180,7 +183,7 @@ impl WaterfallClientPipeline {
         let rendering_start_time = Instant::now();
         let render_result = decode_result.and_then(|_| {
             render_task(
-                &mut self.config.decoder,
+                &mut state.raw_frame_buffer,
                 &mut state.pixels,
                 &mut state.consecutive_connection_losses,
             )
@@ -251,17 +254,18 @@ fn handle_error(error: &ClientError, consecutive_connection_losses: &mut u32) {
 fn decode_task(
     decoder: &mut Box<dyn Decoder>,
     encoded_frame_buffer: &mut [u8],
+    raw_frame_buffer: &mut [u8]
 ) -> Result<usize, ClientError> {
     debug!("Decoding {} received bytes", encoded_frame_buffer.len());
-    decoder.decode(encoded_frame_buffer)
+    decoder.decode(encoded_frame_buffer, raw_frame_buffer)
 }
 
 fn render_task(
-    decoder: &mut Box<dyn Decoder>,
+    raw_frame_buffer: &mut [u8],
     pixels: &mut Pixels,
     consecutive_connection_losses: &mut u32,
 ) -> Result<(), ClientError> {
-    packed_bgr_to_packed_rgba(decoder.get_decoded_frame(), pixels.get_frame());
+    packed_bgr_to_packed_rgba(raw_frame_buffer, pixels.get_frame());
 
     *consecutive_connection_losses = 0;
     pixels.render().unwrap();

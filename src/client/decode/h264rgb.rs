@@ -10,24 +10,22 @@ use cstr::cstr;
 
 use crate::client::error::ClientError;
 
-use super::{yuv420p::YUV420PDecoder, Decoder};
+use super::{Decoder};
 
 pub struct H264RGBDecoder {
-    decoded_frame_buffer: Vec<u8>,
     decode_context: AVCodecContext,
 
     parsed_offset: usize,
     parser_context: AVCodecParserContext,
 }
 
-impl H264RGBDecoder {
-    pub fn new(width: usize, height: usize) -> Self {
-        let frame_buffer_size = width * height * 3;
+unsafe impl Send for H264RGBDecoder { }
 
+impl H264RGBDecoder {
+    pub fn new() -> Self {
         let decoder = AVCodec::find_decoder_by_name(cstr!("h264")).unwrap();
 
         H264RGBDecoder {
-            decoded_frame_buffer: vec![0 as u8; frame_buffer_size],
             decode_context: {
                 let mut decode_context = AVCodecContext::new(&decoder);
                 decode_context.open(None).unwrap();
@@ -42,7 +40,11 @@ impl H264RGBDecoder {
 }
 
 impl Decoder for H264RGBDecoder {
-    fn decode(&mut self, encoded_frame_buffer: &[u8]) -> Result<usize, ClientError> {
+    fn decode(
+        &mut self,
+        input_buffer: &[u8],
+        output_buffer: &mut [u8],
+    ) -> Result<usize, ClientError> {
         let mut packet = AVPacket::new();
 
         loop {
@@ -51,7 +53,7 @@ impl Decoder for H264RGBDecoder {
                 .parse_packet(
                     &mut self.decode_context,
                     &mut packet,
-                    &encoded_frame_buffer[self.parsed_offset..],
+                    &input_buffer[self.parsed_offset..],
                 )
                 .unwrap();
 
@@ -93,9 +95,9 @@ impl Decoder for H264RGBDecoder {
                     };
 
                     for i in 0..pixels_count {
-                        self.decoded_frame_buffer[i * 3] = g_data[i];
-                        self.decoded_frame_buffer[i * 3 + 1] = r_data[i];
-                        self.decoded_frame_buffer[i * 3 + 2] = b_data[i];
+                        output_buffer[i * 3] = g_data[i];
+                        output_buffer[i * 3 + 1] = r_data[i];
+                        output_buffer[i * 3 + 2] = b_data[i];
                     }
 
                     
@@ -106,9 +108,5 @@ impl Decoder for H264RGBDecoder {
 
             self.parsed_offset += offset;
         }
-    }
-
-    fn get_decoded_frame(&self) -> &[u8] {
-        self.decoded_frame_buffer.as_slice()
     }
 }

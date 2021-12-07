@@ -3,9 +3,7 @@ use std::{
     time::Duration,
 };
 
-use crate::client::{decode::{
-        h264::H264Decoder, Decoder,
-    }, receive::{FrameReceiver, srt::SRTFrameReceiver, tcp::TCPFrameReceiver, udp::UDPFrameReceiver}};
+use crate::client::{decode::{Decoder, h264::H264Decoder, h264rgb::H264RGBDecoder}, receive::{FrameReceiver, srt::SRTFrameReceiver, tcp::TCPFrameReceiver, udp::UDPFrameReceiver}};
 
 pub fn setup_decoder_from_name(
     _canvas_width: u32,
@@ -14,11 +12,8 @@ pub fn setup_decoder_from_name(
 ) -> Box<dyn Decoder + Send> {
     let decoder: Box<dyn Decoder + Send> = match decoder_name {
         "h264" => Box::new(H264Decoder::new()),
-        /*"h264rgb" => Box::new(H264RGBDecoder::new(
-            canvas_width as usize,
-            canvas_height as usize,
-        )),
-        "h265" => Box::new(H265Decoder::new(
+        "h264rgb" => Box::new(H264RGBDecoder::new()),
+        /*"h265" => Box::new(H265Decoder::new(
             canvas_width as usize,
             canvas_height as usize,
         )),
@@ -64,7 +59,7 @@ pub async fn setup_frame_receiver_by_name(
                 SRTFrameReceiver::new(
                     &server_address.to_string(),
                     Duration::from_millis(10),
-                    Duration::from_millis(500),
+                    Duration::from_millis(50),
                 )
                 .await
             ))

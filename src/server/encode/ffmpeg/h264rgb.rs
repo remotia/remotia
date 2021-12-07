@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::ptr::NonNull;
+
 use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
@@ -15,7 +17,6 @@ use crate::server::encode::Encoder;
 use super::{FFMpegEncodingBridge, frame_builders::{bgr::BGRAVFrameBuilder, yuv420p::YUV420PAVFrameBuilder}};
 
 pub struct H264RGBEncoder {
-
     encode_context: AVCodecContext,
 
     width: i32,
@@ -43,11 +44,17 @@ impl H264RGBEncoder {
                 encode_context.set_framerate(ffi::AVRational { num: 60, den: 1 });
                 encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_BGR24);
 
-                let options = AVDictionary::new(cstr!("preset"), cstr!("ultrafast"), 0).set(
-                    cstr!("tune"),
-                    cstr!("zerolatency"),
-                    0,
-                );
+                let mut encode_context = unsafe {
+                    let raw_encode_context = encode_context.into_raw().as_ptr();
+
+                    (*raw_encode_context).bit_rate = 10000 * 1000;
+
+                    AVCodecContext::from_raw(NonNull::new(raw_encode_context).unwrap())
+                };
+
+                let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
+                    .set(cstr!("preset"), cstr!("ultrafast"), 0)
+                    .set(cstr!("tune"), cstr!("zerolatency"), 0);
 
                 encode_context.open(Some(options)).unwrap();
 

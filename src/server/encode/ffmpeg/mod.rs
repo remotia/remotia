@@ -5,7 +5,7 @@ pub mod frame_builders;
 
 pub mod h264;
 pub mod h264_vaapi;
-// pub mod h264rgb;
+pub mod h264rgb;
 // pub mod h265;
 
 pub struct FFMpegEncodingBridge { }

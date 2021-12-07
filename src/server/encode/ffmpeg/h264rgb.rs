@@ -25,6 +25,8 @@ pub struct H264RGBEncoder {
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
 }
 
+unsafe impl Send for H264RGBEncoder {}
+
 impl H264RGBEncoder {
     pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
         H264RGBEncoder {
@@ -59,16 +61,13 @@ impl H264RGBEncoder {
 }
 
 impl Encoder for H264RGBEncoder {
-    fn encode(&mut self, frame_buffer: &[u8]) -> usize {
+    fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
         let avframe = self
             .bgr_avframe_builder
-            .create_avframe(&mut self.encode_context, frame_buffer);
+            .create_avframe(&mut self.encode_context, input_buffer);
 
-        
-        self.ffmpeg_encoding_bridge.encode_avframe(&mut self.encode_context, avframe)
-    }
 
-    fn get_encoded_frame(&self) -> &[u8] {
-        self.ffmpeg_encoding_bridge.get_encoded_frame()
+        self.ffmpeg_encoding_bridge
+            .encode_avframe(&mut self.encode_context, avframe, output_buffer)
     }
 }

@@ -47,8 +47,6 @@ pub fn launch_receive_thread(
                 Err(err) => (None, Some(err)),
             };
 
-
-
             let mut frame_stats = ReceivedFrameStats::default();
             frame_stats.reception_time = reception_time;
             frame_stats.reception_delay = reception_delay;

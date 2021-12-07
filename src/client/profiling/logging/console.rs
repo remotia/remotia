@@ -52,6 +52,10 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
 
         info!("Timeouts: {}", timed_out_frames);
 
+        if rendered_frames.len() == 0 {
+            return;
+        }
+
         info!(
             "Average reception time: {}ms",
             vec_avg!(field_vec!(rendered_frames, reception_time, u128), u128)

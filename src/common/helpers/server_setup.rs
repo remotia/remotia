@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use crate::server::{encode::{ffmpeg::h264::H264Encoder, identity::IdentityEncoder, Encoder}, send::{FrameSender, srt::SRTFrameSender, tcp::TCPFrameSender}};
+use crate::server::{encode::{Encoder, ffmpeg::{h264::H264Encoder, h264_vaapi::H264VAAPIEncoder, h264rgb::H264RGBEncoder}, identity::IdentityEncoder}, send::{FrameSender, srt::SRTFrameSender, tcp::TCPFrameSender}};
 use log::info;
 
 pub fn setup_encoder_by_name(
@@ -17,7 +17,8 @@ pub fn setup_encoder_by_name(
 
     let encoder: Box<dyn Encoder + Send> = match encoder_name {
         "h264" => Box::new(H264Encoder::new(frame_size, width as i32, height as i32)),
-        // "h264rgb" => Box::new(H264RGBEncoder::new(frame_size, width as i32, height as i32)),
+        "h264_vaapi" => Box::new(H264VAAPIEncoder::new(frame_size, width as i32, height as i32)),
+        "h264rgb" => Box::new(H264RGBEncoder::new(frame_size, width as i32, height as i32)),
         // "h265" => Box::new(H265Encoder::new(frame_size, width as i32, height as i32)),
         // "identity" => Box::new(IdentityEncoder::new(frame_size)),
         // "yuv420p" => Box::new(YUV420PEncoder::new(width, height)),

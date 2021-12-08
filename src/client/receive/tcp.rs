@@ -65,7 +65,7 @@ impl TCPFrameReceiver {
         encoded_frame_buffer[..pixels_count].copy_from_slice(&frame_body.frame_pixels);
 
         Ok(ReceivedFrame {
-            buffer_size: total_read_bytes,
+            buffer_size: pixels_count,
             capture_timestamp: frame_body.capture_timestamp,
             reception_delay: 0
         })

@@ -45,12 +45,15 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
 
         info!("Total dropped frames: {}, of which:", dropped_frames_count);
 
-        let timed_out_frames = profiled_frames
+        info!("Timeouts: {}", profiled_frames
             .iter()
             .filter(|frame| is_error_of_type!(&frame.error, ClientError::Timeout))
-            .count();
+            .count());
 
-        info!("Timeouts: {}", timed_out_frames);
+        info!("No complete frames: {}", profiled_frames
+            .iter()
+            .filter(|frame| is_error_of_type!(&frame.error, ClientError::NoCompleteFrames))
+            .count());
 
         if rendered_frames.len() == 0 {
             return;

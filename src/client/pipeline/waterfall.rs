@@ -30,6 +30,7 @@ use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
+use crate::common::window::create_gl_window;
 
 pub struct WaterfallClientConfiguration {
     pub decoder: Box<dyn Decoder>,
@@ -50,7 +51,7 @@ pub struct WaterfallClientState {
     pub pixels: Pixels,
     pub consecutive_connection_losses: u32,
     pub encoded_frame_buffer: Vec<u8>,
-    pub raw_frame_buffer: Vec<u8>
+    pub raw_frame_buffer: Vec<u8>,
 }
 
 pub struct WaterfallClientPipeline {
@@ -67,16 +68,11 @@ impl WaterfallClientPipeline {
             (self.config.canvas_width as usize) * (self.config.canvas_height as usize) * 3;
 
         // Init display
-        let sdl = SDL::init(InitFlags::default()).unwrap();
-        let window = sdl
-            .create_raw_window(
-                "Remotia client",
-                WindowPosition::Centered,
-                self.config.canvas_width,
-                self.config.canvas_height,
-                0,
-            )
-            .unwrap();
+        let gl_win = create_gl_window(
+            self.config.canvas_width as i32,
+            self.config.canvas_height as i32,
+        );
+        let window = &*gl_win;
 
         let mut state = WaterfallClientState {
             pixels: {
@@ -113,9 +109,7 @@ impl WaterfallClientPipeline {
 
         loop {
             let spin_time = (1000 / std::cmp::max(fps as i64, 1)) - last_frame_dispatching_time;
-            std::thread::sleep(Duration::from_millis(
-                std::cmp::max(0, spin_time) as u64,
-            ));
+            std::thread::sleep(Duration::from_millis(std::cmp::max(0, spin_time) as u64));
 
             let frame_dispatch_start_time = Instant::now();
 
@@ -156,14 +150,13 @@ impl WaterfallClientPipeline {
         let reception_time = reception_start_time.elapsed().as_millis();
 
         let (reception_delay, frame_delay) = if receive_result.is_ok() {
-            let received_frame= receive_result.as_ref().unwrap();
+            let received_frame = receive_result.as_ref().unwrap();
             let capture_timestamp = received_frame.capture_timestamp;
             let frame_delay = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_millis()
-                        - capture_timestamp;
-
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+                - capture_timestamp;
 
             (received_frame.reception_delay, frame_delay)
         } else {
@@ -205,7 +198,6 @@ impl WaterfallClientPipeline {
         }
 
         let total_time = total_start_time.elapsed().as_millis();
-
 
         ControlFlow::Continue(ReceivedFrameStats {
             reception_time,
@@ -254,7 +246,7 @@ fn handle_error(error: &ClientError, consecutive_connection_losses: &mut u32) {
 fn decode_task(
     decoder: &mut Box<dyn Decoder>,
     encoded_frame_buffer: &mut [u8],
-    raw_frame_buffer: &mut [u8]
+    raw_frame_buffer: &mut [u8],
 ) -> Result<usize, ClientError> {
     debug!("Decoding {} received bytes", encoded_frame_buffer.len());
     decoder.decode(encoded_frame_buffer, raw_frame_buffer)

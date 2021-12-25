@@ -16,11 +16,18 @@ use crate::server::encode::Encoder;
 
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
+#[derive(Default, Debug)]
+pub struct H264EncoderState {
+    encoded_frames: usize
+}
+
 pub struct H264Encoder {
     encode_context: AVCodecContext,
 
     width: i32,
     height: i32,
+
+    state: H264EncoderState,
 
     yuv420_avframe_builder: YUV420PAVFrameBuilder,
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
@@ -35,6 +42,8 @@ impl H264Encoder {
         H264Encoder {
             width: width,
             height: height,
+
+            state: H264EncoderState::default(),
 
             encode_context: {
                 let encoder = AVCodec::find_encoder_by_name(cstr!("libx264")).unwrap();
@@ -71,11 +80,17 @@ impl H264Encoder {
 
 impl Encoder for H264Encoder {
     fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
+        let key_frame = self.state.encoded_frames % 4 == 0;
+
         let avframe = self
             .yuv420_avframe_builder
-            .create_avframe(&mut self.encode_context, input_buffer);
+            .create_avframe(&mut self.encode_context, input_buffer, key_frame);
 
-        self.ffmpeg_encoding_bridge
-            .encode_avframe(&mut self.encode_context, avframe, output_buffer)
+        let encoded_bytes = self.ffmpeg_encoding_bridge
+            .encode_avframe(&mut self.encode_context, avframe, output_buffer);
+
+        self.state.encoded_frames += 1;
+
+        encoded_bytes
     }
 }

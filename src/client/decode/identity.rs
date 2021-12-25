@@ -17,14 +17,14 @@ impl IdentityDecoder {
 }
 
 impl Decoder for IdentityDecoder {
-    fn decode(&mut self, encoded_frame_buffer: &[u8]) -> Result<usize, ClientError> {
-        self.decoded_frame_buffer.copy_from_slice(encoded_frame_buffer);
+    fn decode(
+        &mut self,
+        input_buffer: &[u8],
+        output_buffer: &mut [u8],
+    ) -> Result<usize, ClientError> {
+        output_buffer.copy_from_slice(input_buffer);
 
-        Ok(0)
-    }
-
-    fn get_decoded_frame(&self) -> &[u8] {
-        self.decoded_frame_buffer.as_slice()
+        Ok(output_buffer.len())
     }
 }
 

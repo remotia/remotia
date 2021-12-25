@@ -1,0 +1,1 @@
+tc qdisc add dev lo root netem rate $1

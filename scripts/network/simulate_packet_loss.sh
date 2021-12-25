@@ -1,1 +1,1 @@
-tc qdisc add dev lo root netem loss 10.0%
+tc qdisc add dev lo root netem loss $1

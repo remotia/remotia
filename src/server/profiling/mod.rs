@@ -22,6 +22,7 @@ pub struct TransmittedFrameStats {
     pub capture_delay: u128,
 
     pub encoded_size: usize,
+    pub transmitted_bytes: usize
 }
 
 pub struct TransmissionRoundStats {

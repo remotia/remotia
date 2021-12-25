@@ -14,7 +14,15 @@ use cstr::cstr;
 
 use crate::server::encode::Encoder;
 
-use super::{FFMpegEncodingBridge, frame_builders::{bgr::BGRAVFrameBuilder, yuv420p::YUV420PAVFrameBuilder}};
+use super::{
+    frame_builders::{bgr::BGRAVFrameBuilder, yuv420p::YUV420PAVFrameBuilder},
+    FFMpegEncodingBridge,
+};
+
+#[derive(Default, Debug)]
+pub struct H264RGBEncoderState {
+    encoded_frames: usize,
+}
 
 pub struct H264RGBEncoder {
     encode_context: AVCodecContext,
@@ -22,10 +30,14 @@ pub struct H264RGBEncoder {
     width: i32,
     height: i32,
 
+    state: H264RGBEncoderState,
+
     bgr_avframe_builder: BGRAVFrameBuilder,
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
 }
 
+// TODO: Evaluate a safer way to move the encoder to another thread
+// Necessary for multi-threaded pipelines
 unsafe impl Send for H264RGBEncoder {}
 
 impl H264RGBEncoder {
@@ -33,6 +45,8 @@ impl H264RGBEncoder {
         H264RGBEncoder {
             width: width,
             height: height,
+
+            state: H264RGBEncoderState::default(),
 
             encode_context: {
                 let encoder = AVCodec::find_encoder_by_name(cstr!("libx264rgb")).unwrap();
@@ -47,7 +61,7 @@ impl H264RGBEncoder {
                 let mut encode_context = unsafe {
                     let raw_encode_context = encode_context.into_raw().as_ptr();
 
-                    (*raw_encode_context).bit_rate = 10000 * 1000;
+                    // (*raw_encode_context).bit_rate = 20000 * 1000;
 
                     AVCodecContext::from_raw(NonNull::new(raw_encode_context).unwrap())
                 };
@@ -62,19 +76,29 @@ impl H264RGBEncoder {
             },
 
             bgr_avframe_builder: BGRAVFrameBuilder::new(),
-            ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size)
+            ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size),
         }
     }
 }
 
 impl Encoder for H264RGBEncoder {
     fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
-        let avframe = self
-            .bgr_avframe_builder
-            .create_avframe(&mut self.encode_context, input_buffer);
+        let key_frame = self.state.encoded_frames % 4 == 0;
 
+        let avframe = self.bgr_avframe_builder.create_avframe(
+            &mut self.encode_context,
+            input_buffer,
+            key_frame,
+        );
 
-        self.ffmpeg_encoding_bridge
-            .encode_avframe(&mut self.encode_context, avframe, output_buffer)
+        let encoded_bytes = self.ffmpeg_encoding_bridge.encode_avframe(
+            &mut self.encode_context,
+            avframe,
+            output_buffer,
+        );
+
+        self.state.encoded_frames += 1;
+
+        encoded_bytes
     }
 }

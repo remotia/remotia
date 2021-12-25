@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+pub mod remvsp;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FrameBody {
     pub capture_timestamp: u128,

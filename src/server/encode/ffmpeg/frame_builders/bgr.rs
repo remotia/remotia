@@ -14,12 +14,16 @@ impl BGRAVFrameBuilder {
         &mut self,
         encode_context: &mut AVCodecContext,
         bgr_frame_buffer: &[u8],
+        key_frame: bool,
     ) -> AVFrame {
         let mut avframe = AVFrame::new();
         avframe.set_format(encode_context.pix_fmt);
         avframe.set_width(encode_context.width);
         avframe.set_height(encode_context.height);
         avframe.set_pts(self.frame_count);
+        if key_frame {
+            avframe.set_pict_type(1);
+        }
         avframe.alloc_buffer().unwrap();
 
         let data = avframe.data;

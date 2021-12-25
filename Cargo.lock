@@ -108,12 +108,16 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "beryllium"
-version = "0.3.2-alpha.0"
-source = "git+https://github.com/Lokathor/beryllium.git?rev=9375bbd2dbc8c35d5f669181a9d525315f20ba40#9375bbd2dbc8c35d5f669181a9d525315f20ba40"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d92c41048725052efb9d24be37bc5291325000d455b0d8f7d9a28b644a77f98"
 dependencies = [
+ "bytemuck",
  "fermium",
  "objc",
- "raw-window-handle 0.3.4",
+ "raw-window-handle 0.4.2",
+ "tinyvec",
+ "zstring",
 ]
 
 [[package]]
@@ -345,6 +349,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmake"
+version = "0.1.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7b858541263efe664aead4a5209a4ae5c5d2811167d4ed4ee0944503f8d2089"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -475,6 +488,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
 name = "env_logger"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -502,11 +521,13 @@ dependencies = [
 
 [[package]]
 name = "fermium"
-version = "200.12.4"
+version = "20016.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d43340fadb4f6bd408a8a5fc30da3754bdca4d64ab8daf2ecffc6c6524b662f"
+checksum = "0e8c513d516bc2c9d4e795623e3ad855a63a9f3917b36bccc2916f0cc8dbd849"
 dependencies = [
  "chlorine",
+ "cmake",
+ "raw-window-handle 0.4.2",
 ]
 
 [[package]]
@@ -775,6 +796,15 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -1306,6 +1336,7 @@ dependencies = [
  "csv",
  "env_logger 0.9.0",
  "futures",
+ "itertools",
  "log",
  "object-pool",
  "openssl",
@@ -1314,6 +1345,7 @@ dependencies = [
  "rsmpeg",
  "scrap",
  "serde",
+ "socket2",
  "srt-tokio",
  "thiserror",
  "tokio 1.14.0",
@@ -1450,6 +1482,16 @@ name = "smallvec"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ecab6c735a6bb4139c0caafd0cc3635748bbb3acf4550e8138122099251f309"
+
+[[package]]
+name = "socket2"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dc90fe6c7be1a323296982db1836d1ea9e47b6839496dde9a541bc496df3516"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
+]
 
 [[package]]
 name = "spirv"
@@ -1590,6 +1632,12 @@ dependencies = [
  "wasi",
  "winapi 0.3.9",
 ]
+
+[[package]]
+name = "tinyvec"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c1c1d5a42b6245520c249549ec267180beaffcc0615401ac8e31853d4b6d8d2"
 
 [[package]]
 name = "tokio"

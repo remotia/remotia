@@ -10,17 +10,16 @@ use cstr::cstr;
 
 use crate::client::error::ClientError;
 
-use super::{Decoder, utils::yuv2bgr::raster};
+use super::{utils::yuv2bgr::raster, Decoder};
 
 pub struct H264Decoder {
     decode_context: AVCodecContext,
 
-    parsed_offset: usize,
     parser_context: AVCodecParserContext,
 }
 
 // TODO: Fix all those unsafe impl
-unsafe impl Send for H264Decoder { }
+unsafe impl Send for H264Decoder {}
 
 impl H264Decoder {
     pub fn new() -> Self {
@@ -34,7 +33,6 @@ impl H264Decoder {
                 decode_context
             },
 
-            parsed_offset: 0,
             parser_context: AVCodecParserContext::find(decoder.id).unwrap(),
         }
     }
@@ -54,23 +52,30 @@ impl H264Decoder {
 
         raster::yuv_to_bgr(&yuv420p_frame_buffer, output_buffer);
     }
-}
 
-impl Decoder for H264Decoder {
-    fn decode(
-        &mut self,
-        input_buffer: &[u8],
-        output_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
+    fn write_avframe(&mut self, avframe: rsmpeg::avutil::AVFrame, output_buffer: &mut [u8]) {
+        let data = avframe.data;
+        let linesize = avframe.linesize;
+        let height = avframe.height as usize;
+        let linesize_y = linesize[0] as usize;
+        let linesize_cb = linesize[1] as usize;
+        let linesize_cr = linesize[2] as usize;
+        let y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
+        let cb_data = unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
+        let cr_data = unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
+        self.decoded_yuv_to_rgb(y_data, cb_data, cr_data, output_buffer);
+    }
+
+    fn parse_packets(&mut self, input_buffer: &[u8]) -> Option<ClientError> {
         let mut packet = AVPacket::new();
-
-        loop {
+        let mut parsed_offset = 0;
+        while parsed_offset < input_buffer.len() {
             let (get_packet, offset) = self
                 .parser_context
                 .parse_packet(
                     &mut self.decode_context,
                     &mut packet,
-                    &input_buffer[self.parsed_offset..],
+                    &input_buffer[parsed_offset..],
                 )
                 .unwrap();
 
@@ -81,42 +86,40 @@ impl Decoder for H264Decoder {
                     Ok(_) => (),
                     Err(e) => {
                         debug!("Error on send packet: {}", e);
-                        break Err(ClientError::FFMpegSendPacketError);
+                        return Some(ClientError::FFMpegSendPacketError);
                     }
                 }
 
-                loop {
-                    let avframe = match self.decode_context.receive_frame() {
-                        Ok(frame) => frame,
-                        Err(RsmpegError::DecoderDrainError)
-                        | Err(RsmpegError::DecoderFlushedError) => break,
-                        Err(e) => panic!("{:?}", e),
-                    };
-
-                    let data = avframe.data;
-                    let linesize = avframe.linesize;
-                    // let width = avframe.width as usize;
-                    let height = avframe.height as usize;
-
-                    let linesize_y = linesize[0] as usize;
-                    let linesize_cb = linesize[1] as usize;
-                    let linesize_cr = linesize[2] as usize;
-                    let y_data =
-                        unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
-                    let cb_data = unsafe {
-                        std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb)
-                    };
-                    let cr_data = unsafe {
-                        std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr)
-                    };
-
-                    self.decoded_yuv_to_rgb(y_data, cb_data, cr_data, output_buffer);
-                }
-            } else {
-                break Ok(0);
+                packet = AVPacket::new();
             }
 
-            self.parsed_offset += offset;
+            parsed_offset += offset;
         }
+
+        None
+    }
+}
+
+impl Decoder for H264Decoder {
+    fn decode(
+        &mut self,
+        input_buffer: &[u8],
+        output_buffer: &mut [u8],
+    ) -> Result<usize, ClientError> {
+        if let Some(error) = self.parse_packets(input_buffer) {
+            return Err(error);
+        }
+
+        let avframe = match self.decode_context.receive_frame() {
+            Ok(frame) => frame,
+            Err(RsmpegError::DecoderDrainError) | Err(RsmpegError::DecoderFlushedError) => {
+                return Err(ClientError::NoDecodedFrames);
+            }
+            Err(e) => panic!("{:?}", e),
+        };
+
+        self.write_avframe(avframe, output_buffer);
+
+        Ok(output_buffer.len())
     }
 }

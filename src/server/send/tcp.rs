@@ -21,14 +21,13 @@ impl TCPFrameSender {
     }
 
     fn send_packet_header(&mut self, frame_size: usize) {
-        // debug!("Sending frame header with size {}...", frame_size);
         self.stream.write_all(&frame_size.to_be_bytes()).unwrap();
     }
 }
 
 #[async_trait]
 impl FrameSender for TCPFrameSender {
-    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) {
+    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) -> usize {
         let frame_body = FrameBody {
             capture_timestamp,
             frame_pixels: frame_buffer.to_vec(),
@@ -39,5 +38,7 @@ impl FrameSender for TCPFrameSender {
         self.send_packet_header(binarized_obj.len());
 
         self.stream.write_all(&binarized_obj).unwrap();
+
+        binarized_obj.len()
     }
 }

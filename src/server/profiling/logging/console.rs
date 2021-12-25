@@ -59,7 +59,7 @@ impl TransmissionRoundLogger for TransmissionRoundConsoleLogger {
             vec_avg!(field_vec!(profiled_frames, encoded_size, usize), usize)
         );
 
-        let bandwidth = (field_vec!(profiled_frames, encoded_size, usize)
+        let bandwidth = (field_vec!(profiled_frames, transmitted_bytes, usize)
             .iter()
             .sum::<usize>() as f64)
             / 1024.0;

@@ -14,7 +14,6 @@ use crate::server::send::FrameSender;
 use super::encode::EncodeResult;
 
 pub struct TransferResult {
-    // pub transmitted_frame_buffer: Reusable<'static, BytesMut>,
     pub frame_stats: TransmittedFrameStats,
 }
 
@@ -36,7 +35,7 @@ pub fn launch_transfer_thread(
 
             let transfer_start_time = Instant::now();
 
-            frame_sender
+            frame_stats.transmitted_bytes = frame_sender
                 .send_frame(encode_result.capture_timestamp, &encoded_frame_buffer[..frame_stats.encoded_size])
                 .await;
 

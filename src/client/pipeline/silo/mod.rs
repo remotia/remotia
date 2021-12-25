@@ -35,8 +35,8 @@ use crate::client::pipeline::silo::decode::DecodeResult;
 use crate::client::pipeline::silo::profile::launch_profile_thread;
 use crate::client::pipeline::silo::receive::launch_receive_thread;
 use crate::client::pipeline::silo::receive::ReceiveResult;
-use crate::client::pipeline::silo::render::RenderResult;
 use crate::client::pipeline::silo::render::launch_render_thread;
+use crate::client::pipeline::silo::render::RenderResult;
 use crate::client::profiling::logging::console::ReceptionRoundConsoleLogger;
 use crate::client::profiling::logging::csv::ReceptionRoundCSVLogger;
 use crate::client::profiling::ReceivedFrameStats;
@@ -44,6 +44,7 @@ use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
+use crate::common::window::create_gl_window;
 
 pub struct SiloClientConfiguration {
     pub decoder: Box<dyn Decoder + Send>,
@@ -71,16 +72,11 @@ impl SiloClientPipeline {
 
     pub async fn run(self) {
         // Init display
-        let sdl = SDL::init(InitFlags::default()).unwrap();
-        let window = sdl
-            .create_raw_window(
-                "Remotia client",
-                WindowPosition::Centered,
-                self.config.canvas_width,
-                self.config.canvas_height,
-                0,
-            )
-            .unwrap();
+        let gl_win = create_gl_window(
+            self.config.canvas_width as i32,
+            self.config.canvas_height as i32,
+        );
+        let window = &*gl_win;
 
         info!("Starting to receive stream...");
 
@@ -146,13 +142,13 @@ impl SiloClientPipeline {
             pixels,
             raw_frame_buffers_sender,
             decode_result_receiver,
-            render_result_sender
+            render_result_sender,
         );
 
         let profile_handle = launch_profile_thread(
             render_result_receiver,
             self.config.csv_profiling,
-            self.config.console_profiling
+            self.config.console_profiling,
         );
 
         receive_handle.await.unwrap();

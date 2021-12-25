@@ -126,14 +126,14 @@ impl SRTManualFragmentationFrameSender {
 macro_rules! phase {
     ($future: expr) => {
         if let Err(_) = $future.await {
-            return;
+            return 0;
         }
     };
 }
 
 #[async_trait]
 impl FrameSender for SRTManualFragmentationFrameSender {
-    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) {
+    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) -> usize {
         phase!(self.send_frame(capture_timestamp, frame_buffer));
         debug!(
             "Buffer size: {}, Timestamp: {:?}",
@@ -143,5 +143,7 @@ impl FrameSender for SRTManualFragmentationFrameSender {
                 .unwrap()
                 .as_millis()
         );
+
+        frame_buffer.len()
     }
 }

@@ -1,7 +1,7 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bytes::BytesMut;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
@@ -24,16 +24,20 @@ pub fn launch_receive_thread(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
+            debug!("Pulling empty encoded frame buffer...");
+
             let (mut encoded_frame_buffer, encoded_frame_buffer_wait_time) =
                 channel_pull(&mut encoded_frame_buffers_receiver)
                     .await
                     .expect("Encoded frame buffers channel closed, terminating.");
 
+            debug!("Receiving...");
             let reception_start_time = Instant::now();
             let receive_result = frame_receiver
                 .receive_encoded_frame(&mut encoded_frame_buffer)
                 .await;
             let reception_time = reception_start_time.elapsed().as_millis();
+            debug!("Received");
 
             let reception_delay = if receive_result.is_ok() {
                 let received_frame = receive_result.as_ref().unwrap();
@@ -62,6 +66,7 @@ pub fn launch_receive_thread(
                 None
             };
 
+            debug!("Sending result...");
             let send_result = receive_result_sender.send(ReceiveResult {
                 received_frame,
                 encoded_frame_buffer,
@@ -69,7 +74,7 @@ pub fn launch_receive_thread(
             });
 
             if let Err(e) = send_result {
-                warn!("Capture result send error: {}", e);
+                warn!("Receive result send error: {}", e);
                 break;
             };
         }

@@ -24,6 +24,10 @@ pub struct H265Encoder {
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
 }
 
+// TODO: Evaluate a safer way to move the encoder to another thread
+// Necessary for multi-threaded pipelines
+unsafe impl Send for H265Encoder {}
+
 impl H265Encoder {
     pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
         H265Encoder {
@@ -58,16 +62,11 @@ impl H265Encoder {
 }
 
 impl Encoder for H265Encoder {
-    fn encode(&mut self, frame_buffer: &[u8]) -> usize {
+    fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
         let avframe = self
             .yuv420_avframe_builder
-            .create_avframe(&mut self.encode_context, frame_buffer);
-
+            .create_avframe(&mut self.encode_context, input_buffer, false);
         
-        self.ffmpeg_encoding_bridge.encode_avframe(&mut self.encode_context, avframe)
-    }
-
-    fn get_encoded_frame(&self) -> &[u8] {
-        self.ffmpeg_encoding_bridge.get_encoded_frame()
+        self.ffmpeg_encoding_bridge.encode_avframe(&mut self.encode_context, avframe, output_buffer)
     }
 }

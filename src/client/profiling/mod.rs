@@ -9,7 +9,7 @@ use self::logging::{ReceptionRoundLogger, console::ReceptionRoundConsoleLogger};
 
 use super::error::ClientError;
 
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, Debug)]
 pub struct ReceivedFrameStats {
     pub capture_timestamp: u128,
     pub spin_time: u64,

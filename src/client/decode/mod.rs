@@ -2,11 +2,10 @@
 
 use crate::client::error::ClientError;
 
-// pub mod identity;
+pub mod identity;
 pub mod h264;
 pub mod h264rgb;
-// pub mod h265;
-// pub mod yuv420p;
+pub mod h265;
 
 mod utils;
 

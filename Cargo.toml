@@ -24,9 +24,9 @@ env_logger = "0.9.0"
 log = "0.4.14"
 scrap = "0.5"
 pixels = "0.7.0"
-# beryllium = { version = "0.3.2", features = ["extern_crate_raw_window_handle"] }
+beryllium = { version = "0.7.6", features = ["use-raw-window-handle"] }
 zstring = "0.1.2"
-beryllium = { git = "https://github.com/Lokathor/beryllium.git", rev = "9375bbd2dbc8c35d5f669181a9d525315f20ba40", features = ["extern_crate_raw_window_handle"] }
+# beryllium = { git = "https://github.com/Lokathor/beryllium.git", rev = "9375bbd2dbc8c35d5f669181a9d525315f20ba40", features = ["extern_crate_raw_window_handle"] }
 thiserror = "1.0.30"
 rsmpeg = "0.7.0"
 cstr = "0.2.9"
@@ -42,3 +42,9 @@ bincode = "1.3.3"
 async-trait = "0.1.51"
 
 object-pool = "0.5.4"
+
+socket2 = "0.4.2"
+
+rand = "0.8.4"
+
+itertools = "0.10.3"

@@ -8,7 +8,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::client::error::ClientError;
+use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
 
 use super::{utils::yuv2bgr::raster, Decoder};
 
@@ -121,5 +121,9 @@ impl Decoder for H264Decoder {
         self.write_avframe(avframe, output_buffer);
 
         Ok(output_buffer.len())
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

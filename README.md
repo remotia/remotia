@@ -19,4 +19,4 @@ Lorenzo.
 
 ## Usage
 
-You may find some examples including different architectures, codecs and communication protocols. Apart the base architecture (waterfall, silo...) most of the other components are configurable at runtime via the command line. Use the --help option to know more about each example.
+You may find some examples including different architectures, codecs and communication protocols. Apart the base architecture (silo...) most of the other components are configurable at runtime via the command line. Use the --help option to know more about each example.

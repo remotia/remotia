@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
     avutil::{AVDictionary, AVFrame},
@@ -9,7 +10,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::server::encode::Encoder;
+use crate::{common::feedback::FeedbackMessage, server::encode::Encoder};
 
 use super::{FFMpegEncodingBridge, frame_builders::yuv420p::YUV420PAVFrameBuilder};
 
@@ -68,5 +69,9 @@ impl Encoder for H265Encoder {
             .create_avframe(&mut self.encode_context, input_buffer, false);
         
         self.ffmpeg_encoding_bridge.encode_avframe(&mut self.encode_context, avframe, output_buffer)
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

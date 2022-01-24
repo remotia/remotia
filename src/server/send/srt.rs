@@ -14,10 +14,7 @@ use serde::Serialize;
 use srt_tokio::{SrtSocket, SrtSocketBuilder};
 use tokio::time::timeout;
 
-use crate::{
-    common::network::{FrameBody, FrameHeader},
-    server::error::ServerError,
-};
+use crate::{common::{feedback::FeedbackMessage, network::{FrameBody, FrameHeader}}, server::error::ServerError};
 
 use super::FrameSender;
 
@@ -96,5 +93,9 @@ impl FrameSender for SRTFrameSender {
         );
 
         frame_buffer.len()
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

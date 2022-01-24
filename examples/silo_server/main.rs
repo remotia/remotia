@@ -1,16 +1,10 @@
 extern crate scrap;
 
 use clap::Parser;
-use remotia::{
-    common::{
+use remotia::{common::{
         command_line::parse_canvas_resolution_str,
         helpers::server_setup::{setup_encoder_by_name, setup_frame_sender_by_name},
-    },
-    server::{
-        capture::scrap::ScrapFrameCapturer,
-        pipeline::silo::{SiloServerConfiguration, SiloServerPipeline},
-    },
-};
+    }, server::{capture::scrap::ScrapFrameCapturer, pipeline::silo::{SiloServerConfiguration, SiloServerPipeline}, profiling::tcp::TCPServerProfiler}};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -21,7 +15,7 @@ pub struct CommandLineServerOptions {
     #[clap(short, long, default_value = "h264")]
     encoder_name: String,
 
-    #[clap(short, long, default_value = "srt")]
+    #[clap(short, long, default_value = "remvsp")]
     frame_sender_name: String,
 
     #[clap(long)]
@@ -46,6 +40,7 @@ async fn main() -> std::io::Result<()> {
     let options = CommandLineServerOptions::parse();
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
+    let profiler = Box::new(TCPServerProfiler::connect());
     let encoder = setup_encoder_by_name(width as usize, height as usize, &options.encoder_name);
     let frame_sender = setup_frame_sender_by_name(&options.frame_sender_name)
         .await
@@ -55,6 +50,8 @@ async fn main() -> std::io::Result<()> {
         frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),
         encoder: encoder,
         frame_sender: frame_sender,
+        profiler: profiler,
+
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
 

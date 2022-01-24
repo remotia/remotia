@@ -12,10 +12,7 @@ use futures::TryStreamExt;
 use log::{debug, info, warn};
 use srt_tokio::{SrtSocket, SrtSocketBuilder};
 
-use crate::{
-    client::error::ClientError,
-    common::network::{FrameBody, FrameHeader},
-};
+use crate::{client::error::ClientError, common::{feedback::FeedbackMessage, network::{FrameBody, FrameHeader}}};
 
 use super::{FrameReceiver, ReceivedFrame};
 
@@ -110,5 +107,9 @@ impl FrameReceiver for SRTFrameReceiver {
         frame_buffer: &mut [u8],
     ) -> Result<ReceivedFrame, ClientError> {
         self.receive_frame_pixels(frame_buffer).await
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

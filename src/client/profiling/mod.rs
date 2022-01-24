@@ -2,14 +2,25 @@ use std::time::Instant;
 
 pub mod logging;
 
+pub mod tcp;
+
 use log::info;
 use serde::Serialize;
+
+use crate::common::feedback::FeedbackMessage;
 
 use self::logging::{ReceptionRoundLogger, console::ReceptionRoundConsoleLogger};
 
 use super::error::ClientError;
 
-#[derive(Serialize, Default, Debug)]
+use async_trait::async_trait;
+
+#[async_trait]
+pub trait ClientProfiler {
+    async fn profile_frame(&mut self, frame_stats: ReceivedFrameStats) -> Option<FeedbackMessage>;
+}
+
+#[derive(Serialize, Default, Debug, Clone, Copy)]
 pub struct ReceivedFrameStats {
     pub capture_timestamp: u128,
     pub spin_time: u64,

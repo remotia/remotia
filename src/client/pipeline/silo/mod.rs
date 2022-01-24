@@ -25,6 +25,7 @@ use log::{debug, error, warn};
 use pixels::wgpu;
 use pixels::PixelsBuilder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
+use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use zstring::zstr;
 
@@ -42,16 +43,17 @@ use crate::client::profiling::logging::csv::ReceptionRoundCSVLogger;
 use crate::client::profiling::ReceivedFrameStats;
 use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
-use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
+use crate::client::render::Renderer;
 use crate::client::utils::profilation::setup_round_stats;
-use crate::common::window::create_gl_window;
+use crate::common::feedback::FeedbackMessage;
+use crate::client::profiling::ClientProfiler;
 
 pub struct SiloClientConfiguration {
     pub decoder: Box<dyn Decoder + Send>,
     pub frame_receiver: Box<dyn FrameReceiver + Send>,
+    pub renderer: Box<dyn Renderer + Send>,
 
-    pub canvas_width: u32,
-    pub canvas_height: u32,
+    pub profiler: Box<dyn ClientProfiler + Send>,
 
     pub maximum_consecutive_connection_losses: u32,
 
@@ -71,21 +73,13 @@ impl SiloClientPipeline {
     }
 
     pub async fn run(self) {
-        // Init display
-        let gl_win = create_gl_window(
-            self.config.canvas_width as i32,
-            self.config.canvas_height as i32,
-        );
-        let window = &*gl_win;
-
         info!("Starting to receive stream...");
 
         const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;
         const MAXIMUM_RAW_FRAME_BUFFERS: usize = 64;
 
-        let raw_frame_size = (self.config.canvas_width * self.config.canvas_height * 3) as usize;
-        let maximum_encoded_frame_size =
-            (self.config.canvas_width * self.config.canvas_height * 3) as usize;
+        let raw_frame_size = self.config.renderer.get_buffer_size();
+        let maximum_encoded_frame_size = self.config.renderer.get_buffer_size();
 
         let (encoded_frame_buffers_sender, encoded_frame_buffers_receiver) =
             mpsc::unbounded_channel::<BytesMut>();
@@ -104,18 +98,6 @@ impl SiloClientPipeline {
             raw_frame_buffers_sender.send(buf).unwrap();
         }
 
-        let pixels = {
-            let surface_texture =
-                SurfaceTexture::new(self.config.canvas_width, self.config.canvas_height, &window);
-            PixelsBuilder::new(
-                self.config.canvas_width,
-                self.config.canvas_height,
-                surface_texture,
-            )
-            .build()
-            .unwrap()
-        };
-
         let (receive_result_sender, receive_result_receiver) =
             mpsc::unbounded_channel::<ReceiveResult>();
         let (decode_result_sender, decode_result_receiver) =
@@ -123,10 +105,14 @@ impl SiloClientPipeline {
         let (render_result_sender, render_result_receiver) =
             mpsc::unbounded_channel::<RenderResult>();
 
+        let (feedback_sender, receiver_feedback_receiver) =
+            broadcast::channel::<FeedbackMessage>(32);
+
         let receive_handle = launch_receive_thread(
             self.config.frame_receiver,
             encoded_frame_buffers_receiver,
             receive_result_sender,
+            receiver_feedback_receiver
         );
 
         let decode_handle = launch_decode_thread(
@@ -135,20 +121,24 @@ impl SiloClientPipeline {
             encoded_frame_buffers_sender,
             receive_result_receiver,
             decode_result_sender,
+            feedback_sender.subscribe()
         );
 
         let render_handle = launch_render_thread(
+            self.config.renderer,
             self.config.target_fps,
-            pixels,
             raw_frame_buffers_sender,
             decode_result_receiver,
             render_result_sender,
+            feedback_sender.subscribe()
         );
 
         let profile_handle = launch_profile_thread(
+            self.config.profiler,
             render_result_receiver,
             self.config.csv_profiling,
             self.config.console_profiling,
+            feedback_sender
         );
 
         receive_handle.await.unwrap();

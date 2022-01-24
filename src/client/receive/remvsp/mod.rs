@@ -16,10 +16,7 @@ use tokio::{
     time::Instant,
 };
 
-use crate::{
-    client::error::ClientError,
-    common::network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader},
-};
+use crate::{client::error::ClientError, common::{feedback::FeedbackMessage, network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader}}};
 
 use self::{reconstruct::FrameReconstructionState, state::RemVSPReceptionState};
 
@@ -125,5 +122,9 @@ impl FrameReceiver for RemVSPFrameReceiver {
         }
 
         result
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

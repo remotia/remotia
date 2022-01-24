@@ -1,5 +1,9 @@
 #![allow(dead_code)]
 
+use log::debug;
+
+use crate::common::feedback::FeedbackMessage;
+
 use super::Encoder;
 
 pub struct IdentityEncoder { }
@@ -15,5 +19,9 @@ impl Encoder for IdentityEncoder {
         let encoded_frame_length = input_buffer.len();
         output_buffer.copy_from_slice(input_buffer);
         encoded_frame_length
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

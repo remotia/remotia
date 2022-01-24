@@ -8,7 +8,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::client::error::ClientError;
+use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
 
 use super::{Decoder};
 
@@ -108,5 +108,9 @@ impl Decoder for H264RGBDecoder {
 
             self.parsed_offset += offset;
         }
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

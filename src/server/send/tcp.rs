@@ -2,8 +2,9 @@ use std::{io::Write, net::TcpStream};
 
 use async_trait::async_trait;
 use bytes::Bytes;
+use log::debug;
 
-use crate::common::network::FrameBody;
+use crate::common::{feedback::FeedbackMessage, network::FrameBody};
 
 use super::FrameSender;
 
@@ -40,5 +41,9 @@ impl FrameSender for TCPFrameSender {
         self.stream.write_all(&binarized_obj).unwrap();
 
         binarized_obj.len()
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

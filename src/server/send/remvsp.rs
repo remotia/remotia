@@ -10,7 +10,10 @@ use log::{debug, info};
 use rand::Rng;
 use socket2::{Domain, Socket, Type};
 
-use crate::common::network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader};
+use crate::common::{
+    feedback::FeedbackMessage,
+    network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader},
+};
 
 use super::FrameSender;
 
@@ -136,12 +139,14 @@ impl FrameSender for RemVSPFrameSender {
 
         fragments_to_retransmit
             .iter()
-            .for_each(|frame_fragment| { 
-                transmitted_bytes += self.send_fragment(&frame_fragment)
-            });
+            .for_each(|frame_fragment| transmitted_bytes += self.send_fragment(&frame_fragment));
 
         self.state.current_frame_id += 1;
 
         transmitted_bytes
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

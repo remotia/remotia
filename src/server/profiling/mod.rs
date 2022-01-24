@@ -6,7 +6,18 @@ use crate::server::profiling::logging::console::TransmissionRoundConsoleLogger;
 
 use self::logging::TransmissionRoundLogger;
 
+use crate::common::feedback::FeedbackMessage;
+
+use async_trait::async_trait;
+
 pub mod logging;
+
+pub mod tcp;
+
+#[async_trait]
+pub trait ServerProfiler {
+    async fn pull_feedback(&mut self) -> Option<FeedbackMessage>;
+}
 
 #[derive(Serialize, Default)]
 pub struct TransmittedFrameStats {

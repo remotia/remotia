@@ -1,4 +1,6 @@
-use crate::client::error::ClientError;
+use log::debug;
+
+use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
 
 use super::Decoder;
 
@@ -25,6 +27,10 @@ impl Decoder for IdentityDecoder {
         output_buffer.copy_from_slice(input_buffer);
 
         Ok(output_buffer.len())
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }
 

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use log::debug;
 
-use crate::{client::{error::ClientError, receive::ReceivedFrame}, common::network::FrameBody};
+use crate::{client::{error::ClientError, receive::ReceivedFrame}, common::{feedback::FeedbackMessage, network::FrameBody}};
 
 use super::FrameReceiver;
 
@@ -78,5 +78,9 @@ impl FrameReceiver for TCPFrameReceiver {
         let binarized_obj_size = self.receive_frame_header()?;
 
         self.receive_frame_pixels(binarized_obj_size, encoded_frame_buffer)
+    }
+
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

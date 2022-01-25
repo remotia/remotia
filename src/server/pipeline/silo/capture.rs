@@ -56,6 +56,7 @@ pub fn launch_capture_thread(
             let frame_stats = initialize_frame_stats(
                 &mut last_frame_capture_time,
                 capture_start_time,
+                capture_timestamp,
                 raw_frame_buffer_wait_time,
             );
 
@@ -95,10 +96,13 @@ fn push_result(
 fn initialize_frame_stats(
     last_frame_capture_time: &mut i64,
     capture_start_time: Instant,
+    capture_timestamp: u128,
     raw_frame_buffer_wait_time: u128,
 ) -> TransmittedFrameStats {
     let mut frame_stats = TransmittedFrameStats::default();
     *last_frame_capture_time = capture_start_time.elapsed().as_millis() as i64;
+
+    frame_stats.capture_timestamp = capture_timestamp;
     frame_stats.capture_time = *last_frame_capture_time as u128;
     frame_stats.capturer_idle_time = raw_frame_buffer_wait_time;
     frame_stats

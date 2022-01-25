@@ -21,6 +21,8 @@ pub trait ServerProfiler {
 
 #[derive(Serialize, Default)]
 pub struct TransmittedFrameStats {
+    pub capture_timestamp: u128,
+
     pub capture_time: u128,
     pub encoding_time: u128,
     pub transfer_time: u128,

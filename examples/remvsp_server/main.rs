@@ -3,20 +3,13 @@ extern crate scrap;
 use clap::Parser;
 use remotia::{common::{
         command_line::parse_canvas_resolution_str,
-        helpers::server_setup::{setup_encoder_by_name, setup_frame_sender_by_name},
-    }, server::{capture::scrap::ScrapFrameCapturer, pipeline::silo::{BuffersConfig, SiloServerConfiguration, SiloServerPipeline}, profiling::tcp::TCPServerProfiler}};
+    }, server::{capture::scrap::ScrapFrameCapturer, encode::ffmpeg::h264::H264Encoder, pipeline::silo::{BuffersConfig, SiloServerConfiguration, SiloServerPipeline}, profiling::tcp::TCPServerProfiler, send::remvsp::{RemVPSFrameSenderConfiguration, RemVSPFrameSender}}};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
 pub struct CommandLineServerOptions {
     #[clap(short, long, default_value = "1280x720")]
     resolution: String,
-
-    #[clap(short, long, default_value = "h264")]
-    encoder_name: String,
-
-    #[clap(short, long, default_value = "remvsp")]
-    frame_sender_name: String,
 
     #[clap(long)]
     console_profiling: bool,
@@ -41,10 +34,14 @@ async fn main() -> std::io::Result<()> {
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
     let profiler = Box::new(TCPServerProfiler::connect());
-    let encoder = setup_encoder_by_name(width as usize, height as usize, &options.encoder_name);
-    let frame_sender = setup_frame_sender_by_name(&options.frame_sender_name)
-        .await
-        .unwrap();
+
+    let encoder = Box::new(H264Encoder::new((width * height * 3) as usize, width as i32, height as i32));
+
+    let frame_sender = Box::new(
+                RemVSPFrameSender::listen(5001, 512, RemVPSFrameSenderConfiguration {
+                    retransmission_frequency: 0.5,
+                })
+            );
 
     let pipeline = SiloServerPipeline::new(SiloServerConfiguration {
         frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),
@@ -61,8 +58,8 @@ async fn main() -> std::io::Result<()> {
         height: height as usize,
         maximum_preencoding_capture_delay: 5,
         buffers_conf: BuffersConfig {
-            maximum_raw_frame_buffers: 256,
-            maximum_encoded_frame_buffers: 32,
+            maximum_raw_frame_buffers: 2,
+            maximum_encoded_frame_buffers: 256,
         },
     });
 

@@ -1,20 +1,13 @@
-use std::{net::SocketAddr, str::FromStr};
+use std::{net::SocketAddr, str::FromStr, time::Duration};
 
 use clap::Parser;
-use remotia::{client::{pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, render::beryllium::BerylliumRenderer}, common::{
+use remotia::{client::{decode::h264::H264Decoder, pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, receive::remvsp::{RemVSPFrameReceiver, RemVSPFrameReceiverConfiguration}, render::beryllium::BerylliumRenderer}, common::{
         command_line::parse_canvas_resolution_str,
-        helpers::client_setup::{setup_decoder_from_name, setup_frame_receiver_by_name},
     }};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
 struct Options {
-    #[clap(short, long, default_value = "h264")]
-    decoder_name: String,
-
-    #[clap(short, long, default_value = "remvsp")]
-    frame_receiver_name: String,
-
     #[clap(short, long, default_value = "1280x720")]
     resolution: String,
 
@@ -46,14 +39,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let renderer = Box::new(BerylliumRenderer::new(canvas_width, canvas_height));
 
-    let decoder = setup_decoder_from_name(canvas_width, canvas_height, &options.decoder_name);
-    let frame_receiver = setup_frame_receiver_by_name(
-        SocketAddr::from_str(&options.server_address)?,
-        &options.binding_port,
-        &options.frame_receiver_name,
-    )
-    .await
-    .unwrap();
+    let decoder = Box::new(H264Decoder::new());
+    let frame_receiver = Box::new(RemVSPFrameReceiver::connect(
+            i16::from_str(&options.binding_port).unwrap(),
+            SocketAddr::from_str(&options.server_address)?,
+            RemVSPFrameReceiverConfiguration {
+                delayable_threshold: 300,
+                frame_pull_interval: Duration::from_millis(30),
+                ..Default::default()
+            }
+        ).await);
+
     let profiler = Box::new(TCPClientProfiler::connect().await);
 
     let pipeline = SiloClientPipeline::new(SiloClientConfiguration {
@@ -69,10 +65,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         csv_profiling: options.csv_profiling,
 
         buffers_conf: BuffersConfig {
-            maximum_encoded_frame_buffers: 16,
-            maximum_raw_frame_buffers: 32,
+            maximum_encoded_frame_buffers: 32,
+            maximum_raw_frame_buffers: 33,
         },
-        maximum_pre_render_frame_delay: 200,
+        maximum_pre_render_frame_delay: 300,
     });
 
     pipeline.run().await;

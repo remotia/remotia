@@ -30,6 +30,7 @@ pub struct RenderResult {
 pub fn launch_render_thread(
     mut renderer: Box<dyn Renderer + Send>,
     target_fps: u32,
+    maximum_pre_render_frame_delay: u128,
     raw_frame_buffers_sender: UnboundedSender<BytesMut>,
     mut decode_result_receiver: UnboundedReceiver<DecodeResult>,
     render_result_sender: UnboundedSender<RenderResult>,
@@ -49,14 +50,29 @@ pub fn launch_render_thread(
                 pull_decode_results(&mut decode_result_receiver).await;
 
             if decode_result.raw_frame_buffer.is_some() {
-                if let ControlFlow::Break(_) = update_frame_buffer(
-                    decode_result,
-                    &mut frame_stats,
-                    &mut renderer,
-                    decode_result_wait_time,
-                    last_spin_time,
-                    &raw_frame_buffers_sender,
-                ) {
+                let raw_frame_buffer = decode_result.raw_frame_buffer.unwrap();
+
+                let pre_render_frame_delay = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis()
+                    - frame_stats.capture_timestamp;
+
+                if pre_render_frame_delay > maximum_pre_render_frame_delay {
+                    frame_stats.error = Some(ClientError::StaleFrame);
+                } else {
+                    update_frame_buffer(
+                        &raw_frame_buffer,
+                        &mut frame_stats,
+                        &mut renderer,
+                        decode_result_wait_time,
+                        last_spin_time,
+                    );
+                }
+
+                if let ControlFlow::Break(_) =
+                    return_buffer(&raw_frame_buffers_sender, raw_frame_buffer)
+                {
                     break;
                 }
             }
@@ -73,6 +89,19 @@ pub fn launch_render_thread(
             spin(fps, frame_dispatch_time, &mut last_spin_time).await;
         }
     })
+}
+
+fn return_buffer(
+    raw_frame_buffers_sender: &UnboundedSender<BytesMut>,
+    raw_frame_buffer: BytesMut,
+) -> ControlFlow<()> {
+    debug!("Returning the raw frame buffer back...");
+    let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer);
+    if let Err(e) = buffer_return_result {
+        warn!("Raw frame buffer return error: {}", e);
+        return ControlFlow::Break(());
+    };
+    ControlFlow::Continue(())
 }
 
 async fn spin(fps: f64, frame_dispatch_time: i64, last_spin_time: &mut u64) {
@@ -104,14 +133,12 @@ fn push_result(
 }
 
 fn update_frame_buffer(
-    decode_result: DecodeResult,
+    raw_frame_buffer: &BytesMut,
     frame_stats: &mut ReceivedFrameStats,
     renderer: &mut Box<dyn Renderer + Send>,
     decode_result_wait_time: u128,
     last_spin_time: u64,
-    raw_frame_buffers_sender: &UnboundedSender<BytesMut>,
-) -> ControlFlow<()> {
-    let raw_frame_buffer = decode_result.raw_frame_buffer.unwrap();
+) {
     if frame_stats.error.is_none() {
         debug!("Rendering frame with stats: {:?}", frame_stats);
 
@@ -135,15 +162,6 @@ fn update_frame_buffer(
         frame_stats.renderer_idle_time = decode_result_wait_time;
         frame_stats.spin_time = last_spin_time;
     }
-
-    debug!("Returning the raw frame buffer back...");
-    let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer);
-    if let Err(e) = buffer_return_result {
-        warn!("Raw frame buffer return error: {}", e);
-        return ControlFlow::Break(());
-    };
-
-    ControlFlow::Continue(())
 }
 
 async fn pull_decode_results(

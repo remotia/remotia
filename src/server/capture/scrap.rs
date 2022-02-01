@@ -29,11 +29,12 @@ impl ScrapFrameCapturer {
 }
 
 impl FrameCapturer for ScrapFrameCapturer {
-    fn capture(&mut self) -> Result<&[u8], std::io::Error> {
+    fn capture(&mut self, output_buffer: &mut[u8]) -> Result<(), std::io::Error> {
         match self.capturer.frame() {
             Ok(buffer) => {
                 let frame_slice = unsafe { slice::from_raw_parts(buffer.as_ptr(), buffer.len()) };
-                return Ok(frame_slice);
+                output_buffer.copy_from_slice(frame_slice);
+                Ok(())
             }
             Err(error) => {
                 if error.kind() == WouldBlock {

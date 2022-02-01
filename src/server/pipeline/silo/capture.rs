@@ -118,10 +118,8 @@ fn capture(
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis();
-    let result = frame_capturer.capture();
+    frame_capturer.capture(raw_frame_buffer).unwrap();
     debug!("Frame captured");
-    let packed_bgra_frame_buffer = result.unwrap();
-    packed_bgra_to_packed_bgr(&packed_bgra_frame_buffer, raw_frame_buffer);
     (capture_start_time, capture_timestamp)
 }
 
@@ -135,10 +133,8 @@ async fn pull_raw_buffer(
 }
 
 async fn spin(spin_time: i64, last_frame_capture_time: i64) {
-    tokio::time::sleep(Duration::from_millis(
-        std::cmp::max(0, spin_time - last_frame_capture_time) as u64,
-    ))
-    .await;
+    let sleep_time = std::cmp::max(0, spin_time - last_frame_capture_time) as u64;
+    tokio::time::sleep(Duration::from_millis(sleep_time)).await;
 }
 
 fn pull_feedback(

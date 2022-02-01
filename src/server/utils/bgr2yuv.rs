@@ -59,6 +59,28 @@ pub mod raster {
             v_pixels[i / 4] += (v as f64 * 0.25) as u8;
         }
     }
+
+    pub fn bgra_to_yuv_separate(
+        bgra_pixels: &[u8],
+        y_pixels: &mut [u8],
+        u_pixels: &mut [u8],
+        v_pixels: &mut [u8],
+    ) {
+        let pixels_count = bgra_pixels.len() / 4;
+
+        for i in 0..pixels_count {
+            let (b, g, r) = (
+                bgra_pixels[i * 4],
+                bgra_pixels[i * 4 + 1],
+                bgra_pixels[i * 4 + 2],
+            );
+            let (y, u, v) = pixel::bgr_to_yuv(b, g, r);
+
+            y_pixels[i] = y;
+            u_pixels[i / 4] += (u as f64 * 0.25) as u8;
+            v_pixels[i / 4] += (v as f64 * 0.25) as u8;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -74,7 +96,7 @@ mod tests {
     use test::bench::BenchSamples;
     use test::Bencher;
 
-    use crate::server::encode::utils::bgr2yuv::raster;
+    use crate::server::utils::bgr2yuv::raster;
 
     #[test]
     fn bgr_to_yuv_simple_test() {

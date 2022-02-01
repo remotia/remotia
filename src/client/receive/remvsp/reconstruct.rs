@@ -6,7 +6,7 @@ use tokio::time::Instant;
 
 use crate::common::network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader};
 
-const DELAYABLE_FRAME_THRESHOLD: u128 = 100;
+use super::RemVSPFrameReceiverConfiguration;
 
 pub struct FrameReconstructionState {
     pub(crate) frame_header: Option<RemVSPFrameHeader>,
@@ -53,8 +53,8 @@ impl FrameReconstructionState {
             .insert(fragment.fragment_id, fragment.data);
     }
 
-    pub fn is_delayable(&self) -> bool {
-        self.first_reception.elapsed().as_millis() < DELAYABLE_FRAME_THRESHOLD
+    pub fn is_delayable(&self, threshold: u128) -> bool {
+        self.first_reception.elapsed().as_millis() < threshold
     }
 
     pub fn is_complete(&self) -> bool {

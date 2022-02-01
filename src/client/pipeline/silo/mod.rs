@@ -48,6 +48,11 @@ use crate::client::utils::profilation::setup_round_stats;
 use crate::common::feedback::FeedbackMessage;
 use crate::client::profiling::ClientProfiler;
 
+pub struct BuffersConfig {
+    pub maximum_encoded_frame_buffers: usize,
+    pub maximum_raw_frame_buffers: usize
+}
+
 pub struct SiloClientConfiguration {
     pub decoder: Box<dyn Decoder + Send>,
     pub frame_receiver: Box<dyn FrameReceiver + Send>,
@@ -57,10 +62,13 @@ pub struct SiloClientConfiguration {
 
     pub maximum_consecutive_connection_losses: u32,
 
-    pub target_fps: u32,
+    pub frames_render_rate: u32,
 
     pub console_profiling: bool,
     pub csv_profiling: bool,
+
+    pub maximum_pre_render_frame_delay: u128,
+    pub buffers_conf: BuffersConfig
 }
 
 pub struct SiloClientPipeline {
@@ -75,8 +83,6 @@ impl SiloClientPipeline {
     pub async fn run(self) {
         info!("Starting to receive stream...");
 
-        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;
-        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 64;
 
         let raw_frame_size = self.config.renderer.get_buffer_size();
         let maximum_encoded_frame_size = self.config.renderer.get_buffer_size();
@@ -86,13 +92,13 @@ impl SiloClientPipeline {
         let (raw_frame_buffers_sender, raw_frame_buffers_receiver) =
             mpsc::unbounded_channel::<BytesMut>();
 
-        for _ in 0..MAXIMUM_ENCODED_FRAME_BUFFERS {
+        for _ in 0..self.config.buffers_conf.maximum_raw_frame_buffers {
             let mut buf = BytesMut::with_capacity(maximum_encoded_frame_size);
             buf.resize(maximum_encoded_frame_size, 0);
             encoded_frame_buffers_sender.send(buf).unwrap();
         }
 
-        for _ in 0..MAXIMUM_RAW_FRAME_BUFFERS {
+        for _ in 0..self.config.buffers_conf.maximum_encoded_frame_buffers {
             let mut buf = BytesMut::with_capacity(raw_frame_size);
             buf.resize(raw_frame_size, 0);
             raw_frame_buffers_sender.send(buf).unwrap();
@@ -126,7 +132,8 @@ impl SiloClientPipeline {
 
         let render_handle = launch_render_thread(
             self.config.renderer,
-            self.config.target_fps,
+            self.config.frames_render_rate,
+            self.config.maximum_pre_render_frame_delay,
             raw_frame_buffers_sender,
             decode_result_receiver,
             render_result_sender,

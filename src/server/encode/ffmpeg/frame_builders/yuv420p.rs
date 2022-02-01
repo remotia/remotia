@@ -1,7 +1,7 @@
 use log::debug;
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
 
-use crate::server::encode::utils::bgr2yuv::raster;
+use crate::server::utils::bgr2yuv::raster;
 
 pub struct YUV420PAVFrameBuilder {
     frame_count: i64,
@@ -51,7 +51,7 @@ impl YUV420PAVFrameBuilder {
         self.u_pixels.fill(0);
         self.v_pixels.fill(0);
 
-        raster::bgr_to_yuv_separate(
+        raster::bgra_to_yuv_separate(
             frame_buffer,
             &mut self.y_pixels,
             &mut self.u_pixels,

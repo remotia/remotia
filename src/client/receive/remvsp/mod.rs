@@ -16,20 +16,28 @@ use tokio::{
     time::Instant,
 };
 
-use crate::{client::error::ClientError, common::{feedback::FeedbackMessage, network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader}}};
+use crate::{
+    client::error::ClientError,
+    common::{
+        feedback::FeedbackMessage,
+        network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader},
+    },
+};
 
 use self::{reconstruct::FrameReconstructionState, state::RemVSPReceptionState};
 
 use super::{FrameReceiver, ReceivedFrame};
 
 pub struct RemVSPFrameReceiverConfiguration {
-    frame_pull_interval: Duration,
+    pub frame_pull_interval: Duration,
+    pub delayable_threshold: u128,
 }
 
 impl Default for RemVSPFrameReceiverConfiguration {
     fn default() -> Self {
         Self {
             frame_pull_interval: Duration::from_millis(10),
+            delayable_threshold: 100,
         }
     }
 }
@@ -42,7 +50,11 @@ pub struct RemVSPFrameReceiver {
 }
 
 impl RemVSPFrameReceiver {
-    pub async fn connect(port: i16, server_address: SocketAddr) -> Self {
+    pub async fn connect(
+        port: i16,
+        server_address: SocketAddr,
+        config: RemVSPFrameReceiverConfiguration,
+    ) -> Self {
         let bind_address: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
         let bind_address = bind_address.into();
 
@@ -62,7 +74,7 @@ impl RemVSPFrameReceiver {
         let mut obj = Self {
             socket,
             server_address,
-            config: Default::default(),
+            config,
             state: Arc::new(Mutex::new(RemVSPReceptionState {
                 last_reconstructed_frame: 0,
                 ..Default::default()
@@ -108,7 +120,11 @@ impl FrameReceiver for RemVSPFrameReceiver {
     ) -> Result<ReceivedFrame, ClientError> {
         let result = {
             debug!("Pulling frame...");
-            let received_frame = self.state.lock().await.pull_frame(encoded_frame_buffer);
+            let received_frame = self
+                .state
+                .lock()
+                .await
+                .pull_frame(encoded_frame_buffer, self.config.delayable_threshold);
 
             match received_frame {
                 Some(v) => Ok(v),

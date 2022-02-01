@@ -6,6 +6,7 @@ use std::{
 
 use crate::client::decode::h265::H265Decoder;
 use crate::client::decode::identity::IdentityDecoder;
+use crate::client::receive::remvsp::RemVSPFrameReceiverConfiguration;
 use crate::client::{
     decode::{h264::H264Decoder, h264rgb::H264RGBDecoder, Decoder},
     receive::{
@@ -54,6 +55,7 @@ pub async fn setup_frame_receiver_by_name(
         "remvsp" => Ok(Box::new(RemVSPFrameReceiver::connect(
             i16::from_str(binding_port).unwrap(),
             server_address,
+            RemVSPFrameReceiverConfiguration::default()
         ).await)),
         _ => panic!("Unknown frame receiver name"),
     }

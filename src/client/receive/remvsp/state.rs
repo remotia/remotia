@@ -78,7 +78,11 @@ impl RemVSPReceptionState {
         }
     }
 
-    pub fn pull_frame(&mut self, encoded_frame_buffer: &mut [u8]) -> Option<ReceivedFrame> {
+    pub fn pull_frame(
+        &mut self,
+        encoded_frame_buffer: &mut [u8],
+        delayable_threshold: u128,
+    ) -> Option<ReceivedFrame> {
         debug!("Frames reception state: {:#?}", self);
 
         let mut pulled_frame: Option<ReceivedFrame> = None;
@@ -100,7 +104,7 @@ impl RemVSPReceptionState {
                 continue;
             }
 
-            if !frame.is_delayable() {
+            if !frame.is_delayable(delayable_threshold) {
                 debug!(
                     "Frame #{} is not delayable anymore, will be dropped. Frame status: {:?}",
                     frame_id, frame

@@ -106,6 +106,7 @@ fn return_buffer(
     encoded_frame_buffers_sender: &UnboundedSender<BytesMut>,
     encoded_frame_buffer: BytesMut,
 ) -> ControlFlow<()> {
+    debug!("Returning encoded frame buffer...");
     let buffer_return_result = encoded_frame_buffers_sender.send(encoded_frame_buffer);
     if let Err(e) = buffer_return_result {
         warn!("Encoded frame buffer return error: {}", e);

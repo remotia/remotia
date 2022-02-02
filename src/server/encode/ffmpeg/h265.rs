@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use bytes::{Bytes, BytesMut};
 use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
@@ -9,13 +10,13 @@ use rsmpeg::{
 };
 
 use cstr::cstr;
+use async_trait::async_trait;
 
-use crate::{common::feedback::FeedbackMessage, server::encode::Encoder};
+use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::ServerError}};
 
-use super::{FFMpegEncodingBridge, frame_builders::yuv420p::YUV420PAVFrameBuilder};
+use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
 pub struct H265Encoder {
-
     encode_context: AVCodecContext,
 
     width: i32,
@@ -57,18 +58,26 @@ impl H265Encoder {
             },
 
             yuv420_avframe_builder: YUV420PAVFrameBuilder::new(width as usize, height as usize),
-            ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size)
+            ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size),
         }
     }
 }
 
+#[async_trait]
 impl Encoder for H265Encoder {
-    fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
-        let avframe = self
-            .yuv420_avframe_builder
-            .create_avframe(&mut self.encode_context, input_buffer, false);
-        
-        self.ffmpeg_encoding_bridge.encode_avframe(&mut self.encode_context, avframe, output_buffer)
+    async fn encode(
+        &mut self,
+        input_buffer: Bytes,
+        mut output_buffer: &mut BytesMut,
+    ) -> Result<usize, ServerError> {
+        let avframe = self.yuv420_avframe_builder.create_avframe(
+            &mut self.encode_context,
+            &input_buffer,
+            false,
+        );
+
+        Ok(self.ffmpeg_encoding_bridge
+            .encode_avframe(&mut self.encode_context, avframe, &mut output_buffer))
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

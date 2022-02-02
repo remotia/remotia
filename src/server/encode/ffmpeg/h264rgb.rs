@@ -2,6 +2,7 @@
 
 use std::ptr::NonNull;
 
+use bytes::{Bytes, BytesMut};
 use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
@@ -11,8 +12,9 @@ use rsmpeg::{
 };
 
 use cstr::cstr;
+use async_trait::async_trait;
 
-use crate::{common::feedback::FeedbackMessage, server::encode::Encoder};
+use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::ServerError}};
 
 use super::{
     frame_builders::{bgr::BGRAVFrameBuilder, yuv420p::YUV420PAVFrameBuilder},
@@ -81,25 +83,30 @@ impl H264RGBEncoder {
     }
 }
 
+#[async_trait]
 impl Encoder for H264RGBEncoder {
-    fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
+    async fn encode(
+        &mut self,
+        input_buffer: Bytes,
+        mut output_buffer: &mut BytesMut,
+    ) -> Result<usize, ServerError> {
         let key_frame = self.state.encoded_frames % 4 == 0;
 
         let avframe = self.bgr_avframe_builder.create_avframe(
             &mut self.encode_context,
-            input_buffer,
+            &input_buffer,
             key_frame,
         );
 
         let encoded_bytes = self.ffmpeg_encoding_bridge.encode_avframe(
             &mut self.encode_context,
             avframe,
-            output_buffer,
+            &mut output_buffer,
         );
 
         self.state.encoded_frames += 1;
 
-        encoded_bytes
+        Ok(encoded_bytes)
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

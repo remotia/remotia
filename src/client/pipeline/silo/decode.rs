@@ -55,7 +55,7 @@ pub fn launch_decode_thread(
                     received_frame,
                     &mut raw_frame_buffer,
                     &mut frame_stats,
-                );
+                ).await;
 
                 update_decoding_stats(
                     &mut frame_stats,
@@ -125,7 +125,7 @@ fn update_decoding_stats(
     frame_stats.decoder_idle_time = receive_result_wait_time + raw_frame_buffer_wait_time;
 }
 
-fn decode(
+async fn decode(
     decoder: &mut Box<dyn Decoder + Send>,
     encoded_frame_buffer: &BytesMut,
     received_frame: crate::client::receive::ReceivedFrame,
@@ -137,7 +137,7 @@ fn decode(
     let decoder_result = decoder.decode(
         &encoded_frame_buffer[..received_frame.buffer_size],
         raw_frame_buffer,
-    );
+    ).await;
     let decoding_time = decoding_start_time.elapsed().as_millis();
     if decoder_result.is_err() {
         frame_stats.error = Some(decoder_result.unwrap_err());

@@ -2,6 +2,8 @@ use log::debug;
 
 use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
 
+use async_trait::async_trait;
+
 use super::Decoder;
 
 pub struct IdentityDecoder {
@@ -18,8 +20,9 @@ impl IdentityDecoder {
     }
 }
 
+#[async_trait]
 impl Decoder for IdentityDecoder {
-    fn decode(
+    async fn decode(
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],

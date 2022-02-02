@@ -37,23 +37,27 @@ pub fn launch_transfer_thread(
             let encoded_frame_buffer = encode_result.encoded_frame_buffer;
             let mut frame_stats = encode_result.frame_stats;
 
-            let capture_timestamp = encode_result.capture_timestamp;
+            if frame_stats.error.is_none() {
+                let capture_timestamp = encode_result.capture_timestamp;
 
-            let transfer_start_time = transfer(
-                &mut frame_stats,
-                &mut frame_sender,
-                capture_timestamp,
-                &encoded_frame_buffer,
-            )
-            .await;
+                let transfer_start_time = transfer(
+                    &mut frame_stats,
+                    &mut frame_sender,
+                    capture_timestamp,
+                    &encoded_frame_buffer,
+                )
+                .await;
+
+                update_transfer_stats(
+                    &mut frame_stats,
+                    transfer_start_time,
+                    encode_result_wait_time,
+                );
+            } else {
+                debug!("Error on encoded frame: {:?}", frame_stats.error);
+            }
 
             return_buffer(&encoded_frame_buffers_sender, encoded_frame_buffer);
-
-            update_transfer_stats(
-                &mut frame_stats,
-                transfer_start_time,
-                encode_result_wait_time,
-            );
 
             if let ControlFlow::Break(_) = push_result(&transfer_result_sender, frame_stats) {
                 break;
@@ -87,6 +91,7 @@ fn return_buffer(
     encoded_frame_buffers_sender: &UnboundedSender<BytesMut>,
     encoded_frame_buffer: BytesMut,
 ) {
+    debug!("Returning empty encoded frame buffer...");
     encoded_frame_buffers_sender
         .send(encoded_frame_buffer)
         .expect("Encoded frame buffer return error");
@@ -98,6 +103,7 @@ async fn transfer(
     capture_timestamp: u128,
     encoded_frame_buffer: &BytesMut,
 ) -> Instant {
+    debug!("Transmitting...");
     let transfer_start_time = Instant::now();
     frame_stats.transmitted_bytes = frame_sender
         .send_frame(
@@ -111,6 +117,7 @@ async fn transfer(
 async fn pull_encode_result(
     encode_result_receiver: &mut UnboundedReceiver<EncodeResult>,
 ) -> (EncodeResult, u128) {
+    debug!("Pulling encode result...");
     let (encode_result, encode_result_wait_time) = channel_pull(encode_result_receiver)
         .await
         .expect("Encode result channel closed, terminating.");
@@ -121,6 +128,7 @@ fn pull_feedback(
     feedback_receiver: &mut broadcast::Receiver<FeedbackMessage>,
     frame_sender: &mut Box<dyn FrameSender + Send>,
 ) {
+    debug!("Pulling feedback...");
     match feedback_receiver.try_recv() {
         Ok(message) => {
             frame_sender.handle_feedback(message);

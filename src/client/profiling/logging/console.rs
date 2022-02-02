@@ -1,4 +1,4 @@
-use log::info;
+use log::{debug, info};
 
 use crate::{
     client::{
@@ -60,7 +60,10 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
             .filter(|frame| is_error_of_type!(&frame.error, ClientError::StaleFrame))
             .count());
 
-
+        profiled_frames
+            .iter()
+            .filter(|frame| frame.error.is_some())
+            .for_each(|frame| debug!("Frame error: {:?}", frame.error.unwrap()));
 
         if rendered_frames.len() == 0 {
             return;

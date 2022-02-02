@@ -38,13 +38,12 @@ pub fn launch_render_thread(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         let target_fps = target_fps as f64;
-        let mut fps: f64 = recalculate_fps(0.0, target_fps, None);
-        let mut last_spin_time: u64 = 0;
+
+        let tick_duration = (1000.0 / target_fps) as u64;
+        let mut interval = tokio::time::interval(Duration::from_millis(tick_duration));
 
         loop {
             pull_feedback_messages(&mut feedback_receiver, &mut renderer);
-
-            let frame_dispatch_start_time = Instant::now();
 
             let (decode_result, decode_result_wait_time, mut frame_stats) =
                 pull_decode_results(&mut decode_result_receiver).await;
@@ -61,13 +60,25 @@ pub fn launch_render_thread(
                 if pre_render_frame_delay > maximum_pre_render_frame_delay {
                     frame_stats.error = Some(ClientError::StaleFrame);
                 } else {
-                    update_frame_buffer(
-                        &raw_frame_buffer,
-                        &mut frame_stats,
-                        &mut renderer,
-                        decode_result_wait_time,
-                        last_spin_time,
-                    );
+                    let spin_start_time = Instant::now();
+                    interval.tick().await;
+                    let spin_time = spin_start_time.elapsed().as_millis() as u64;
+
+                    if frame_stats.error.is_none() {
+                        let (rendering_time, frame_delay) = update_frame_buffer(
+                            &raw_frame_buffer,
+                            frame_stats.capture_timestamp,
+                            &mut renderer,
+                        );
+
+                        frame_stats.rendering_time = rendering_time;
+                        frame_stats.frame_delay = frame_delay;
+                        frame_stats.spin_time = spin_time;
+                    }
+
+                    frame_stats.renderer_idle_time = decode_result_wait_time;
+
+                    // last_render_instant = Instant::now();
                 }
 
                 if let ControlFlow::Break(_) =
@@ -77,16 +88,9 @@ pub fn launch_render_thread(
                 }
             }
 
-            fps = recalculate_fps(fps, target_fps, frame_stats.error.as_ref());
-
-            let frame_dispatch_time =
-                calculate_frame_dispatch_time(frame_stats, frame_dispatch_start_time);
-
             if let ControlFlow::Break(_) = push_result(&render_result_sender, frame_stats) {
                 break;
             }
-
-            spin(fps, frame_dispatch_time, &mut last_spin_time).await;
         }
     })
 }
@@ -104,22 +108,6 @@ fn return_buffer(
     ControlFlow::Continue(())
 }
 
-async fn spin(fps: f64, frame_dispatch_time: i64, last_spin_time: &mut u64) {
-    let spin_time = (1000 / std::cmp::max(fps as i64, 1)) - frame_dispatch_time;
-    *last_spin_time = std::cmp::max(0, spin_time) as u64;
-    tokio::time::sleep(Duration::from_millis(*last_spin_time)).await;
-}
-
-fn calculate_frame_dispatch_time(
-    frame_stats: ReceivedFrameStats,
-    frame_dispatch_start_time: Instant,
-) -> i64 {
-    let frame_dispatch_time = (frame_stats.reception_time
-        + frame_stats.decoding_time
-        + frame_dispatch_start_time.elapsed().as_millis()) as i64;
-    frame_dispatch_time
-}
-
 fn push_result(
     render_result_sender: &UnboundedSender<RenderResult>,
     frame_stats: ReceivedFrameStats,
@@ -134,34 +122,22 @@ fn push_result(
 
 fn update_frame_buffer(
     raw_frame_buffer: &BytesMut,
-    frame_stats: &mut ReceivedFrameStats,
+    capture_timestamp: u128,
     renderer: &mut Box<dyn Renderer + Send>,
-    decode_result_wait_time: u128,
-    last_spin_time: u64,
-) {
-    if frame_stats.error.is_none() {
-        debug!("Rendering frame with stats: {:?}", frame_stats);
+) -> (u128, u128) {
+    debug!("Updating frame buffer...");
 
-        let rendering_start_time = Instant::now();
-        renderer.render(&raw_frame_buffer);
-        let rendering_time = rendering_start_time.elapsed().as_millis();
+    let rendering_start_time = Instant::now();
+    renderer.render(&raw_frame_buffer);
+    let rendering_time = rendering_start_time.elapsed().as_millis();
 
-        let frame_delay = {
-            let capture_timestamp = frame_stats.capture_timestamp;
-            let frame_delay = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis()
-                - capture_timestamp;
+    let frame_delay = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
+        - capture_timestamp;
 
-            frame_delay
-        };
-
-        frame_stats.rendering_time = rendering_time;
-        frame_stats.frame_delay = frame_delay;
-        frame_stats.renderer_idle_time = decode_result_wait_time;
-        frame_stats.spin_time = last_spin_time;
-    }
+    (rendering_time, frame_delay)
 }
 
 async fn pull_decode_results(
@@ -185,17 +161,4 @@ fn pull_feedback_messages(
         }
         Err(_) => {}
     };
-}
-
-fn recalculate_fps(current_fps: f64, target_fps: f64, frame_error: Option<&ClientError>) -> f64 {
-    if let Some(error) = frame_error {
-        match error {
-            ClientError::Timeout => current_fps * 0.6,
-            _ => current_fps,
-        }
-    } else {
-        let fps_increment = (target_fps - current_fps) / 2.0;
-        let next_round_fps = current_fps + fps_increment;
-        next_round_fps
-    }
 }

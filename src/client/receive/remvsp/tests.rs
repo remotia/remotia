@@ -9,7 +9,6 @@ fn reconstruct_simple_test() {
     let mut reconstruction_state = FrameReconstructionState::default();
 
     let header = RemVSPFrameHeader {
-        frame_id: 0,
         frame_fragments_count: 2,
         fragment_size: 4,
         capture_timestamp: 0,
@@ -45,7 +44,6 @@ fn reconstruct_message_test(message: &[u8], fragment_size: u16) {
     let frame_fragments_count = message.len() as u16 / fragment_size;
 
     let header = RemVSPFrameHeader {
-        frame_id: 0,
         frame_fragments_count,
         fragment_size,
         capture_timestamp: 0,

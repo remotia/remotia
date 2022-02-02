@@ -9,6 +9,7 @@ use rsmpeg::{
 use cstr::cstr;
 
 use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
+use async_trait::async_trait;
 
 use super::{utils::yuv2bgr::raster, Decoder};
 
@@ -100,8 +101,9 @@ impl H265Decoder {
     }
 }
 
+#[async_trait]
 impl Decoder for H265Decoder {
-    fn decode(
+    async fn decode(
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],

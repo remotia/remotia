@@ -9,6 +9,7 @@ use rsmpeg::{
 use cstr::cstr;
 
 use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
+use async_trait::async_trait;
 
 use super::{Decoder};
 
@@ -39,8 +40,9 @@ impl H264RGBDecoder {
     }
 }
 
+#[async_trait]
 impl Decoder for H264RGBDecoder {
-    fn decode(
+    async fn decode(
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],

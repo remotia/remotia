@@ -4,6 +4,7 @@ use clap::Parser;
 use remotia::{client::{decode::h264::H264Decoder, pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, receive::remvsp::{RemVSPFrameReceiver, RemVSPFrameReceiverConfiguration}, render::beryllium::BerylliumRenderer}, common::{
         command_line::parse_canvas_resolution_str,
     }};
+use remotia::client::decode::pool::PoolDecoder;
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -39,12 +40,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let renderer = Box::new(BerylliumRenderer::new(canvas_width, canvas_height));
 
-    let decoder = Box::new(H264Decoder::new());
+    let decoder = Box::new(PoolDecoder::new(
+        vec![
+            Box::new(H264Decoder::new()),
+            Box::new(H264Decoder::new()),
+            Box::new(H264Decoder::new()),
+            Box::new(H264Decoder::new())
+        ]
+    ));
+
     let frame_receiver = Box::new(RemVSPFrameReceiver::connect(
             i16::from_str(&options.binding_port).unwrap(),
             SocketAddr::from_str(&options.server_address)?,
             RemVSPFrameReceiverConfiguration {
-                delayable_threshold: 300,
+                delayable_threshold: 100,
                 frame_pull_interval: Duration::from_millis(30),
                 ..Default::default()
             }
@@ -66,9 +75,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         buffers_conf: BuffersConfig {
             maximum_encoded_frame_buffers: 32,
-            maximum_raw_frame_buffers: 33,
+            maximum_raw_frame_buffers: 32,
         },
-        maximum_pre_render_frame_delay: 300,
+        maximum_pre_render_frame_delay: 250,
     });
 
     pipeline.run().await;

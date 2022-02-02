@@ -5,6 +5,8 @@ use remotia::{common::{
         command_line::parse_canvas_resolution_str,
     }, server::{capture::scrap::ScrapFrameCapturer, encode::ffmpeg::h264::H264Encoder, pipeline::silo::{BuffersConfig, SiloServerConfiguration, SiloServerPipeline}, profiling::tcp::TCPServerProfiler, send::remvsp::{RemVPSFrameSenderConfiguration, RemVSPFrameSender}}};
 
+use remotia::server::encode::pool::PoolEncoder;
+
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
 pub struct CommandLineServerOptions {
@@ -34,8 +36,16 @@ async fn main() -> std::io::Result<()> {
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
     let profiler = Box::new(TCPServerProfiler::connect());
-
-    let encoder = Box::new(H264Encoder::new((width * height * 3) as usize, width as i32, height as i32));
+    let buffer_size = (width * height * 4) as usize;
+    let encoder = Box::new(PoolEncoder::new(
+        buffer_size,
+        vec![
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+        ]
+    ));
 
     let frame_sender = Box::new(
                 RemVSPFrameSender::listen(5001, 512, RemVPSFrameSenderConfiguration {
@@ -56,9 +66,9 @@ async fn main() -> std::io::Result<()> {
 
         width: width as usize,
         height: height as usize,
-        maximum_preencoding_capture_delay: 5,
+        maximum_preencoding_capture_delay: 10,
         buffers_conf: BuffersConfig {
-            maximum_raw_frame_buffers: 2,
+            maximum_raw_frame_buffers: 8,
             maximum_encoded_frame_buffers: 256,
         },
     });

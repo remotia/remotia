@@ -1,6 +1,6 @@
 use std::{ops::ControlFlow, sync::Arc, time::Instant};
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use log::{debug, info, warn};
 use object_pool::{Pool, Reusable};
 use tokio::{
@@ -13,7 +13,7 @@ use tokio::{
 
 use crate::{
     common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
-    server::{encode::Encoder, profiling::TransmittedFrameStats},
+    server::{encode::Encoder, error::ServerError, profiling::TransmittedFrameStats},
 };
 
 use super::capture::CaptureResult;
@@ -42,6 +42,7 @@ pub fn launch_encode_thread(
                 pull_capture_result(&mut capture_result_receiver).await;
 
             let capture_delay = capture_result.capture_time.elapsed().as_millis();
+            let capture_timestamp = capture_result.capture_timestamp;
 
             let raw_frame_buffer = capture_result.raw_frame_buffer;
 
@@ -51,8 +52,23 @@ pub fn launch_encode_thread(
                 let (mut encoded_frame_buffer, encoded_frame_buffer_wait_time) =
                     pull_buffer(&mut encoded_frame_buffers_receiver).await;
 
-                let (encoded_size, encoding_time) =
-                    encode(&mut encoder, &raw_frame_buffer, &mut encoded_frame_buffer);
+                let (encode_call_result, encoding_time) = encode(
+                    &mut encoder,
+                    Bytes::from(raw_frame_buffer.clone()),
+                    &mut encoded_frame_buffer,
+                )
+                .await;
+
+                let (encoded_size, error) = if encode_call_result.is_ok() {
+                    let encoded_size = encode_call_result.unwrap();
+
+                    debug!("Encoded size: {}", encoded_size);
+                    (encoded_size, None)
+                } else {
+                    debug!("Error while encoding: {}", encode_call_result.unwrap_err());
+
+                    (0, Some(encode_call_result.unwrap_err()))
+                };
 
                 update_encoding_stats(
                     &mut frame_stats,
@@ -61,9 +77,8 @@ pub fn launch_encode_thread(
                     capture_result_wait_time,
                     encoded_frame_buffer_wait_time,
                     capture_delay,
+                    error
                 );
-
-                let capture_timestamp = capture_result.capture_timestamp;
 
                 if let ControlFlow::Break(_) = push_result(
                     &encode_result_sender,
@@ -83,6 +98,7 @@ pub fn launch_encode_thread(
 }
 
 fn return_buffer(raw_frame_buffers_sender: &UnboundedSender<BytesMut>, raw_frame_buffer: BytesMut) {
+    debug!("Returning empty raw frame buffer...");
     raw_frame_buffers_sender
         .send(raw_frame_buffer)
         .expect("Raw buffer return error");
@@ -94,6 +110,7 @@ fn push_result(
     encoded_frame_buffer: BytesMut,
     frame_stats: TransmittedFrameStats,
 ) -> ControlFlow<()> {
+    debug!("Pushing encode result...");
     let send_result = encode_result_sender.send(EncodeResult {
         capture_timestamp,
         encoded_frame_buffer,
@@ -113,27 +130,30 @@ fn update_encoding_stats(
     capture_result_wait_time: u128,
     encoded_frame_buffer_wait_time: u128,
     capture_delay: u128,
+    error: Option<ServerError>
 ) {
     frame_stats.encoded_size = encoded_size;
     frame_stats.encoding_time = encoding_time;
     frame_stats.encoder_idle_time = capture_result_wait_time + encoded_frame_buffer_wait_time;
     frame_stats.capture_delay = capture_delay;
+    frame_stats.error = error
 }
 
-fn encode(
+async fn encode(
     encoder: &mut Box<dyn Encoder + Send>,
-    raw_frame_buffer: &BytesMut,
+    raw_frame_buffer: Bytes,
     encoded_frame_buffer: &mut BytesMut,
-) -> (usize, u128) {
+) -> (Result<usize, ServerError>, u128) {
     let encoding_start_time = Instant::now();
-    let encoded_size = encoder.encode(raw_frame_buffer, encoded_frame_buffer);
+    let encode_call_result = encoder.encode(raw_frame_buffer, encoded_frame_buffer).await;
     let encoding_time = encoding_start_time.elapsed().as_millis();
-    (encoded_size, encoding_time)
+    (encode_call_result, encoding_time)
 }
 
 async fn pull_buffer(
     encoded_frame_buffers_receiver: &mut UnboundedReceiver<BytesMut>,
 ) -> (BytesMut, u128) {
+    debug!("Pulling empty encoded frame buffer...");
     let (encoded_frame_buffer, encoded_frame_buffer_wait_time) =
         channel_pull(encoded_frame_buffers_receiver)
             .await
@@ -144,6 +164,8 @@ async fn pull_buffer(
 async fn pull_capture_result(
     capture_result_receiver: &mut UnboundedReceiver<CaptureResult>,
 ) -> (CaptureResult, u128) {
+    debug!("Pulling capture result...");
+
     let (capture_result, capture_result_wait_time) = channel_pull(capture_result_receiver)
         .await
         .expect("Capture channel closed, terminating.");
@@ -154,6 +176,7 @@ fn pull_feedback(
     feedback_receiver: &mut Receiver<FeedbackMessage>,
     encoder: &mut Box<dyn Encoder + Send>,
 ) {
+    debug!("Pulling feedback...");
     match feedback_receiver.try_recv() {
         Ok(message) => {
             encoder.handle_feedback(message);

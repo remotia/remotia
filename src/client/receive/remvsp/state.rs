@@ -17,13 +17,13 @@ use super::reconstruct::FrameReconstructionState;
 
 #[derive(Default, Debug)]
 pub struct RemVSPReceptionState {
-    pub(crate) last_reconstructed_frame: usize,
+    pub(crate) last_reconstructed_frame_id: usize,
     pub(crate) frames_in_reception: HashMap<usize, FrameReconstructionState>,
 }
 
 impl RemVSPReceptionState {
     pub fn register_frame_fragment(&mut self, fragment: RemVSPFrameFragment) {
-        let frame_id = fragment.frame_header.frame_id;
+        let frame_id = fragment.frame_header.capture_timestamp as usize;
 
         let frame_reconstruction_state = {
             let frames_in_reception = &mut self.frames_in_reception;
@@ -49,7 +49,7 @@ impl RemVSPReceptionState {
     }
 
     fn is_frame_stale(&self, frame_id: usize) -> bool {
-        frame_id <= self.last_reconstructed_frame
+        frame_id <= self.last_reconstructed_frame_id
     }
 
     fn drop_frame_data(&mut self, frame_id: usize) {
@@ -69,7 +69,7 @@ impl RemVSPReceptionState {
 
         let buffer_size = frame.reconstruct(output_buffer);
 
-        self.last_reconstructed_frame = frame_id;
+        self.last_reconstructed_frame_id = frame_id;
 
         ReceivedFrame {
             buffer_size,
@@ -113,7 +113,7 @@ impl RemVSPReceptionState {
             } else if frame.is_complete() {
                 debug!(
                     "Frame #{} has been received completely. Last received frame: {}",
-                    frame_id, self.last_reconstructed_frame
+                    frame_id, self.last_reconstructed_frame_id
                 );
 
                 let received_frame = self.reconstruct_frame(frame_id, encoded_frame_buffer);

@@ -1,8 +1,11 @@
 #![allow(dead_code)]
 
+use bytes::{Bytes, BytesMut};
 use log::debug;
 
-use crate::common::feedback::FeedbackMessage;
+use crate::{common::feedback::FeedbackMessage, server::error::ServerError};
+
+use async_trait::async_trait;
 
 use super::Encoder;
 
@@ -14,11 +17,16 @@ impl IdentityEncoder {
     }
 }
 
+#[async_trait]
 impl Encoder for IdentityEncoder {
-    fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
+    async fn encode(
+        &mut self,
+        input_buffer: Bytes,
+        output_buffer: &mut BytesMut,
+    ) -> Result<usize, ServerError> {
         let encoded_frame_length = input_buffer.len();
-        output_buffer.copy_from_slice(input_buffer);
-        encoded_frame_length
+        output_buffer.copy_from_slice(&input_buffer);
+        Ok(encoded_frame_length)
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

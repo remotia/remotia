@@ -10,6 +10,8 @@ use crate::common::feedback::FeedbackMessage;
 
 use async_trait::async_trait;
 
+use super::error::ServerError;
+
 pub mod logging;
 
 pub mod tcp;
@@ -35,7 +37,9 @@ pub struct TransmittedFrameStats {
     pub capture_delay: u128,
 
     pub encoded_size: usize,
-    pub transmitted_bytes: usize
+    pub transmitted_bytes: usize,
+
+    pub error: Option<ServerError>
 }
 
 pub struct TransmissionRoundStats {

@@ -75,9 +75,7 @@ impl RemVSPFrameSender {
 
             config,
 
-            state: RemVSPTransmissionState {
-                current_frame_id: 1,
-            },
+            state: RemVSPTransmissionState { },
         }
     }
 
@@ -96,9 +94,7 @@ impl RemVSPFrameSender {
 }
 
 #[derive(Default)]
-struct RemVSPTransmissionState {
-    pub current_frame_id: usize,
-}
+struct RemVSPTransmissionState { }
 
 #[async_trait]
 impl FrameSender for RemVSPFrameSender {
@@ -106,7 +102,6 @@ impl FrameSender for RemVSPFrameSender {
         let chunks = frame_buffer.chunks(self.chunk_size);
 
         let frame_header = RemVSPFrameHeader {
-            frame_id: self.state.current_frame_id,
             frame_fragments_count: chunks.len() as u16,
             fragment_size: self.chunk_size as u16,
             capture_timestamp,
@@ -140,8 +135,6 @@ impl FrameSender for RemVSPFrameSender {
         fragments_to_retransmit
             .iter()
             .for_each(|frame_fragment| transmitted_bytes += self.send_fragment(&frame_fragment));
-
-        self.state.current_frame_id += 1;
 
         transmitted_bytes
     }

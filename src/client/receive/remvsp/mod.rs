@@ -75,10 +75,7 @@ impl RemVSPFrameReceiver {
             socket,
             server_address,
             config,
-            state: Arc::new(Mutex::new(RemVSPReceptionState {
-                last_reconstructed_frame: 0,
-                ..Default::default()
-            })),
+            state: Arc::new(Mutex::new(RemVSPReceptionState::default())),
         };
 
         obj.run_reception_loop();

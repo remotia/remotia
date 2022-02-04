@@ -16,56 +16,52 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{
-    common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
-    server::{
-        capture::FrameCapturer, profiling::TransmittedFrameStats,
-        utils::encoding::packed_bgra_to_packed_bgr,
-    },
-};
+use crate::{common::{feedback::FeedbackMessage, helpers::silo::channel_pull}, server::{capture::FrameCapturer, types::ServerFrameData}};
 
 pub struct CaptureResult {
-    pub capture_timestamp: u128,
     pub capture_time: Instant,
-
-    pub raw_frame_buffer: BytesMut,
-    pub frame_stats: TransmittedFrameStats,
+    pub frame_data: ServerFrameData,
 }
 
 pub fn launch_capture_thread(
-    spin_time: i64,
+    frames_capture_rate: u32,
     mut raw_frame_buffers_receiver: UnboundedReceiver<BytesMut>,
     capture_result_sender: UnboundedSender<CaptureResult>,
     mut frame_capturer: Box<dyn FrameCapturer + Send>,
     mut feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        let mut last_frame_capture_time: i64 = 0;
+        let tick_duration = (1000.0 / frames_capture_rate as f64) as u64;
+        let mut interval = tokio::time::interval(Duration::from_millis(tick_duration));
 
         loop {
+            let spin_start_time = Instant::now();
+            interval.tick().await;
+            let spin_time = spin_start_time.elapsed().as_millis();
+
             pull_feedback(&mut feedback_receiver, &mut frame_capturer);
 
-            spin(spin_time, last_frame_capture_time).await;
-
-            let (mut raw_frame_buffer, raw_frame_buffer_wait_time) =
+            let (raw_frame_buffer, raw_frame_buffer_wait_time) =
                 pull_raw_buffer(&mut raw_frame_buffers_receiver).await;
 
-            let (capture_start_time, capture_timestamp) =
-                capture(&mut frame_capturer, &mut raw_frame_buffer);
+            let mut frame_data = ServerFrameData::default();
 
-            let frame_stats = initialize_frame_stats(
-                &mut last_frame_capture_time,
-                capture_start_time,
-                capture_timestamp,
-                raw_frame_buffer_wait_time,
-            );
+            frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
+
+            let (capture_start_time, capture_timestamp) =
+                capture(&mut frame_capturer, &mut frame_data);
+
+            frame_data.set("capture_timestamp", capture_timestamp);
+            frame_data.set_local("capture_time", capture_start_time.elapsed().as_millis());
+            frame_data.set_local("spin_time", spin_time);
+            frame_data.set_local("capturer_raw_frame_buffer_wait_time", raw_frame_buffer_wait_time);
 
             if let ControlFlow::Break(_) = push_result(
                 &capture_result_sender,
-                capture_timestamp,
-                capture_start_time,
-                raw_frame_buffer,
-                frame_stats,
+                CaptureResult {
+                    capture_time: capture_start_time,
+                    frame_data,
+                },
             ) {
                 break;
             }
@@ -75,17 +71,9 @@ pub fn launch_capture_thread(
 
 fn push_result(
     capture_result_sender: &UnboundedSender<CaptureResult>,
-    capture_timestamp: u128,
-    capture_start_time: Instant,
-    raw_frame_buffer: BytesMut,
-    frame_stats: TransmittedFrameStats,
+    result: CaptureResult,
 ) -> ControlFlow<()> {
-    let send_result = capture_result_sender.send(CaptureResult {
-        capture_timestamp,
-        capture_time: capture_start_time,
-        raw_frame_buffer,
-        frame_stats,
-    });
+    let send_result = capture_result_sender.send(result);
     if let Err(e) = send_result {
         warn!("Capture result send error: {}", e);
         return ControlFlow::Break(());
@@ -93,24 +81,9 @@ fn push_result(
     ControlFlow::Continue(())
 }
 
-fn initialize_frame_stats(
-    last_frame_capture_time: &mut i64,
-    capture_start_time: Instant,
-    capture_timestamp: u128,
-    raw_frame_buffer_wait_time: u128,
-) -> TransmittedFrameStats {
-    let mut frame_stats = TransmittedFrameStats::default();
-    *last_frame_capture_time = capture_start_time.elapsed().as_millis() as i64;
-
-    frame_stats.capture_timestamp = capture_timestamp;
-    frame_stats.capture_time = *last_frame_capture_time as u128;
-    frame_stats.capturer_idle_time = raw_frame_buffer_wait_time;
-    frame_stats
-}
-
 fn capture(
     frame_capturer: &mut Box<dyn FrameCapturer + Send>,
-    raw_frame_buffer: &mut BytesMut,
+    frame_data: &mut ServerFrameData,
 ) -> (Instant, u128) {
     debug!("Capturing frame...");
     let capture_start_time = Instant::now();
@@ -118,7 +91,7 @@ fn capture(
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis();
-    frame_capturer.capture(raw_frame_buffer).unwrap();
+    frame_capturer.capture(frame_data);
     debug!("Frame captured");
     (capture_start_time, capture_timestamp)
 }
@@ -130,11 +103,6 @@ async fn pull_raw_buffer(
         .await
         .expect("Raw frame buffers channel closed, terminating.");
     (raw_frame_buffer, raw_frame_buffer_wait_time)
-}
-
-async fn spin(spin_time: i64, last_frame_capture_time: i64) {
-    let sleep_time = std::cmp::max(0, spin_time - last_frame_capture_time) as u64;
-    tokio::time::sleep(Duration::from_millis(sleep_time)).await;
 }
 
 fn pull_feedback(

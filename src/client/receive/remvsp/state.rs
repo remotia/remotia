@@ -19,6 +19,7 @@ use super::reconstruct::FrameReconstructionState;
 pub struct RemVSPReceptionState {
     pub(crate) last_reconstructed_frame_id: usize,
     pub(crate) frames_in_reception: HashMap<usize, FrameReconstructionState>,
+    pub(crate) reconstructed_frames: HashMap<usize, FrameReconstructionState>,
 }
 
 impl RemVSPReceptionState {
@@ -85,8 +86,9 @@ impl RemVSPReceptionState {
     ) -> Option<ReceivedFrame> {
         debug!("Frames reception state: {:#?}", self);
 
-        let mut pulled_frame: Option<ReceivedFrame> = None;
+        // let mut pulled_frame: Option<ReceivedFrame> = None;
 
+        // Check frames to drop
         let mut frames_to_drop: Vec<usize> = Vec::new();
 
         let mut sorted_keys = self.frames_in_reception.keys().sorted();
@@ -95,31 +97,12 @@ impl RemVSPReceptionState {
             let frame = self.frames_in_reception.get(frame_id).unwrap();
             let frame_id = *frame_id;
 
-            if self.is_frame_stale(frame_id) {
-                debug!(
-                    "Frame #{} is stale, will be dropped. Frame status: {:?}",
-                    frame_id, frame
-                );
-                frames_to_drop.push(frame_id);
-                continue;
-            }
-
             if !frame.is_delayable(delayable_threshold) {
                 debug!(
                     "Frame #{} is not delayable anymore, will be dropped. Frame status: {:?}",
                     frame_id, frame
                 );
                 frames_to_drop.push(frame_id);
-            } else if frame.is_complete() {
-                debug!(
-                    "Frame #{} has been received completely. Last received frame: {}",
-                    frame_id, self.last_reconstructed_frame_id
-                );
-
-                let received_frame = self.reconstruct_frame(frame_id, encoded_frame_buffer);
-
-                pulled_frame = Some(received_frame);
-                break;
             }
         }
 
@@ -127,6 +110,28 @@ impl RemVSPReceptionState {
             self.drop_frame_data(frame_id);
         }
 
-        pulled_frame
+        // Check if head frame is complete
+        let head_frame_id = self.frames_in_reception.keys().sorted().next();
+
+        if head_frame_id.is_none() {
+            return None;
+        } else {
+            let head_frame_id = head_frame_id.unwrap();
+            let head_frame = self.frames_in_reception.get(head_frame_id).unwrap();
+            let head_frame_id = *head_frame_id;
+
+            if !head_frame.is_complete() {
+                return None;
+            }
+
+            debug!(
+                "Head frame #{} has been received completely. Last received frame: {}",
+                head_frame_id, self.last_reconstructed_frame_id
+            );
+
+            let received_frame = self.reconstruct_frame(head_frame_id, encoded_frame_buffer);
+
+            return Some(received_frame);
+        }
     }
 }

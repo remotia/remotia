@@ -4,7 +4,7 @@ use scrap::{Capturer, Display, Frame};
 use core::slice;
 use std::io::ErrorKind::WouldBlock;
 
-use crate::common::feedback::FeedbackMessage;
+use crate::{common::feedback::FeedbackMessage, server::types::ServerFrameData};
 
 use super::FrameCapturer;
 
@@ -14,7 +14,7 @@ pub struct ScrapFrameCapturer {
 
 // TODO: Evaluate a safer way to move the capturer to another thread
 // Necessary for multi-threaded pipelines
-unsafe impl Send for ScrapFrameCapturer { }
+unsafe impl Send for ScrapFrameCapturer {}
 
 impl ScrapFrameCapturer {
     pub fn new(capturer: Capturer) -> Self {
@@ -29,19 +29,17 @@ impl ScrapFrameCapturer {
 }
 
 impl FrameCapturer for ScrapFrameCapturer {
-    fn capture(&mut self, output_buffer: &mut[u8]) -> Result<(), std::io::Error> {
+    fn capture(&mut self, frame_data: &mut ServerFrameData) {
         match self.capturer.frame() {
             Ok(buffer) => {
                 let frame_slice = unsafe { slice::from_raw_parts(buffer.as_ptr(), buffer.len()) };
-                output_buffer.copy_from_slice(frame_slice);
-                Ok(())
+                frame_data
+                    .get_writable_buffer_ref("raw_frame_buffer")
+                    .unwrap()
+                    .copy_from_slice(frame_slice);
             }
             Err(error) => {
-                if error.kind() == WouldBlock {
-                    return Err(error);
-                } else {
-                    panic!("Error: {}", error);
-                }
+                panic!("Scrap capture error: {}", error);
             }
         }
     }

@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 
 use async_trait::async_trait;
 
-use crate::common::feedback::FeedbackMessage;
+use crate::{common::feedback::FeedbackMessage, server::types::ServerFrameData};
 
 use super::ServerProfiler;
 
@@ -47,6 +47,8 @@ impl TCPServerProfiler {
 
 #[async_trait]
 impl ServerProfiler for TCPServerProfiler {
+    fn log_frame(&mut self, _frame_data: ServerFrameData) { }
+
     async fn pull_feedback(&mut self) -> Option<FeedbackMessage> {
         self.feedbacks.lock().await.pop()
     }

@@ -1,13 +1,13 @@
-use std::{net::SocketAddr, str::FromStr, time::Duration};
+use std::{time::Duration};
 
 use clap::Parser;
 use remotia::client::decode::pool::PoolDecoder;
+use remotia::client::receive::srt::SRTFrameReceiver;
 use remotia::{
     client::{
         decode::h264::H264Decoder,
         pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline},
         profiling::tcp::TCPClientProfiler,
-        receive::remvsp::{RemVSPFrameReceiver, RemVSPFrameReceiverConfiguration},
         render::beryllium::BerylliumRenderer,
     },
     common::command_line::parse_canvas_resolution_str,
@@ -47,24 +47,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let renderer = Box::new(BerylliumRenderer::new(canvas_width, canvas_height));
 
-    let decoder = Box::new(PoolDecoder::new(
-        vec![
-            Box::new(H264Decoder::new()),
-            Box::new(H264Decoder::new()),
-            Box::new(H264Decoder::new()),
-            Box::new(H264Decoder::new())
-        ]
-    ));
+    let decoder = Box::new(PoolDecoder::new(vec![
+        Box::new(H264Decoder::new()),
+        Box::new(H264Decoder::new()),
+        Box::new(H264Decoder::new()),
+        Box::new(H264Decoder::new()),
+    ]));
 
     let frame_receiver = Box::new(
-        RemVSPFrameReceiver::connect(
-            i16::from_str(&options.binding_port).unwrap(),
-            SocketAddr::from_str(&options.server_address)?,
-            RemVSPFrameReceiverConfiguration {
-                delayable_threshold: 50,
-                frame_pull_interval: Duration::from_millis(10),
-                ..Default::default()
-            },
+        SRTFrameReceiver::new(
+            &options.server_address,
+            Duration::from_millis(300),
+            Duration::from_millis(5000),
         )
         .await,
     );
@@ -88,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             maximum_raw_frame_buffers: 32,
         },
 
-        maximum_pre_render_frame_delay: 1000,
+        maximum_pre_render_frame_delay: 10000,
     });
 
     pipeline.run().await;

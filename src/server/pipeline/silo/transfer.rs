@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bytes::BytesMut;
 use log::{debug, warn};
@@ -11,13 +11,14 @@ use tokio::task::JoinHandle;
 
 use crate::common::feedback::FeedbackMessage;
 use crate::common::helpers::silo::channel_pull;
-use crate::server::profiling::TransmittedFrameStats;
 use crate::server::send::FrameSender;
+use crate::server::types::ServerFrameData;
 
 use super::encode::EncodeResult;
+use super::utils::return_writable_buffer;
 
 pub struct TransferResult {
-    pub frame_stats: TransmittedFrameStats,
+    pub frame_data: ServerFrameData,
 }
 
 pub fn launch_transfer_thread(
@@ -34,84 +35,48 @@ pub fn launch_transfer_thread(
             let (encode_result, encode_result_wait_time) =
                 pull_encode_result(&mut encode_result_receiver).await;
 
-            let encoded_frame_buffer = encode_result.encoded_frame_buffer;
-            let mut frame_stats = encode_result.frame_stats;
+            let mut frame_data = encode_result.frame_data;
 
-            if frame_stats.error.is_none() {
-                let capture_timestamp = encode_result.capture_timestamp;
+            if frame_data.get_error().is_none() {
+                transfer(&mut frame_sender, &mut frame_data).await;
 
-                let transfer_start_time = transfer(
-                    &mut frame_stats,
-                    &mut frame_sender,
-                    capture_timestamp,
-                    &encoded_frame_buffer,
-                )
-                .await;
-
-                update_transfer_stats(
-                    &mut frame_stats,
-                    transfer_start_time,
-                    encode_result_wait_time,
+                frame_data.set_local("transferrer_encode_result_wait_time", encode_result_wait_time);
+                frame_data.set_local(
+                    "total_time",
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                        - frame_data.get("capture_timestamp"),
                 );
             } else {
-                debug!("Error on encoded frame: {:?}", frame_stats.error);
+                debug!("Error on encoded frame: {:?}", frame_data.get_error());
             }
 
-            return_buffer(&encoded_frame_buffers_sender, encoded_frame_buffer);
+            return_writable_buffer(
+                &encoded_frame_buffers_sender,
+                &mut frame_data,
+                "encoded_frame_buffer",
+            );
 
-            if let ControlFlow::Break(_) = push_result(&transfer_result_sender, frame_stats) {
+            let send_result = transfer_result_sender.send(TransferResult { frame_data });
+            if let Err(_) = send_result {
+                warn!("Transfer result sender error");
                 break;
-            }
+            };
         }
     })
 }
 
-fn update_transfer_stats(
-    frame_stats: &mut TransmittedFrameStats,
-    transfer_start_time: Instant,
-    encode_result_wait_time: u128,
-) {
-    frame_stats.transfer_time = transfer_start_time.elapsed().as_millis();
-    frame_stats.transferrer_idle_time = encode_result_wait_time;
-}
-
-fn push_result(
-    transfer_result_sender: &UnboundedSender<TransferResult>,
-    frame_stats: TransmittedFrameStats,
-) -> ControlFlow<()> {
-    let send_result = transfer_result_sender.send(TransferResult { frame_stats });
-    if let Err(_) = send_result {
-        warn!("Transfer result sender error");
-        return ControlFlow::Break(());
-    };
-    ControlFlow::Continue(())
-}
-
-fn return_buffer(
-    encoded_frame_buffers_sender: &UnboundedSender<BytesMut>,
-    encoded_frame_buffer: BytesMut,
-) {
-    debug!("Returning empty encoded frame buffer...");
-    encoded_frame_buffers_sender
-        .send(encoded_frame_buffer)
-        .expect("Encoded frame buffer return error");
-}
-
 async fn transfer(
-    frame_stats: &mut TransmittedFrameStats,
     frame_sender: &mut Box<dyn FrameSender + Send>,
-    capture_timestamp: u128,
-    encoded_frame_buffer: &BytesMut,
-) -> Instant {
+    frame_data: &mut ServerFrameData,
+) {
     debug!("Transmitting...");
     let transfer_start_time = Instant::now();
-    frame_stats.transmitted_bytes = frame_sender
-        .send_frame(
-            capture_timestamp,
-            &encoded_frame_buffer[..frame_stats.encoded_size],
-        )
-        .await;
-    transfer_start_time
+    frame_sender.send_frame(frame_data).await;
+
+    frame_data.set_local("transfer_time", transfer_start_time.elapsed().as_millis());
 }
 
 async fn pull_encode_result(

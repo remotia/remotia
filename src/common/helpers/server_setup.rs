@@ -3,7 +3,15 @@ use std::{
     time::Duration,
 };
 
-use crate::server::{encode::{Encoder, ffmpeg::{h264::H264Encoder, h264rgb::H264RGBEncoder, h265::H265Encoder}, identity::IdentityEncoder}, send::{FrameSender, remvsp::{RemVPSFrameSenderConfiguration, RemVSPFrameSender}, srt::SRTFrameSender, tcp::TCPFrameSender}};
+use crate::server::{
+    encode::{ffmpeg::h264::H264Encoder, Encoder},
+    send::{
+        remvsp::{RemVPSFrameSenderConfiguration, RemVSPFrameSender},
+        srt::SRTFrameSender,
+        tcp::TCPFrameSender,
+        FrameSender,
+    },
+};
 use log::info;
 
 pub fn setup_encoder_by_name(
@@ -17,9 +25,9 @@ pub fn setup_encoder_by_name(
 
     let encoder: Box<dyn Encoder + Send> = match encoder_name {
         "h264" => Box::new(H264Encoder::new(frame_size, width as i32, height as i32)),
-        "h264rgb" => Box::new(H264RGBEncoder::new(frame_size, width as i32, height as i32)),
-        "h265" => Box::new(H265Encoder::new(frame_size, width as i32, height as i32)),
-        "identity" => Box::new(IdentityEncoder::new()),
+        // "h264rgb" => Box::new(H264RGBEncoder::new(frame_size, width as i32, height as i32)),
+        // "h265" => Box::new(H265Encoder::new(frame_size, width as i32, height as i32)),
+        // "identity" => Box::new(IdentityEncoder::new()),
         _ => panic!("Unknown encoder name"),
     };
 
@@ -37,23 +45,16 @@ pub async fn setup_frame_sender_by_name(
 
             Ok(Box::new(TCPFrameSender::new(stream)))
         }
-        "srt" => {
-            Ok(Box::new(
-                SRTFrameSender::new(
-                    5001,
-                    Duration::from_millis(10),
-                    Duration::from_millis(50),
-                )
-                .await,
-            ))
-        },
-        "remvsp" => {
-            Ok(Box::new(
-                RemVSPFrameSender::listen(5001, 512, RemVPSFrameSenderConfiguration {
-                    retransmission_frequency: 0.5,
-                })
-            ))
-        }
+        "srt" => Ok(Box::new(
+            SRTFrameSender::new(5001, Duration::from_millis(10), Duration::from_millis(50)).await,
+        )),
+        "remvsp" => Ok(Box::new(RemVSPFrameSender::listen(
+            5001,
+            512,
+            RemVPSFrameSenderConfiguration {
+                retransmission_frequency: 0.5,
+            },
+        ))),
         _ => panic!("Unknown frame sender"),
     }
 }

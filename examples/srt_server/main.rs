@@ -1,5 +1,7 @@
 extern crate scrap;
 
+use std::time::Duration;
+
 use clap::Parser;
 use remotia::{
     common::command_line::parse_canvas_resolution_str,
@@ -12,7 +14,8 @@ use remotia::{
             console::{errors::ConsoleServerErrorsProfiler, stats::ConsoleServerStatsProfiler},
             tcp::TCPServerProfiler,
             ServerProfiler,
-        }, send::remvsp::{RemVPSFrameSenderConfiguration, RemVSPFrameSender},
+        },
+        send::srt::SRTFrameSender,
     },
 };
 
@@ -99,13 +102,9 @@ async fn main() -> std::io::Result<()> {
         ],
     ));
 
-    let frame_sender = Box::new(RemVSPFrameSender::listen(
-        5001,
-        512,
-        RemVPSFrameSenderConfiguration {
-            retransmission_frequency: 0.5,
-        },
-    ));
+    let frame_sender = Box::new(
+        SRTFrameSender::new(5001, Duration::from_millis(300), Duration::from_millis(5000)).await,
+    );
 
     let pipeline = SiloServerPipeline::new(SiloServerConfiguration {
         frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),

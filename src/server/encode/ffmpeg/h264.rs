@@ -18,7 +18,10 @@ use async_trait::async_trait;
 
 use cstr::cstr;
 
-use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::ServerError}};
+use crate::{
+    common::feedback::FeedbackMessage,
+    server::{encode::Encoder, error::ServerError, types::ServerFrameData},
+};
 
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
@@ -132,14 +135,17 @@ fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
 
 #[async_trait]
 impl Encoder for H264Encoder {
-    async fn encode(
-        &mut self,
-        input_buffer: Bytes,
-        mut output_buffer: &mut BytesMut,
-    ) -> Result<usize, ServerError> {
+    async fn encode(&mut self, frame_data: &mut ServerFrameData) {
         self.perform_quality_increase();
 
         let key_frame = self.state.encoded_frames % 4 == 0;
+
+        let input_buffer = frame_data
+            .extract_writable_buffer("raw_frame_buffer")
+            .expect("No raw frame buffer in frame DTO");
+        let mut output_buffer = frame_data
+            .extract_writable_buffer("encoded_frame_buffer")
+            .expect("No encoded frame buffer in frame DTO");
 
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,
@@ -155,7 +161,10 @@ impl Encoder for H264Encoder {
 
         self.state.encoded_frames += 1;
 
-        Ok(encoded_bytes)
+        frame_data.insert_writable_buffer("raw_frame_buffer", input_buffer);
+        frame_data.insert_writable_buffer("encoded_frame_buffer", output_buffer);
+
+        frame_data.set("encoded_size", encoded_bytes as u128);
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

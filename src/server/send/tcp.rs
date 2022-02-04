@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use log::debug;
 
-use crate::common::{feedback::FeedbackMessage, network::FrameBody};
+use crate::{common::{feedback::FeedbackMessage, network::FrameBody}, server::types::ServerFrameData};
 
 use super::FrameSender;
 
@@ -28,7 +28,12 @@ impl TCPFrameSender {
 
 #[async_trait]
 impl FrameSender for TCPFrameSender {
-    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) -> usize {
+    async fn send_frame(&mut self, frame_data: &mut ServerFrameData) {
+        let capture_timestamp = frame_data.get("capture_timestamp");
+        let encoded_size = frame_data.get("encoded_size") as usize;
+        let frame_buffer = frame_data.get_writable_buffer_ref("encoded_frame_buffer").unwrap();
+        let frame_buffer = &frame_buffer[..encoded_size];
+
         let frame_body = FrameBody {
             capture_timestamp,
             frame_pixels: frame_buffer.to_vec(),
@@ -40,7 +45,7 @@ impl FrameSender for TCPFrameSender {
 
         self.stream.write_all(&binarized_obj).unwrap();
 
-        binarized_obj.len()
+        frame_data.set_local("transmitted_bytes", binarized_obj.len() as u128);
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

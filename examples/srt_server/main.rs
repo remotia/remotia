@@ -1,7 +1,5 @@
 extern crate scrap;
 
-use std::time::Duration;
-
 use clap::Parser;
 use remotia::{
     common::command_line::parse_canvas_resolution_str,
@@ -102,9 +100,7 @@ async fn main() -> std::io::Result<()> {
         ],
     ));
 
-    let frame_sender = Box::new(
-        SRTFrameSender::new(5001, Duration::from_millis(300), Duration::from_millis(5000)).await,
-    );
+    let frame_sender = Box::new(SRTFrameSender::new(5001).await);
 
     let pipeline = SiloServerPipeline::new(SiloServerConfiguration {
         frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),

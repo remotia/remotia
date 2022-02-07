@@ -46,7 +46,7 @@ pub async fn setup_frame_sender_by_name(
             Ok(Box::new(TCPFrameSender::new(stream)))
         }
         "srt" => Ok(Box::new(
-            SRTFrameSender::new(5001, Duration::from_millis(10), Duration::from_millis(50)).await,
+            SRTFrameSender::new(5001).await,
         )),
         "remvsp" => Ok(Box::new(RemVSPFrameSender::listen(
             5001,

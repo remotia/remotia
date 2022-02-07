@@ -1,5 +1,3 @@
-use std::{time::Duration};
-
 use clap::Parser;
 use remotia::client::decode::pool::PoolDecoder;
 use remotia::client::receive::srt::SRTFrameReceiver;
@@ -54,14 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Box::new(H264Decoder::new()),
     ]));
 
-    let frame_receiver = Box::new(
-        SRTFrameReceiver::new(
-            &options.server_address,
-            Duration::from_millis(300),
-            Duration::from_millis(5000),
-        )
-        .await,
-    );
+    let frame_receiver = Box::new(SRTFrameReceiver::new(&options.server_address).await);
 
     let profiler = Box::new(TCPClientProfiler::connect().await);
 
@@ -82,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             maximum_raw_frame_buffers: 32,
         },
 
-        maximum_pre_render_frame_delay: 10000,
+        maximum_pre_render_frame_delay: 30000,
     });
 
     pipeline.run().await;

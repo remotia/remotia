@@ -1,0 +1,23 @@
+[package]
+name = "remotia-samples"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.tokio]
+version = "1.14.0"
+features = ["rt-multi-thread"]
+
+[dependencies]
+env_logger = "0.9.0"
+log = "0.4.14"
+remotia = { path = "../remotia/" }   
+remotia-buffer-utils = { path = "../remotia-buffer-utils/" }   
+remotia-profilation-utils = { path = "../remotia-profilation-utils/" }   
+remotia-core-capturers = { path = "../remotia-core-capturers/" }   
+remotia-ffmpeg-codecs = { path = "../remotia-ffmpeg-codecs/" }   
+remotia-srt = { path = "../remotia-srt/" }   
+remotia-core-renderers = { path = "../remotia-core-renderers/" }   
+remotia-core-loggers = { path = "../remotia-core-loggers/" }   
+remotia-core-codecs = { path = "../remotia-core-codecs/" }   

@@ -6,9 +6,9 @@ use remotia::{
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
-use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
+use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger, csv::serializer::CSVFrameDataSerializer};
 use remotia_core_renderers::beryllium::BerylliumRenderer;
-use remotia_ffmpeg_codecs::decoders::{h264::H264Decoder, libvpx_vp9::LibVpxVP9Decoder, hevc::HEVCDecoder};
+use remotia_ffmpeg_codecs::decoders::{h264::H264Decoder};
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 use remotia_srt::receiver::SRTFrameReceiver;
 
@@ -26,13 +26,14 @@ async fn main() -> std::io::Result<()> {
                     .log(DropReason::CodecError)
                     .log(DropReason::NoDecodedFrames)
                     .log(DropReason::ConnectionError),
-            ),
+            )
+            .add(CSVFrameDataSerializer::new("client_drops.csv").log("capture_timestamp")),
         )
         .bind()
         .feedable();
 
-    let width = 1920;
-    let height = 1080;
+    let width = 1280;
+    let height = 720;
     let buffer_size = width * height * 4;
 
     // Pipeline structure
@@ -104,7 +105,16 @@ async fn main() -> std::io::Result<()> {
                         .header("--- Delay times")
                         .log("reception_delay")
                         .log("frame_delay"),
-                ),
+                )
+                .add(
+                    CSVFrameDataSerializer::new("client.csv")
+                        .log("reception_time")
+                        .log("decoding_time")
+                        .log("rendering_time")
+                        .log("total_time")
+                        .log("reception_delay")
+                        .log("frame_delay"),
+                )
         )
         .bind();
 

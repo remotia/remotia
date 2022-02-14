@@ -11,8 +11,11 @@ use remotia::{
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
 use remotia_core_codecs::yuv420p::encoder::RGBAToYUV420PConverter;
-use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
-use remotia_ffmpeg_codecs::encoders::{x264::X264Encoder, libvpx_vp9::LibVpxVP9Encoder, x265::X265Encoder};
+use remotia_core_loggers::{
+    csv::serializer::CSVFrameDataSerializer, errors::ConsoleDropReasonLogger,
+    stats::ConsoleAverageStatsLogger,
+};
+use remotia_ffmpeg_codecs::encoders::x264::X264Encoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 use remotia_srt::sender::SRTFrameSender;
 
@@ -23,12 +26,14 @@ async fn main() -> std::io::Result<()> {
     let error_handling_pipeline = AscodePipeline::new()
         .tag("ErrorsHandler")
         .link(
-            Component::new().add(
-                ConsoleDropReasonLogger::new()
-                    .log(DropReason::StaleFrame)
-                    .log(DropReason::ConnectionError)
-                    .log(DropReason::CodecError),
-            ),
+            Component::new()
+                .add(
+                    ConsoleDropReasonLogger::new()
+                        .log(DropReason::StaleFrame)
+                        .log(DropReason::ConnectionError)
+                        .log(DropReason::CodecError),
+                )
+                .add(CSVFrameDataSerializer::new("server_drops.csv").log("capture_timestamp")),
         )
         .bind()
         .feedable();
@@ -42,21 +47,29 @@ async fn main() -> std::io::Result<()> {
         .tag("ServerMain")
         .link(
             Component::new()
-                .add(Ticker::new(100))
+                .add(Ticker::new(10))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
-                .add(capturer),
+                .add(capturer)
+                .add(TimestampDiffCalculator::new(
+                    "capture_timestamp",
+                    "capture_time",
+                ))
+                .add(TimestampAdder::new("capturing_component_processing_finished"))
         )
         .link(
             Component::new()
                 .add(TimestampDiffCalculator::new(
+                    "capturing_component_processing_finished",
+                    "capturing_to_encoding_component_delay",
+                ))
+                .add(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "capture_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
+                .add(ThresholdBasedFrameDropper::new("capture_delay", 15))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-
                 .add(TimestampAdder::new(
                     "color_space_conversion_start_timestamp",
                 ))
@@ -70,6 +83,10 @@ async fn main() -> std::io::Result<()> {
                     width * height / 4,
                 ))
                 .add(RGBAToYUV420PConverter::new())
+                .add(TimestampDiffCalculator::new(
+                    "color_space_conversion_start_timestamp",
+                    "color_space_conversion_time",
+                ))
 
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
@@ -84,10 +101,15 @@ async fn main() -> std::io::Result<()> {
                     "encoding_start_timestamp",
                     "encoding_time",
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
+                .add(TimestampAdder::new("encoding_component_processing_finished"))
         )
         .link(
             Component::new()
+                .add(TimestampDiffCalculator::new(
+                    "encoding_component_processing_finished",
+                    "encoding_to_transmission_component_delay",
+                ))
                 .add(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "pre_transmission_delay",
@@ -115,14 +137,33 @@ async fn main() -> std::io::Result<()> {
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
                         .log("encoded_size")
-                        .log("avframe_building_time")
+                        .log("capture_time")
+                        .log("color_space_conversion_time")
                         .log("encoding_time")
                         .log("transmission_time")
                         .log("total_time"),
                 )
                 .add(
                     ConsoleAverageStatsLogger::new()
+                        .header("--- Components communication delays")
+                        .log("capturing_to_encoding_component_delay")
+                        .log("encoding_to_transmission_component_delay")
+                )
+                .add(
+                    ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
+                        .log("capture_delay")
+                        .log("pre_transmission_delay"),
+                )
+                .add(
+                    CSVFrameDataSerializer::new("server.csv")
+                        .log("capture_timestamp")
+                        .log("encoded_size")
+                        .log("capture_time")
+                        .log("color_space_conversion_time")
+                        .log("encoding_time")
+                        .log("transmission_time")
+                        .log("total_time")
                         .log("capture_delay")
                         .log("pre_transmission_delay"),
                 ),

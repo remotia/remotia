@@ -3,6 +3,8 @@ use remotia::{traits::FrameProcessor, types::FrameData};
 
 use async_trait::async_trait;
 
+pub mod pool;
+
 pub struct BufferAllocator { 
     buffer_id: String,
     size: usize

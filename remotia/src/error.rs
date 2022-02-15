@@ -38,4 +38,7 @@ pub enum DropReason {
 
     #[error("NoAvailableEncoders")]
     NoAvailableEncoders,
+
+    #[error("No available buffers")]
+    NoAvailableBuffers,
 }

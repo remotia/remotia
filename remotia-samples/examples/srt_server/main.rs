@@ -8,7 +8,7 @@ use remotia::{
     },
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
-use remotia_buffer_utils::BufferAllocator;
+use remotia_buffer_utils::pool::BuffersPool;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
 use remotia_core_codecs::yuv420p::encoder::RGBAToYUV420PConverter;
 use remotia_core_loggers::{
@@ -23,25 +23,40 @@ use remotia_srt::sender::SRTFrameSender;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
+    let capturer = ScrapFrameCapturer::new_from_primary();
+    let width = capturer.width();
+    let height = capturer.height();
+    let buffer_size = width * height * 4;
+
+    let rfb_pool = BuffersPool::new("raw_frame_buffer", 8, buffer_size);
+    let ycb_pool = BuffersPool::new("y_channel_buffer", 8, width * height);
+    let crcb_pool = BuffersPool::new("cr_channel_buffer", 8, (width * height) / 4);
+    let cbcb_pool = BuffersPool::new("cb_channel_buffer", 8, (width * height) / 4);
+    let efb_pool = BuffersPool::new("encoded_frame_buffer", 8, buffer_size);
+
     let error_handling_pipeline = AscodePipeline::new()
         .tag("ErrorsHandler")
         .link(
             Component::new()
+                .add(rfb_pool.redeemer().soft())
+                .add(ycb_pool.redeemer().soft())
+                .add(crcb_pool.redeemer().soft())
+                .add(cbcb_pool.redeemer().soft())
+                .add(efb_pool.redeemer().soft())
+
                 .add(
                     ConsoleDropReasonLogger::new()
                         .log(DropReason::StaleFrame)
                         .log(DropReason::ConnectionError)
-                        .log(DropReason::CodecError),
+                        .log(DropReason::CodecError)
+                        .log(DropReason::NoAvailableBuffers),
                 )
                 .add(CSVFrameDataSerializer::new("server_drops.csv").log("capture_timestamp")),
         )
         .bind()
         .feedable();
 
-    let capturer = ScrapFrameCapturer::new_from_primary();
-    let width = capturer.width();
-    let height = capturer.height();
-    let buffer_size = width * height * 4;
+
 
     let main_pipeline = AscodePipeline::new()
         .tag("ServerMain")
@@ -49,8 +64,10 @@ async fn main() -> std::io::Result<()> {
             Component::new()
                 .add(Ticker::new(10))
                 .add(TimestampAdder::new("process_start_timestamp"))
-                .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
+                // .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
+                .add(rfb_pool.borrower())
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(capturer)
                 .add(TimestampDiffCalculator::new(
                     "capture_timestamp",
@@ -73,22 +90,21 @@ async fn main() -> std::io::Result<()> {
                 .add(TimestampAdder::new(
                     "color_space_conversion_start_timestamp",
                 ))
-                .add(BufferAllocator::new("y_channel_buffer", width * height))
-                .add(BufferAllocator::new(
-                    "cb_channel_buffer",
-                    width * height / 4,
-                ))
-                .add(BufferAllocator::new(
-                    "cr_channel_buffer",
-                    width * height / 4,
-                ))
+                .add(ycb_pool.borrower())
+                .add(crcb_pool.borrower())
+                .add(cbcb_pool.borrower())
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
+
                 .add(RGBAToYUV420PConverter::new())
+                .add(rfb_pool.redeemer())
                 .add(TimestampDiffCalculator::new(
                     "color_space_conversion_start_timestamp",
                     "color_space_conversion_time",
                 ))
 
-                .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
+                .add(efb_pool.borrower())
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
+
                 .add(TimestampAdder::new("encoding_start_timestamp"))
                 .add(X264Encoder::new(
                     buffer_size,
@@ -97,6 +113,10 @@ async fn main() -> std::io::Result<()> {
                     "keyint=16",
                 ))
                 // .add(LibVpxVP9Encoder::new(buffer_size, width as i32, height as i32))
+                .add(ycb_pool.redeemer())
+                .add(crcb_pool.redeemer())
+                .add(cbcb_pool.redeemer())
+
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
@@ -121,6 +141,9 @@ async fn main() -> std::io::Result<()> {
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(TimestampAdder::new("transmission_start_timestamp"))
                 .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
+
+                .add(efb_pool.redeemer())
+
                 .add(TimestampDiffCalculator::new(
                     "transmission_start_timestamp",
                     "transmission_time",

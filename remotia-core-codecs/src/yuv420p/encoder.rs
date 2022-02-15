@@ -26,6 +26,9 @@ impl FrameProcessor for RGBAToYUV420PConverter {
             .extract_writable_buffer("cr_channel_buffer")
             .unwrap();
 
+        cb_channel_buffer.fill(0);
+        cr_channel_buffer.fill(0);
+
         bgra_to_yuv_separate(
             &mut raw_frame_buffer,
             &mut y_channel_buffer,

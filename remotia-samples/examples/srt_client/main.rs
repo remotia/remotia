@@ -2,13 +2,16 @@ use std::time::Duration;
 
 use remotia::{
     error::DropReason,
-    processors::{error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper},
+    processors::{error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper, key_check::KeyChecker},
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
-use remotia_buffer_utils::BufferAllocator;
-use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger, csv::serializer::CSVFrameDataSerializer};
+use remotia_buffer_utils::pool::BuffersPool;
+use remotia_core_loggers::{
+    csv::serializer::CSVFrameDataSerializer, errors::ConsoleDropReasonLogger,
+    stats::ConsoleAverageStatsLogger,
+};
 use remotia_core_renderers::beryllium::BerylliumRenderer;
-use remotia_ffmpeg_codecs::decoders::{h264::H264Decoder};
+use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 use remotia_srt::receiver::SRTFrameReceiver;
 
@@ -16,32 +19,43 @@ use remotia_srt::receiver::SRTFrameReceiver;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let error_handling_pipeline = AscodePipeline::new()
-        .tag("ErrorsHandler")
-        .link(
-            Component::new().add(
-                ConsoleDropReasonLogger::new()
-                    .log(DropReason::StaleFrame)
-                    .log(DropReason::ConnectionError)
-                    .log(DropReason::CodecError)
-                    .log(DropReason::NoDecodedFrames)
-                    .log(DropReason::ConnectionError),
-            )
-            .add(CSVFrameDataSerializer::new("client_drops.csv").log("capture_timestamp")),
-        )
-        .bind()
-        .feedable();
-
     let width = 1280;
     let height = 720;
     let buffer_size = width * height * 4;
+
+    let efb_pool = BuffersPool::new("encoded_frame_buffer", 8, buffer_size);
+    let rfb_pool = BuffersPool::new("raw_frame_buffer", 8, buffer_size);
+
+    let error_handling_pipeline = AscodePipeline::new()
+        .tag("ErrorsHandler")
+        .link(
+            Component::new()
+                .add(rfb_pool.redeemer().soft())
+                .add(efb_pool.redeemer().soft())
+
+                .add(
+                    ConsoleDropReasonLogger::new()
+                        .log(DropReason::StaleFrame)
+                        .log(DropReason::ConnectionError)
+                        .log(DropReason::CodecError)
+                        .log(DropReason::NoDecodedFrames)
+                        .log(DropReason::ConnectionError)
+                        .log(DropReason::NoAvailableBuffers),
+                )
+                .add(KeyChecker::new("capture_timestamp"))
+                .add(CSVFrameDataSerializer::new("client_drops.csv").log("capture_timestamp")),
+        )
+        .bind()
+        .feedable();
 
     // Pipeline structure
     let main_pipeline = AscodePipeline::new()
         .tag("ClientMain")
         .link(
             Component::new()
-                .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
+                .add(efb_pool.borrower())
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
+
                 .add(TimestampAdder::new("reception_start_timestamp"))
                 .add(SRTFrameReceiver::new("127.0.0.1:5001", Duration::from_millis(50)).await)
                 .add(TimestampDiffCalculator::new(
@@ -52,7 +66,9 @@ async fn main() -> std::io::Result<()> {
         )
         .link(
             Component::new()
-                .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
+                .add(rfb_pool.borrower())
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
+
                 .add(TimestampAdder::new("decoding_start_timestamp"))
                 .add(H264Decoder::new())
                 // .add(H265Decoder::new())
@@ -61,6 +77,7 @@ async fn main() -> std::io::Result<()> {
                     "decoding_start_timestamp",
                     "decoding_time",
                 ))
+                .add(efb_pool.redeemer())
                 .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
@@ -80,6 +97,10 @@ async fn main() -> std::io::Result<()> {
                     "rendering_start_timestamp",
                     "rendering_time",
                 ))
+
+                .add(rfb_pool.redeemer())
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
+
                 .add(TimestampDiffCalculator::new(
                     "reception_start_timestamp",
                     "total_time",
@@ -114,7 +135,7 @@ async fn main() -> std::io::Result<()> {
                         .log("total_time")
                         .log("reception_delay")
                         .log("frame_delay"),
-                )
+                ),
         )
         .bind();
 

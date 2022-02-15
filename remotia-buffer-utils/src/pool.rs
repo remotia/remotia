@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 
 use bytes::BytesMut;
+use log::debug;
 use remotia::{error::DropReason, traits::FrameProcessor, types::FrameData};
 
 pub struct BuffersPool {
@@ -51,6 +52,8 @@ pub struct BufferBorrower {
 #[async_trait]
 impl FrameProcessor for BufferBorrower {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
+        debug!("Borrowing '{}' buffer...", self.slot_id);
+
         let mut buffers = self.buffers.lock().unwrap();
         let buffer = buffers.pop();
 
@@ -79,6 +82,8 @@ impl BufferRedeemer {
 #[async_trait]
 impl FrameProcessor for BufferRedeemer {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
+        debug!("Redeeming '{}' buffer (soft = {})...", self.slot_id, self.soft);
+
         let buffer = frame_data.extract_writable_buffer(&self.slot_id);
 
         match buffer {

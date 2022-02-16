@@ -1,4 +1,4 @@
-use std::{time::Duration, path::{Path, PathBuf}};
+use std::{time::Duration, path::{PathBuf}};
 
 use remotia::{
     error::DropReason,
@@ -59,7 +59,7 @@ async fn main() -> std::io::Result<()> {
         .link(
             Component::new()
                 .add(TimestampAdder::new("dump_start_timestamp"))
-                .add(RawFrameDumper::new("raw_frame_buffer", PathBuf::from("./frames_dump/")))
+                .add(RawFrameDumper::new("raw_frame_buffer", PathBuf::from("./server_frames_dump/")))
                 .add(TimestampDiffCalculator::new(
                     "dump_start_timestamp",
                     "dump_time",
@@ -155,7 +155,7 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(TimestampAdder::new("transmission_start_timestamp"))
-                // .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
+                .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
                 .add(efb_pool.redeemer())
                 .add(TimestampDiffCalculator::new(
                     "transmission_start_timestamp",

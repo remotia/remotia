@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, path::PathBuf};
 
 use remotia::{
     error::DropReason,
@@ -8,7 +8,7 @@ use remotia::{
 use remotia_buffer_utils::pool::BuffersPool;
 use remotia_core_loggers::{
     csv::serializer::CSVFrameDataSerializer, errors::ConsoleDropReasonLogger,
-    stats::ConsoleAverageStatsLogger,
+    stats::ConsoleAverageStatsLogger, frame_dump::RawFrameDumper,
 };
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
@@ -98,6 +98,8 @@ async fn main() -> std::io::Result<()> {
                     "rendering_start_timestamp",
                     "rendering_time",
                 ))
+
+                .add(RawFrameDumper::new("raw_frame_buffer", PathBuf::from("./client_frames_dump/")))
 
                 .add(rfb_pool.redeemer())
                 .add(OnErrorSwitch::new(&error_handling_pipeline))

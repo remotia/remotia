@@ -1,22 +1,25 @@
-use std::{path::{Path, PathBuf}, fs::{File, create_dir_all}, io::Write};
+use std::{
+    fs::{create_dir_all, File},
+    io::Write,
+    path::PathBuf,
+};
 
 use async_trait::async_trait;
 
-use log::info;
 use remotia::{traits::FrameProcessor, types::FrameData};
 
 pub struct RawFrameDumper {
     buffer_id: String,
 
-    folder: PathBuf
+    folder: PathBuf,
 }
 
 impl RawFrameDumper {
     pub fn new(buffer_id: &str, folder: PathBuf) -> Self {
-        create_dir_all(folder.clone());
+        create_dir_all(folder.clone()).unwrap();
         Self {
             buffer_id: buffer_id.to_string(),
-            folder
+            folder,
         }
     }
 }
@@ -30,7 +33,7 @@ impl FrameProcessor for RawFrameDumper {
         let mut file_path = self.folder.clone();
         file_path.push(format!("{}.bgra", frame_id));
         let mut output_file = File::create(file_path.as_path()).unwrap();
-        output_file.write_all(&buffer);
+        output_file.write_all(&buffer).unwrap();
 
         Some(frame_data)
     }

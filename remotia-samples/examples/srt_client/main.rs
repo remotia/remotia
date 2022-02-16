@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use remotia::{
     error::DropReason,
-    processors::{error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper, key_check::KeyChecker},
+    processors::{error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper, key_check::KeyChecker, ticker::Ticker},
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::pool::BuffersPool;
@@ -53,6 +53,7 @@ async fn main() -> std::io::Result<()> {
         .tag("ClientMain")
         .link(
             Component::new()
+                .add(Ticker::new(10))
                 .add(efb_pool.borrower())
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
 

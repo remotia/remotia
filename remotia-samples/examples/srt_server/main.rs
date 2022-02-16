@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, path::{Path, PathBuf}};
 
 use remotia::{
     error::DropReason,
@@ -59,7 +59,7 @@ async fn main() -> std::io::Result<()> {
         .link(
             Component::new()
                 .add(TimestampAdder::new("dump_start_timestamp"))
-                .add(RawFrameDumper::new("raw_frame_buffer", width, height))
+                .add(RawFrameDumper::new("raw_frame_buffer", PathBuf::from("./frames_dump/")))
                 .add(TimestampDiffCalculator::new(
                     "dump_start_timestamp",
                     "dump_time",

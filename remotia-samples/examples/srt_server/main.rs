@@ -3,8 +3,8 @@ use std::time::Duration;
 use remotia::{
     error::DropReason,
     processors::{
-        error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper,
-        ticker::Ticker,
+        clone_switch::CloneSwitch, error_switch::OnErrorSwitch,
+        frame_drop::threshold::ThresholdBasedFrameDropper, ticker::Ticker,
     },
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
@@ -13,7 +13,7 @@ use remotia_core_capturers::scrap::ScrapFrameCapturer;
 use remotia_core_codecs::yuv420p::encoder::RGBAToYUV420PConverter;
 use remotia_core_loggers::{
     csv::serializer::CSVFrameDataSerializer, errors::ConsoleDropReasonLogger,
-    stats::ConsoleAverageStatsLogger,
+    frame_dump::RawFrameDumper, stats::ConsoleAverageStatsLogger,
 };
 use remotia_ffmpeg_codecs::encoders::x264::X264Encoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -43,7 +43,6 @@ async fn main() -> std::io::Result<()> {
                 .add(crcb_pool.redeemer().soft())
                 .add(cbcb_pool.redeemer().soft())
                 .add(efb_pool.redeemer().soft())
-
                 .add(
                     ConsoleDropReasonLogger::new()
                         .log(DropReason::StaleFrame)
@@ -56,7 +55,23 @@ async fn main() -> std::io::Result<()> {
         .bind()
         .feedable();
 
-
+    let frame_dump_pipeline = AscodePipeline::new()
+        .link(
+            Component::new()
+                .add(TimestampAdder::new("dump_start_timestamp"))
+                .add(RawFrameDumper::new("raw_frame_buffer", width, height))
+                .add(TimestampDiffCalculator::new(
+                    "dump_start_timestamp",
+                    "dump_time",
+                ))
+                .add(
+                    ConsoleAverageStatsLogger::new()
+                        .header("--- Frame dump times")
+                        .log("dump_time"),
+                ),
+        )
+        .bind()
+        .feedable();
 
     let main_pipeline = AscodePipeline::new()
         .tag("ServerMain")
@@ -65,7 +80,6 @@ async fn main() -> std::io::Result<()> {
                 .add(Ticker::new(10))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(TimestampAdder::new("capture_timestamp"))
-                // .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(rfb_pool.borrower())
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(capturer)
@@ -73,7 +87,9 @@ async fn main() -> std::io::Result<()> {
                     "capture_timestamp",
                     "capture_time",
                 ))
-                .add(TimestampAdder::new("capturing_component_processing_finished"))
+                .add(TimestampAdder::new(
+                    "capturing_component_processing_finished",
+                )),
         )
         .link(
             Component::new()
@@ -94,17 +110,15 @@ async fn main() -> std::io::Result<()> {
                 .add(crcb_pool.borrower())
                 .add(cbcb_pool.borrower())
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-
                 .add(RGBAToYUV420PConverter::new())
+                .add(CloneSwitch::new(&frame_dump_pipeline))
                 .add(rfb_pool.redeemer())
                 .add(TimestampDiffCalculator::new(
                     "color_space_conversion_start_timestamp",
                     "color_space_conversion_time",
                 ))
-
                 .add(efb_pool.borrower())
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-
                 .add(TimestampAdder::new("encoding_start_timestamp"))
                 .add(X264Encoder::new(
                     buffer_size,
@@ -116,13 +130,14 @@ async fn main() -> std::io::Result<()> {
                 .add(ycb_pool.redeemer())
                 .add(crcb_pool.redeemer())
                 .add(cbcb_pool.redeemer())
-
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
                 ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(TimestampAdder::new("encoding_component_processing_finished"))
+                .add(TimestampAdder::new(
+                    "encoding_component_processing_finished",
+                )),
         )
         .link(
             Component::new()
@@ -140,10 +155,8 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(TimestampAdder::new("transmission_start_timestamp"))
-                .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
-
+                // .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
                 .add(efb_pool.redeemer())
-
                 .add(TimestampDiffCalculator::new(
                     "transmission_start_timestamp",
                     "transmission_time",
@@ -170,7 +183,7 @@ async fn main() -> std::io::Result<()> {
                     ConsoleAverageStatsLogger::new()
                         .header("--- Components communication delays")
                         .log("capturing_to_encoding_component_delay")
-                        .log("encoding_to_transmission_component_delay")
+                        .log("encoding_to_transmission_component_delay"),
                 )
                 .add(
                     ConsoleAverageStatsLogger::new()
@@ -196,6 +209,7 @@ async fn main() -> std::io::Result<()> {
     let mut handles = Vec::new();
     handles.extend(main_pipeline.run());
     handles.extend(error_handling_pipeline.run());
+    handles.extend(frame_dump_pipeline.run());
 
     for handle in handles {
         handle.await.unwrap()

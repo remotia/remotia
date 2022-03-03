@@ -11,6 +11,8 @@ use remotia::{traits::FrameProcessor, types::FrameData};
 pub struct RawFrameDumper {
     buffer_id: String,
 
+    key: String,
+
     folder: PathBuf,
 }
 
@@ -19,6 +21,7 @@ impl RawFrameDumper {
         create_dir_all(folder.clone()).unwrap();
         Self {
             buffer_id: buffer_id.to_string(),
+            key: "frame_id".to_string(),
             folder,
         }
     }
@@ -27,7 +30,7 @@ impl RawFrameDumper {
 #[async_trait]
 impl FrameProcessor for RawFrameDumper {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        let frame_id = frame_data.get("capture_timestamp");
+        let frame_id = frame_data.get(&self.key);
         let buffer = frame_data.get_writable_buffer_ref(&self.buffer_id).unwrap();
 
         let mut file_path = self.folder.clone();

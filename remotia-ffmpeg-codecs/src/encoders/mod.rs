@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, info};
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
 
 #[allow(dead_code)]
@@ -7,8 +7,8 @@ mod frame_builders;
 // pub mod asynchronous;
 
 pub mod x264;
-pub mod x265;
-pub mod libvpx_vp9;
+// pub mod x265;
+// pub mod libvpx_vp9;
 
 pub struct FFMpegEncodingBridge { }
 
@@ -26,6 +26,8 @@ impl FFMpegEncodingBridge {
     ) -> usize {
         let mut encoded_frame_length = 0;
         encode_context.send_frame(Some(&avframe)).unwrap();
+
+        info!("Loop");
 
         loop {
             let packet = match encode_context.receive_packet() {
@@ -52,6 +54,8 @@ impl FFMpegEncodingBridge {
             output_buffer[start_index..end_index].copy_from_slice(data);
 
             encoded_frame_length = end_index;
+
+            info!("Encoded packet PTS: {}", packet.pts);
         }
 
         encoded_frame_length

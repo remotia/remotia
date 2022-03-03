@@ -1,16 +1,17 @@
 use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext, AVCodecParserContext, AVPacket},
-    error::RsmpegError,
+    error::RsmpegError, UnsafeDerefMut, ffi,
 };
 
 use cstr::cstr;
 
 use remotia::{
-    common::feedback::FeedbackMessage, error::DropReason, traits::FrameProcessor, types::FrameData, client::decode::Decoder,
+    client::decode::Decoder, common::feedback::FeedbackMessage, error::DropReason,
+    traits::FrameProcessor, types::FrameData
 };
 
-use super::{utils::yuv2bgr::raster};
+use super::utils::yuv2bgr::raster;
 use async_trait::async_trait;
 
 pub struct H264Decoder {
@@ -69,15 +70,41 @@ impl H264Decoder {
     fn parse_packets(&mut self, input_buffer: &[u8]) -> Option<DropReason> {
         let mut packet = AVPacket::new();
         let mut parsed_offset = 0;
+
+        debug!("Loop");
+
         while parsed_offset < input_buffer.len() {
-            let (get_packet, offset) = self
-                .parser_context
-                .parse_packet(
-                    &mut self.decode_context,
-                    &mut packet,
-                    &input_buffer[parsed_offset..],
-                )
-                .unwrap();
+            let parse_result = {
+                let data = &input_buffer[parsed_offset..];
+
+                let mut packet_data = packet.data;
+                let mut packet_size = packet.size;
+
+                let offset = unsafe {
+                    ffi::av_parser_parse2(
+                        self.parser_context.as_mut_ptr(),
+                        self.decode_context.as_mut_ptr(),
+                        &mut packet_data,
+                        &mut packet_size,
+                        data.as_ptr(),
+                        data.len() as i32,
+                        100,
+                        100,
+                        0,
+                    )
+                };
+
+                unsafe {
+                    packet.deref_mut().data = packet_data;
+                    packet.deref_mut().size = packet_size;
+                }
+
+                (packet.size != 0, offset as usize)
+            };
+
+            let (get_packet, offset) = parse_result;
+
+            debug!("Decoded packet PTS: {}", packet.pts);
 
             if get_packet {
                 let result = self.decode_context.send_packet(Some(&packet));
@@ -103,7 +130,7 @@ impl H264Decoder {
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],
-    ) -> Result<(), DropReason> {
+    ) -> Result<i64, DropReason> {
         if let Some(error) = self.parse_packets(input_buffer) {
             return Err(error);
         }
@@ -116,9 +143,13 @@ impl H264Decoder {
             Err(e) => panic!("{:?}", e),
         };
 
+        let frame_id = avframe.coded_picture_number as i64;
+
+        debug!("Decoded frame id: {}", frame_id);
+
         self.write_avframe(avframe, output_buffer);
 
-        Ok(())
+        Ok(frame_id)
     }
 }
 
@@ -138,9 +169,13 @@ impl FrameProcessor for H264Decoder {
 
         let decode_result = self.decode_to_buffer(&encoded_frame_buffer, &mut raw_frame_buffer);
 
-        encoded_frame_buffer.unsplit(empty_buffer_memory);
+        if decode_result.is_ok() {
+            let frame_id = decode_result.unwrap() as u128;
+            // Override the frame_id stat, compensating eventual decoding delay
+            frame_data.set("frame_id", frame_id);
+        }
 
-        debug!("Start: {:?}", &raw_frame_buffer[0..16]);
+        encoded_frame_buffer.unsplit(empty_buffer_memory);
 
         frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);
         frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);

@@ -138,6 +138,11 @@ impl X264Encoder {
             avframe_building_start_time.elapsed().as_millis(),
         );
 
+        frame_data.set(
+            "frame_id",
+            avframe.pts as u128
+        );
+
         let encoded_bytes = self.ffmpeg_encoding_bridge.encode_avframe(
             &mut self.encode_context,
             avframe,
@@ -161,7 +166,7 @@ fn init_encoder(width: i32, height: i32, crf: u32, x264opts: &CString) -> AVCode
     let mut encode_context = AVCodecContext::new(&encoder);
     encode_context.set_width(width);
     encode_context.set_height(height);
-    encode_context.set_time_base(ffi::AVRational { num: 1, den: 60 });
+    encode_context.set_time_base(ffi::AVRational { num: 1, den: 60 * 1000 });
     encode_context.set_framerate(ffi::AVRational { num: 60, den: 1 });
     encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV420P);
     let mut encode_context = unsafe {

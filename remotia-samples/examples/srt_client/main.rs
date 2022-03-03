@@ -1,14 +1,17 @@
-use std::{time::Duration, path::PathBuf};
+use std::{path::PathBuf, time::Duration};
 
 use remotia::{
     error::DropReason,
-    processors::{error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper, key_check::KeyChecker, ticker::Ticker},
+    processors::{
+        error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper,
+        key_check::KeyChecker, ticker::Ticker, clone_switch::CloneSwitch,
+    },
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::pool::BuffersPool;
 use remotia_core_loggers::{
     csv::serializer::CSVFrameDataSerializer, errors::ConsoleDropReasonLogger,
-    stats::ConsoleAverageStatsLogger, frame_dump::RawFrameDumper,
+    frame_dump::RawFrameDumper, stats::ConsoleAverageStatsLogger,
 };
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
@@ -32,7 +35,6 @@ async fn main() -> std::io::Result<()> {
             Component::new()
                 .add(rfb_pool.redeemer().soft())
                 .add(efb_pool.redeemer().soft())
-
                 .add(
                     ConsoleDropReasonLogger::new()
                         .log(DropReason::StaleFrame)
@@ -48,6 +50,27 @@ async fn main() -> std::io::Result<()> {
         .bind()
         .feedable();
 
+    let frame_dump_pipeline = AscodePipeline::new()
+        .link(
+            Component::new()
+                .add(TimestampAdder::new("dump_start_timestamp"))
+                .add(RawFrameDumper::new(
+                    "raw_frame_buffer",
+                    PathBuf::from("/home/lorenzo/Scrivania/remotia-dumps/client_frames_dump/"),
+                ))
+                .add(TimestampDiffCalculator::new(
+                    "dump_start_timestamp",
+                    "dump_time",
+                ))
+                .add(
+                    ConsoleAverageStatsLogger::new()
+                        .header("--- Frame dump times")
+                        .log("dump_time"),
+                ),
+        )
+        .bind()
+        .feedable();
+
     // Pipeline structure
     let main_pipeline = AscodePipeline::new()
         .tag("ClientMain")
@@ -56,7 +79,6 @@ async fn main() -> std::io::Result<()> {
                 .add(Ticker::new(10))
                 .add(efb_pool.borrower())
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-
                 .add(TimestampAdder::new("reception_start_timestamp"))
                 .add(SRTFrameReceiver::new("127.0.0.1:5001", Duration::from_millis(50)).await)
                 .add(TimestampDiffCalculator::new(
@@ -69,7 +91,6 @@ async fn main() -> std::io::Result<()> {
             Component::new()
                 .add(rfb_pool.borrower())
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-
                 .add(TimestampAdder::new("decoding_start_timestamp"))
                 .add(H264Decoder::new())
                 // .add(H265Decoder::new())
@@ -98,12 +119,9 @@ async fn main() -> std::io::Result<()> {
                     "rendering_start_timestamp",
                     "rendering_time",
                 ))
-
-                .add(RawFrameDumper::new("raw_frame_buffer", PathBuf::from("./client_frames_dump/")))
-
+                .add(CloneSwitch::new(&frame_dump_pipeline))
                 .add(rfb_pool.redeemer())
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-
                 .add(TimestampDiffCalculator::new(
                     "reception_start_timestamp",
                     "total_time",
@@ -132,6 +150,7 @@ async fn main() -> std::io::Result<()> {
                 )
                 .add(
                     CSVFrameDataSerializer::new("client.csv")
+                        .log("capture_timestamp")
                         .log("reception_time")
                         .log("decoding_time")
                         .log("rendering_time")
@@ -144,6 +163,7 @@ async fn main() -> std::io::Result<()> {
 
     let mut handles = Vec::new();
     handles.extend(main_pipeline.run());
+    handles.extend(frame_dump_pipeline.run());
     handles.extend(error_handling_pipeline.run());
 
     for handle in handles {

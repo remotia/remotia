@@ -1,4 +1,6 @@
-use log::debug;
+use std::ptr::NonNull;
+
+use log::{debug};
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame};
 
 pub struct YUV420PAVFrameBuilder {
@@ -23,6 +25,8 @@ impl YUV420PAVFrameBuilder {
         avframe.set_width(encode_context.width);
         avframe.set_height(encode_context.height);
         avframe.set_pts(self.frame_count);
+        // avframe.set_pts(frame_timestamp as i64);
+
         if force_key_frame {
             avframe.set_pict_type(1);
         }
@@ -45,9 +49,6 @@ impl YUV420PAVFrameBuilder {
         y_data.copy_from_slice(y_channel_buffer);
         cb_data.copy_from_slice(cb_channel_buffer);
         cr_data.copy_from_slice(cr_channel_buffer);
-
-
-        // debug!("Y Slice: {:?}", &y_data);
 
         debug!("Created avframe #{}", avframe.pts);
 

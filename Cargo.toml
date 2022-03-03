@@ -15,4 +15,6 @@ members = [
 
     "remotia-ffmpeg-codecs",
     "remotia-srt",
+
+    "paper-experiments"
 ]

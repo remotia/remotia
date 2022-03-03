@@ -11,3 +11,4 @@ log = "0.4.14"
 remotia = { path = "../remotia/" }   
 async-trait = "0.1.51"
 bytes = "1.1.0"
+tokio = "1.17.0"

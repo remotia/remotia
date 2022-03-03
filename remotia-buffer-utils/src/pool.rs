@@ -1,10 +1,11 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 
 use async_trait::async_trait;
 
 use bytes::BytesMut;
 use log::debug;
 use remotia::{error::DropReason, traits::FrameProcessor, types::FrameData};
+use tokio::sync::Mutex;
 
 pub struct BuffersPool {
     slot_id: String,
@@ -54,7 +55,7 @@ impl FrameProcessor for BufferBorrower {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         debug!("Borrowing '{}' buffer...", self.slot_id);
 
-        let mut buffers = self.buffers.lock().unwrap();
+        let mut buffers = self.buffers.lock().await;
         let buffer = buffers.pop();
 
         match buffer {
@@ -87,7 +88,7 @@ impl FrameProcessor for BufferRedeemer {
         let buffer = frame_data.extract_writable_buffer(&self.slot_id);
 
         match buffer {
-            Some(buffer) => self.buffers.lock().unwrap().push(buffer),
+            Some(buffer) => self.buffers.lock().await.push(buffer),
             None => {
                 if !self.soft {
                     panic!("Missing '{}' buffer in frame {}", self.slot_id, frame_data);

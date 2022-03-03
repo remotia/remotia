@@ -1,5 +1,3 @@
-use std::ptr::NonNull;
-
 use log::{debug};
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame};
 
@@ -15,6 +13,7 @@ impl YUV420PAVFrameBuilder {
     pub fn create_avframe(
         &mut self,
         encode_context: &mut AVCodecContext,
+        frame_timestamp: u128,
         y_channel_buffer: &[u8],
         cb_channel_buffer: &[u8],
         cr_channel_buffer: &[u8],
@@ -24,8 +23,14 @@ impl YUV420PAVFrameBuilder {
         avframe.set_format(encode_context.pix_fmt);
         avframe.set_width(encode_context.width);
         avframe.set_height(encode_context.height);
-        avframe.set_pts(self.frame_count);
-        // avframe.set_pts(frame_timestamp as i64);
+        // avframe.set_pts(self.frame_count + 100);
+        avframe.set_pts(frame_timestamp as i64);
+
+        /*let avframe = unsafe {
+            let raw_avframe = avframe.into_raw().as_ptr();
+            (*raw_avframe).opaque = 100;
+            AVFrame::from_raw(NonNull::new(raw_avframe).unwrap())
+        };*/
 
         if force_key_frame {
             avframe.set_pict_type(1);

@@ -17,4 +17,6 @@ bytes = "1.1.0"
 
 cstr = "0.2.9"
 
+bincode = "1.3.3"
+
 remotia = { path = "../remotia/" }   

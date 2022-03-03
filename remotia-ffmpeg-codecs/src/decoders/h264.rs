@@ -1,14 +1,17 @@
+use std::collections::VecDeque;
+
 use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext, AVCodecParserContext, AVPacket},
-    error::RsmpegError, UnsafeDerefMut, ffi,
+    error::RsmpegError,
+    ffi, UnsafeDerefMut,
 };
 
 use cstr::cstr;
 
 use remotia::{
     client::decode::Decoder, common::feedback::FeedbackMessage, error::DropReason,
-    traits::FrameProcessor, types::FrameData
+    traits::FrameProcessor, types::FrameData,
 };
 
 use super::utils::yuv2bgr::raster;
@@ -16,6 +19,8 @@ use async_trait::async_trait;
 
 pub struct H264Decoder {
     decode_context: AVCodecContext,
+
+    timestamps_queue: VecDeque<u128>,
 
     parser_context: AVCodecParserContext,
 }
@@ -36,6 +41,7 @@ impl H264Decoder {
             },
 
             parser_context: AVCodecParserContext::find(decoder.id).unwrap(),
+            timestamps_queue: VecDeque::new(),
         }
     }
 
@@ -71,25 +77,32 @@ impl H264Decoder {
         let mut packet = AVPacket::new();
         let mut parsed_offset = 0;
 
-        debug!("Loop");
+        debug!(
+            "Parsing packets (input buffer size: {})...",
+            input_buffer.len()
+        );
 
         while parsed_offset < input_buffer.len() {
-            let parse_result = {
-                let data = &input_buffer[parsed_offset..];
+            let (get_packet, offset) = {
+                let ref mut this = self.parser_context;
 
+                let codec_context: &mut AVCodecContext = &mut self.decode_context;
+                let packet: &mut AVPacket = &mut packet;
+                let data: &[u8] = &input_buffer[parsed_offset..];
                 let mut packet_data = packet.data;
                 let mut packet_size = packet.size;
 
+                let pts = 0x4000000000000000u64 as i64;
                 let offset = unsafe {
                     ffi::av_parser_parse2(
-                        self.parser_context.as_mut_ptr(),
-                        self.decode_context.as_mut_ptr(),
+                        this.as_mut_ptr(),
+                        codec_context.as_mut_ptr(),
                         &mut packet_data,
                         &mut packet_size,
                         data.as_ptr(),
                         data.len() as i32,
-                        100,
-                        100,
+                        pts,
+                        pts,
                         0,
                     )
                 };
@@ -102,10 +115,6 @@ impl H264Decoder {
                 (packet.size != 0, offset as usize)
             };
 
-            let (get_packet, offset) = parse_result;
-
-            debug!("Decoded packet PTS: {}", packet.pts);
-
             if get_packet {
                 let result = self.decode_context.send_packet(Some(&packet));
 
@@ -116,6 +125,8 @@ impl H264Decoder {
                         return Some(DropReason::CodecError);
                     }
                 }
+
+                debug!("Decoded packet: {:?}", packet);
 
                 packet = AVPacket::new();
             }
@@ -143,9 +154,7 @@ impl H264Decoder {
             Err(e) => panic!("{:?}", e),
         };
 
-        let frame_id = avframe.coded_picture_number as i64;
-
-        debug!("Decoded frame id: {}", frame_id);
+        let frame_id = avframe.reordered_opaque as i64;
 
         self.write_avframe(avframe, output_buffer);
 
@@ -167,12 +176,20 @@ impl FrameProcessor for H264Decoder {
             .extract_writable_buffer("raw_frame_buffer")
             .unwrap();
 
+        // Enqueue timestamp, pasting it to the next decoded frame available
+        // Useful to compensate codec delay, may not work when frames
+        // are not decoded in order
+        debug!("Pushing timestamp: {}", frame_data.get("capture_timestamp"));
+        self.timestamps_queue.push_back(frame_data.get("capture_timestamp"));
+
         let decode_result = self.decode_to_buffer(&encoded_frame_buffer, &mut raw_frame_buffer);
 
         if decode_result.is_ok() {
-            let frame_id = decode_result.unwrap() as u128;
-            // Override the frame_id stat, compensating eventual decoding delay
-            frame_data.set("frame_id", frame_id);
+            // Override capture timestamp, compensating eventual decoding delay
+            debug!("Enqueued timestamps: {:?}", self.timestamps_queue);
+            let capture_timestamp = self.timestamps_queue.pop_front().unwrap();
+            debug!("Popping timestamp: {}, current frame timestamp: {}", capture_timestamp, frame_data.get("capture_timestamp"));
+            frame_data.set("capture_timestamp", capture_timestamp);
         }
 
         encoded_frame_buffer.unsplit(empty_buffer_memory);

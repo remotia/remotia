@@ -6,6 +6,7 @@ use std::{
 
 use async_trait::async_trait;
 
+use log::debug;
 use remotia::{traits::FrameProcessor, types::FrameData};
 
 pub struct RawFrameDumper {
@@ -21,9 +22,14 @@ impl RawFrameDumper {
         create_dir_all(folder.clone()).unwrap();
         Self {
             buffer_id: buffer_id.to_string(),
-            key: "frame_id".to_string(),
+            key: "capture_timestamp".to_string(),
             folder,
         }
+    }
+
+    pub fn key(mut self, key: &str) -> Self {
+        self.key = key.to_string();
+        self
     }
 }
 
@@ -32,6 +38,8 @@ impl FrameProcessor for RawFrameDumper {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let frame_id = frame_data.get(&self.key);
         let buffer = frame_data.get_writable_buffer_ref(&self.buffer_id).unwrap();
+
+        debug!("Dumping frame {}", frame_id);
 
         let mut file_path = self.folder.clone();
         file_path.push(format!("{}.bgra", frame_id));

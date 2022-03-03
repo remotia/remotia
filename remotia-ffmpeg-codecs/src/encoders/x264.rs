@@ -128,6 +128,7 @@ impl X264Encoder {
         let avframe_building_start_time = Instant::now();
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,
+            frame_data.get("capture_timestamp"),
             &y_channel_buffer,
             &cb_channel_buffer,
             &cr_channel_buffer,
@@ -136,11 +137,6 @@ impl X264Encoder {
         frame_data.set(
             "avframe_building_time",
             avframe_building_start_time.elapsed().as_millis(),
-        );
-
-        frame_data.set(
-            "frame_id",
-            avframe.pts as u128
         );
 
         let encoded_bytes = self.ffmpeg_encoding_bridge.encode_avframe(

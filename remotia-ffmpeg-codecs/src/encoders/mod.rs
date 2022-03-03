@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::{debug};
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
 
 #[allow(dead_code)]
@@ -45,6 +45,8 @@ impl FFMpegEncodingBridge {
             };
 
             let data = unsafe { std::slice::from_raw_parts(packet.data, packet.size as usize) };
+
+            debug!("Encoded packet: {:?}", packet);
 
             let start_index = encoded_frame_length;
             let end_index = encoded_frame_length + data.len();

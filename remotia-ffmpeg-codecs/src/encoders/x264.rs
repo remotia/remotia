@@ -128,7 +128,6 @@ impl X264Encoder {
         let avframe_building_start_time = Instant::now();
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,
-            frame_data.get("capture_timestamp"),
             &y_channel_buffer,
             &cb_channel_buffer,
             &cr_channel_buffer,

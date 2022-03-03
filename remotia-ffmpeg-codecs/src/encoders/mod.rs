@@ -27,8 +27,6 @@ impl FFMpegEncodingBridge {
         let mut encoded_frame_length = 0;
         encode_context.send_frame(Some(&avframe)).unwrap();
 
-        info!("Loop");
-
         loop {
             let packet = match encode_context.receive_packet() {
                 Ok(packet) => {
@@ -54,8 +52,6 @@ impl FFMpegEncodingBridge {
             output_buffer[start_index..end_index].copy_from_slice(data);
 
             encoded_frame_length = end_index;
-
-            info!("Encoded packet PTS: {}", packet.pts);
         }
 
         encoded_frame_length

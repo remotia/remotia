@@ -19,4 +19,4 @@ Lorenzo.
 
 ## Usage
 
-You may find some examples including different architectures, codecs and communication protocols. Apart the base architecture (silo...) most of the other components are configurable at runtime via the command line. Use the --help option to know more about each example.
+You may find some examples including different architectures, codecs and communication protocols in the "remotia-samples" crate. Some of them include limited command line configuration, but the aim of most of these snippets is demonstrating how to define an architecture via code. Documentation is in progress.

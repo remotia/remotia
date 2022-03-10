@@ -180,16 +180,24 @@ impl FrameProcessor for H264Decoder {
         // Useful to compensate codec delay, may not work when frames
         // are not decoded in order
         debug!("Pushing timestamp: {}", frame_data.get("capture_timestamp"));
-        self.timestamps_queue.push_back(frame_data.get("capture_timestamp"));
+        self.timestamps_queue
+            .push_back(frame_data.get("capture_timestamp"));
 
         let decode_result = self.decode_to_buffer(&encoded_frame_buffer, &mut raw_frame_buffer);
 
-        if decode_result.is_ok() {
-            // Override capture timestamp, compensating eventual decoding delay
-            debug!("Enqueued timestamps: {:?}", self.timestamps_queue);
-            let capture_timestamp = self.timestamps_queue.pop_front().unwrap();
-            debug!("Popping timestamp: {}, current frame timestamp: {}", capture_timestamp, frame_data.get("capture_timestamp"));
-            frame_data.set("capture_timestamp", capture_timestamp);
+        match decode_result {
+            Ok(_) | Err(DropReason::CodecError) => {
+                // Override capture timestamp, compensating eventual decoding delay
+                debug!("Enqueued timestamps: {:?}", self.timestamps_queue);
+                let capture_timestamp = self.timestamps_queue.pop_front().unwrap();
+                debug!(
+                    "Popping timestamp: {}, current frame timestamp: {}",
+                    capture_timestamp,
+                    frame_data.get("capture_timestamp")
+                );
+                frame_data.set("capture_timestamp", capture_timestamp);
+            }
+            Err(_) => (),
         }
 
         encoded_frame_buffer.unsplit(empty_buffer_memory);

@@ -1,1 +1,0 @@
-tc qdisc add dev lo root netem rate 60mbit loss 1.5%

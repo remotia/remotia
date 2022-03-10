@@ -1424,6 +1424,24 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 name = "remotia"
 version = "0.1.0"
 dependencies = [
+ "remotia-core",
+]
+
+[[package]]
+name = "remotia-buffer-utils"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes 1.1.0",
+ "log",
+ "remotia",
+ "tokio 1.17.0",
+]
+
+[[package]]
+name = "remotia-core"
+version = "0.1.0"
+dependencies = [
  "async-trait",
  "bincode",
  "bytes 1.1.0",
@@ -1446,17 +1464,6 @@ dependencies = [
  "thiserror",
  "tokio 1.17.0",
  "tokio-openssl",
-]
-
-[[package]]
-name = "remotia-buffer-utils"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes 1.1.0",
- "log",
- "remotia",
- "tokio 1.17.0",
 ]
 
 [[package]]

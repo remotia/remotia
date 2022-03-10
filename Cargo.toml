@@ -3,6 +3,8 @@ resolver = "2"
 
 members = [
     "remotia",
+
+    "remotia-core",
     "remotia-buffer-utils",
     "remotia-profilation-utils",
 

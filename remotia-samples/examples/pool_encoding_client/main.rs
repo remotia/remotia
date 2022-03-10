@@ -10,7 +10,7 @@ use remotia::{
         pool_switch::DepoolingSwitch,
         switch::Switch,
     },
-    server::pipeline::ascode::{component::Component, AscodePipeline},
+    pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_loggers::{

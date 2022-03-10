@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use remotia::{
-    common::feedback::FeedbackMessage, server::profiling::ServerProfiler, traits::FrameProcessor,
+    traits::FrameProcessor,
     types::FrameData,
 };
 
@@ -93,18 +93,6 @@ impl FrameProcessor for ConsoleAverageStatsLogger {
     async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
         self.log_frame_data(&frame_data);
         Some(frame_data)
-    }
-}
-
-// retro-compatibility for silo pipeline
-#[async_trait]
-impl ServerProfiler for ConsoleAverageStatsLogger {
-    fn log_frame(&mut self, frame_data: FrameData) {
-        self.log_frame_data(&frame_data);
-    }
-
-    async fn pull_feedback(&mut self) -> Option<FeedbackMessage> {
-        None
     }
 }
 

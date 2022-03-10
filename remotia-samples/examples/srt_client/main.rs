@@ -6,7 +6,7 @@ use remotia::{
         error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper,
         key_check::KeyChecker, ticker::Ticker, clone_switch::CloneSwitch,
     },
-    server::pipeline::ascode::{component::Component, AscodePipeline},
+    pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::pool::BuffersPool;
 use remotia_core_loggers::{

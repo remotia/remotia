@@ -7,8 +7,6 @@ use futures::SinkExt;
 
 use log::{debug, info};
 use remotia::{
-    common::{feedback::FeedbackMessage},
-    server::send::FrameSender,
     traits::FrameProcessor,
     types::FrameData,
 };
@@ -60,17 +58,5 @@ impl FrameProcessor for SRTFrameSender {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         self.send_frame_data(&mut frame_data).await;
         Some(frame_data)
-    }
-}
-
-// retro-compatibility with silo pipeline
-#[async_trait]
-impl FrameSender for SRTFrameSender {
-    async fn send_frame(&mut self, frame_data: &mut FrameData) {
-        self.send_frame_data(frame_data).await;
-    }
-
-    fn handle_feedback(&mut self, message: FeedbackMessage) {
-        debug!("Feedback message: {:?}", message);
     }
 }

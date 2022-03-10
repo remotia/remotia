@@ -3,9 +3,8 @@ use beryllium::{
     init::{InitFlags, Sdl},
     window::WindowFlags,
 };
-use log::debug;
 use pixels::{Pixels, PixelsBuilder, SurfaceTexture};
-use remotia::{client::render::Renderer, traits::FrameProcessor, types::FrameData, common::feedback::FeedbackMessage};
+use remotia::{traits::FrameProcessor, types::FrameData};
 use zstring::zstr;
 
 use async_trait::async_trait;
@@ -13,9 +12,6 @@ use async_trait::async_trait;
 pub struct BerylliumRenderer {
     _gl_win: GlWindow,
     pixels: Pixels,
-
-    canvas_width: u32,
-    canvas_height: u32,
 }
 unsafe impl Send for BerylliumRenderer {}
 
@@ -34,9 +30,7 @@ impl BerylliumRenderer {
 
         Self {
             _gl_win: gl_win,
-            pixels,
-            canvas_width,
-            canvas_height,
+            pixels
         }
     }
 }
@@ -49,22 +43,6 @@ impl FrameProcessor for BerylliumRenderer {
         self.pixels.render().unwrap();
 
         Some(frame_data)
-    }
-}
-
-// retro-compatibility with silo pipeline
-impl Renderer for BerylliumRenderer {
-    fn render(&mut self, raw_frame_buffer: &[u8]) {
-        packed_bgr_to_packed_rgba(&raw_frame_buffer, self.pixels.get_frame());
-        self.pixels.render().unwrap();
-    }
-
-    fn handle_feedback(&mut self, message: FeedbackMessage) {
-        debug!("Feedback message: {:?}", message);
-    }
-
-    fn get_buffer_size(&self) -> usize {
-        (self.canvas_width * self.canvas_height * 3) as usize
     }
 }
 

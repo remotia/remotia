@@ -6,7 +6,7 @@ use remotia::{
         debug::random_dropper::RandomFrameDropper, error_switch::OnErrorSwitch,
         key_check::KeyChecker, ticker::Ticker,
     },
-    server::pipeline::ascode::{component::Component, AscodePipeline},
+    pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::pool::BuffersPool;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;

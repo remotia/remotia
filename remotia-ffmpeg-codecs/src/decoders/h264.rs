@@ -10,7 +10,7 @@ use rsmpeg::{
 use cstr::cstr;
 
 use remotia::{
-    client::decode::Decoder, common::feedback::FeedbackMessage, error::DropReason,
+    error::DropReason,
     traits::FrameProcessor, types::FrameData,
 };
 
@@ -210,24 +210,5 @@ impl FrameProcessor for H264Decoder {
         }
 
         Some(frame_data)
-    }
-}
-
-// retro-compatibility with silo pipeline
-#[async_trait]
-impl Decoder for H264Decoder {
-    async fn decode(
-        &mut self,
-        input_buffer: &[u8],
-        output_buffer: &mut [u8],
-    ) -> Result<usize, DropReason> {
-        match self.decode_to_buffer(input_buffer, output_buffer) {
-            Ok(_) => Ok(output_buffer.len()),
-            Err(drop_reason) => Err(drop_reason),
-        }
-    }
-
-    fn handle_feedback(&mut self, message: FeedbackMessage) {
-        debug!("Feedback message: {:?}", message);
     }
 }

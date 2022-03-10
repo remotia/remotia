@@ -3,8 +3,7 @@
 
 pub mod common;
 
-pub mod server;
-pub mod client;
+pub mod pipeline;
 
 pub mod traits;
 pub mod types;

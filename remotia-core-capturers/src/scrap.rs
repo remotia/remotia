@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use log::debug;
-use remotia::{traits::FrameProcessor, types::FrameData, server::{capture::FrameCapturer}, common::{feedback::FeedbackMessage}};
+use remotia::{traits::FrameProcessor, types::FrameData};
 use scrap::{Capturer, Display};
 
 use core::slice;
@@ -55,24 +55,5 @@ impl FrameProcessor for ScrapFrameCapturer {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         self.capture_on_frame_data(&mut frame_data);
         Some(frame_data)
-    }
-}
-
-// retro-compatibility for silo pipeline
-impl FrameCapturer for ScrapFrameCapturer {
-    fn capture(&mut self, frame_data: &mut FrameData) {
-        self.capture_on_frame_data(frame_data);
-    }
-
-    fn width(&self) -> usize {
-        self.width()
-    }
-
-    fn height(&self) -> usize {
-        self.height()
-    }
-
-    fn handle_feedback(&mut self, message: FeedbackMessage) {
-        debug!("Feedback message: {:?}", message);
     }
 }

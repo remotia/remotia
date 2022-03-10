@@ -4,7 +4,7 @@ use remotia::{
         error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper,
         pool_switch::PoolingSwitch, switch::Switch, ticker::Ticker,
     },
-    server::pipeline::ascode::{component::Component, AscodePipeline},
+    pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;

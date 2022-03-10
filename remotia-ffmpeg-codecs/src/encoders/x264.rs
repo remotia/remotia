@@ -2,9 +2,9 @@
 
 use std::{ffi::CString, ptr::NonNull, time::Instant};
 
-use log::{debug, info};
+use log::{info};
 use remotia::{
-    common::feedback::FeedbackMessage, server::encode::Encoder, traits::FrameProcessor,
+    traits::FrameProcessor,
     types::FrameData,
 };
 use rsmpeg::{
@@ -190,24 +190,3 @@ impl FrameProcessor for X264Encoder {
     }
 }
 
-// retro-compatibility for silo pipeline
-#[async_trait]
-impl Encoder for X264Encoder {
-    async fn encode(&mut self, frame_data: &mut FrameData) {
-        self.perform_quality_increase();
-        self.encode_on_frame_data(frame_data);
-    }
-
-    fn handle_feedback(&mut self, message: FeedbackMessage) {
-        debug!("Feedback message: {:?}", message);
-
-        match message {
-            FeedbackMessage::HighFrameDelay(_) => {
-                self.state.decrease_network_stability(0.1);
-                debug!("Network stability: {}", self.state.network_stability);
-            }
-        }
-
-        self.try_encoder_reconfigure();
-    }
-}

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use log::debug;
 
-use crate::{server::pipeline::ascode::{AscodePipeline, feeder::AscodePipelineFeeder}, traits::FrameProcessor, types::FrameData};
+use crate::{pipeline::ascode::{AscodePipeline, feeder::AscodePipelineFeeder}, traits::FrameProcessor, types::FrameData};
 
 pub struct OnErrorSwitch {
     feeder: AscodePipelineFeeder

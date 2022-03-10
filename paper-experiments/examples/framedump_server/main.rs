@@ -7,7 +7,7 @@ use remotia::{
         clone_switch::CloneSwitch, error_switch::OnErrorSwitch,
         frame_drop::threshold::ThresholdBasedFrameDropper, ticker::Ticker,
     },
-    server::pipeline::ascode::{component::Component, AscodePipeline},
+    pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::pool::BuffersPool;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;

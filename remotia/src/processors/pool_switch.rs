@@ -5,7 +5,7 @@ use log::debug;
 use rand::prelude::{SliceRandom, ThreadRng};
 
 use crate::{
-    server::pipeline::ascode::{feeder::AscodePipelineFeeder, AscodePipeline},
+    pipeline::ascode::{feeder::AscodePipelineFeeder, AscodePipeline},
     traits::FrameProcessor,
     types::FrameData,
 };

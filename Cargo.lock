@@ -1439,7 +1439,6 @@ dependencies = [
  "openssl",
  "rand",
  "rayon",
- "rsmpeg",
  "scrap",
  "serde",
  "socket2",

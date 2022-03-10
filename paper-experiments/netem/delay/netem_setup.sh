@@ -1,0 +1,1 @@
+tc qdisc add dev lo root netem delay 40ms 10ms

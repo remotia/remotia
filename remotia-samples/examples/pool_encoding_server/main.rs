@@ -22,7 +22,7 @@ async fn main() -> std::io::Result<()> {
     let error_handling_pipeline = AscodePipeline::new()
         .tag("ErrorsHandler")
         .link(
-            Component::new().add(
+            Component::new().append(
                 ConsoleDropReasonLogger::new()
                     .log(DropReason::StaleFrame)
                     .log(DropReason::ConnectionError)
@@ -61,12 +61,12 @@ async fn main() -> std::io::Result<()> {
         .tag("Capturing")
         .link(
             Component::new()
-                .add(Ticker::new(50))
-                .add(TimestampAdder::new("process_start_timestamp"))
-                .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
-                .add(TimestampAdder::new("capture_timestamp"))
-                .add(capturer)
-                .add(encoding_switch),
+                .append(Ticker::new(50))
+                .append(TimestampAdder::new("process_start_timestamp"))
+                .append(BufferAllocator::new("raw_frame_buffer", buffer_size))
+                .append(TimestampAdder::new("capture_timestamp"))
+                .append(capturer)
+                .append(encoding_switch),
         )
         .bind();
 
@@ -91,27 +91,27 @@ async fn build_tail_pipeline(error_handling_pipeline: &AscodePipeline) -> Ascode
         .tag("TransmissionAndProfilation")
         .link(
             Component::new()
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "pre_transmission_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new(
+                .append(ThresholdBasedFrameDropper::new(
                     "pre_transmission_delay",
                     50,
                 ))
-                .add(OnErrorSwitch::new(error_handling_pipeline))
-                .add(TimestampAdder::new("transmission_start_timestamp"))
-                .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
-                .add(TimestampDiffCalculator::new(
+                .append(OnErrorSwitch::new(error_handling_pipeline))
+                .append(TimestampAdder::new("transmission_start_timestamp"))
+                .append(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
+                .append(TimestampDiffCalculator::new(
                     "transmission_start_timestamp",
                     "transmission_time",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "process_start_timestamp",
                     "total_time",
                 ))
-                .add(OnErrorSwitch::new(error_handling_pipeline))
-                .add(
+                .append(OnErrorSwitch::new(error_handling_pipeline))
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
                         .log("encoded_size")
@@ -119,7 +119,7 @@ async fn build_tail_pipeline(error_handling_pipeline: &AscodePipeline) -> Ascode
                         .log("transmission_time")
                         .log("total_time"),
                 )
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
                         .log("capture_delay"),
@@ -140,21 +140,21 @@ fn build_encoding_pipeline(
         .tag("Encoding")
         .link(
             Component::new()
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "capture_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
-                .add(OnErrorSwitch::new(error_handling_pipeline))
-                .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
-                .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(X264Encoder::new(buffer_size, width as i32, height as i32, ""))
-                .add(TimestampDiffCalculator::new(
+                .append(ThresholdBasedFrameDropper::new("capture_delay", 10))
+                .append(OnErrorSwitch::new(error_handling_pipeline))
+                .append(BufferAllocator::new("encoded_frame_buffer", buffer_size))
+                .append(TimestampAdder::new("encoding_start_timestamp"))
+                .append(X264Encoder::new(buffer_size, width as i32, height as i32, ""))
+                .append(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
                 ))
-                .add(OnErrorSwitch::new(error_handling_pipeline))
-                .add(Switch::new(&tail_pipeline)),
+                .append(OnErrorSwitch::new(error_handling_pipeline))
+                .append(Switch::new(&tail_pipeline)),
         )
         .bind()
         .feedable()

@@ -20,7 +20,7 @@ impl SRTFrameData {
             .get_writable_buffer_ref("encoded_frame_buffer")
             .unwrap();
 
-        let encoded_frame_buffer = (&encoded_frame_buffer[..encoded_size]).to_vec();
+        let encoded_frame_buffer = (encoded_frame_buffer[..encoded_size]).to_vec();
 
         Self {
             stats: frame_data.get_stats().clone(),
@@ -36,6 +36,6 @@ impl SRTFrameData {
             .unwrap();
 
         let encoded_size = self.encoded_frame_buffer.len();
-        (&mut encoded_frame_buffer[..encoded_size]).copy_from_slice(&self.encoded_frame_buffer)
+        encoded_frame_buffer[..encoded_size].copy_from_slice(&self.encoded_frame_buffer)
     }
 }

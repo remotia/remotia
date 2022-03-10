@@ -46,19 +46,19 @@ async fn main() -> std::io::Result<()> {
         .tag("ErrorsHandler")
         .link(
             Component::new()
-                .add(rfb_pool.redeemer().soft())
-                .add(ycb_pool.redeemer().soft())
-                .add(crcb_pool.redeemer().soft())
-                .add(cbcb_pool.redeemer().soft())
-                .add(efb_pool.redeemer().soft())
-                .add(
+                .append(rfb_pool.redeemer().soft())
+                .append(ycb_pool.redeemer().soft())
+                .append(crcb_pool.redeemer().soft())
+                .append(cbcb_pool.redeemer().soft())
+                .append(efb_pool.redeemer().soft())
+                .append(
                     ConsoleDropReasonLogger::new()
                         .log(DropReason::StaleFrame)
                         .log(DropReason::ConnectionError)
                         .log(DropReason::CodecError)
                         .log(DropReason::NoAvailableBuffers),
                 )
-                .add(CSVFrameDataSerializer::new("server_drops.csv").log("capture_timestamp")),
+                .append(CSVFrameDataSerializer::new("server_drops.csv").log("capture_timestamp")),
         )
         .bind()
         .feedable();
@@ -66,16 +66,16 @@ async fn main() -> std::io::Result<()> {
     let frame_dump_pipeline = AscodePipeline::new()
         .link(
             Component::new()
-                .add(TimestampAdder::new("dump_start_timestamp"))
-                .add(RawFrameDumper::new(
+                .append(TimestampAdder::new("dump_start_timestamp"))
+                .append(RawFrameDumper::new(
                     "raw_frame_buffer",
                     PathBuf::from("/home/lorenzo/Scrivania/remotia-dumps/server_frames_dump/"),
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "dump_start_timestamp",
                     "dump_time",
                 ))
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Frame dump times")
                         .log("dump_time"),
@@ -88,98 +88,98 @@ async fn main() -> std::io::Result<()> {
         .tag("ServerMain")
         .link(
             Component::new()
-                .add(Ticker::new(250))
-                .add(TimestampAdder::new("process_start_timestamp"))
-                .add(TimestampAdder::new("capture_timestamp"))
-                .add(rfb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(capturer)
-                .add(TimestampDiffCalculator::new(
+                .append(Ticker::new(250))
+                .append(TimestampAdder::new("process_start_timestamp"))
+                .append(TimestampAdder::new("capture_timestamp"))
+                .append(rfb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(capturer)
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "capture_time",
                 ))
-                .add(TimestampAdder::new(
+                .append(TimestampAdder::new(
                     "capturing_component_processing_finished",
                 )),
         )
         .link(
             Component::new()
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capturing_component_processing_finished",
                     "capturing_to_encoding_component_delay",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "capture_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new("capture_delay", 15))
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(TimestampAdder::new(
+                .append(ThresholdBasedFrameDropper::new("capture_delay", 15))
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(TimestampAdder::new(
                     "color_space_conversion_start_timestamp",
                 ))
-                .add(ycb_pool.borrower())
-                .add(crcb_pool.borrower())
-                .add(cbcb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(RGBAToYUV420PConverter::new())
-                .add(CloneSwitch::new(&frame_dump_pipeline))
-                .add(rfb_pool.redeemer())
-                .add(TimestampDiffCalculator::new(
+                .append(ycb_pool.borrower())
+                .append(crcb_pool.borrower())
+                .append(cbcb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(RGBAToYUV420PConverter::new())
+                .append(CloneSwitch::new(&frame_dump_pipeline))
+                .append(rfb_pool.redeemer())
+                .append(TimestampDiffCalculator::new(
                     "color_space_conversion_start_timestamp",
                     "color_space_conversion_time",
                 ))
-                .add(efb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(X264Encoder::new(
+                .append(efb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(TimestampAdder::new("encoding_start_timestamp"))
+                .append(X264Encoder::new(
                     buffer_size,
                     width as i32,
                     height as i32,
                     &x264opts,
                 ))
-                .add(ycb_pool.redeemer())
-                .add(crcb_pool.redeemer())
-                .add(cbcb_pool.redeemer())
-                .add(TimestampDiffCalculator::new(
+                .append(ycb_pool.redeemer())
+                .append(crcb_pool.redeemer())
+                .append(cbcb_pool.redeemer())
+                .append(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(TimestampAdder::new(
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(TimestampAdder::new(
                     "encoding_component_processing_finished",
                 )),
         )
         .link(
             Component::new()
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "encoding_component_processing_finished",
                     "encoding_to_transmission_component_delay",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "pre_transmission_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new(
+                .append(ThresholdBasedFrameDropper::new(
                     "pre_transmission_delay",
                     200,
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(TimestampAdder::new("transmission_start_timestamp"))
-                .add(SRTFrameSender::new(5001, Duration::from_millis(srt_latency)).await)
-                .add(efb_pool.redeemer())
-                .add(TimestampDiffCalculator::new(
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(TimestampAdder::new("transmission_start_timestamp"))
+                .append(SRTFrameSender::new(5001, Duration::from_millis(srt_latency)).await)
+                .append(efb_pool.redeemer())
+                .append(TimestampDiffCalculator::new(
                     "transmission_start_timestamp",
                     "transmission_time",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "process_start_timestamp",
                     "total_time",
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .append(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
             Component::new()
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
                         .log("encoded_size")
@@ -189,19 +189,19 @@ async fn main() -> std::io::Result<()> {
                         .log("transmission_time")
                         .log("total_time"),
                 )
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Components communication delays")
                         .log("capturing_to_encoding_component_delay")
                         .log("encoding_to_transmission_component_delay"),
                 )
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
                         .log("capture_delay")
                         .log("pre_transmission_delay"),
                 )
-                .add(
+                .append(
                     CSVFrameDataSerializer::new("server.csv")
                         .log("capture_timestamp")
                         .log("encoded_size")

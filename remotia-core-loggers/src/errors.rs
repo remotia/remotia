@@ -85,7 +85,7 @@ impl ConsoleDropReasonLogger {
         }
 
         self.logged_reasons
-            .push(frame_data.get_drop_reason().clone().unwrap());
+            .push(frame_data.get_drop_reason().unwrap());
 
         if self.current_round_start.elapsed().gt(&self.round_duration) {
             self.print_round_stats();

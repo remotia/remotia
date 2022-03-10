@@ -49,15 +49,15 @@ async fn main() -> std::io::Result<()> {
         .tag("Reception")
         .link(
             Component::new()
-                .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
-                .add(TimestampAdder::new("reception_start_timestamp"))
-                .add(SRTFrameReceiver::new("127.0.0.1:5001", Duration::from_millis(50)).await)
-                .add(TimestampDiffCalculator::new(
+                .append(BufferAllocator::new("encoded_frame_buffer", buffer_size))
+                .append(TimestampAdder::new("reception_start_timestamp"))
+                .append(SRTFrameReceiver::new("127.0.0.1:5001", Duration::from_millis(50)).await)
+                .append(TimestampDiffCalculator::new(
                     "reception_start_timestamp",
                     "reception_time",
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(decoding_switch),
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(decoding_switch),
         )
         .bind();
 
@@ -86,37 +86,37 @@ fn build_tail_pipeline(
         .tag("RenderingAndProfilation")
         .link(
             Component::new()
-                .add(TimestampBasedFrameDropper::new("capture_timestamp"))
+                .append(TimestampBasedFrameDropper::new("capture_timestamp"))
                 /*.add(TimestampBasedFrameReorderingBuffer::new(
                     "capture_timestamp",
                     20,
                 ))*/
-                .add(OnErrorSwitch::new(error_handling_pipeline))
-                .add(TimestampDiffCalculator::new(
+                .append(OnErrorSwitch::new(error_handling_pipeline))
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "pre_render_frame_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new(
+                .append(ThresholdBasedFrameDropper::new(
                     "pre_render_frame_delay",
                     200,
                 ))
-                .add(OnErrorSwitch::new(error_handling_pipeline))
-                .add(TimestampAdder::new("rendering_start_timestamp"))
-                .add(BerylliumRenderer::new(width as u32, height as u32))
-                .add(TimestampDiffCalculator::new(
+                .append(OnErrorSwitch::new(error_handling_pipeline))
+                .append(TimestampAdder::new("rendering_start_timestamp"))
+                .append(BerylliumRenderer::new(width as u32, height as u32))
+                .append(TimestampDiffCalculator::new(
                     "rendering_start_timestamp",
                     "rendering_time",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "reception_start_timestamp",
                     "total_time",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "frame_delay",
                 ))
-                .add(OnErrorSwitch::new(error_handling_pipeline))
-                .add(
+                .append(OnErrorSwitch::new(error_handling_pipeline))
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
                         .log("reception_time")
@@ -124,7 +124,7 @@ fn build_tail_pipeline(
                         .log("rendering_time")
                         .log("total_time"),
                 )
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
                         .log("reception_delay")
@@ -144,15 +144,15 @@ fn build_decoding_pipeline(
         .tag("Decoding")
         .link(
             Component::new()
-                .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
-                .add(TimestampAdder::new("decoding_start_timestamp"))
-                .add(H264Decoder::new())
-                .add(TimestampDiffCalculator::new(
+                .append(BufferAllocator::new("raw_frame_buffer", buffer_size))
+                .append(TimestampAdder::new("decoding_start_timestamp"))
+                .append(H264Decoder::new())
+                .append(TimestampDiffCalculator::new(
                     "decoding_start_timestamp",
                     "decoding_time",
                 ))
-                .add(OnErrorSwitch::new(error_handling_pipeline))
-                .add(Switch::new(tail_pipeline)),
+                .append(OnErrorSwitch::new(error_handling_pipeline))
+                .append(Switch::new(tail_pipeline)),
         )
         .bind()
         .feedable()
@@ -163,13 +163,13 @@ fn build_errors_handling_pipeline() -> AscodePipeline {
         .tag("ErrorsHandler")
         .link(
             Component::new()
-                .add(
+                .append(
                     ConsoleDropReasonLogger::new()
                         .log(DropReason::StaleFrame)
                         .log(DropReason::ConnectionError)
                         .log(DropReason::CodecError),
                 )
-                .add(ConsoleFrameDataPrinter::new()),
+                .append(ConsoleFrameDataPrinter::new()),
         )
         .bind()
         .feedable()

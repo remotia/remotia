@@ -16,16 +16,19 @@ pub struct FrameData {
 }
 
 impl FrameData {
-    //*******// 
+    //*******//
     // Stats //
-    //*******// 
+    //*******//
 
     pub fn set(&mut self, key: &str, value: u128) {
         self.stats.insert(key.to_string(), value);
     }
 
     pub fn get(&self, key: &str) -> u128 {
-        *self.stats.get(key).expect(&missing_key_msg(key))
+        *self
+            .stats
+            .get(key)
+            .unwrap_or_else(|| panic!("{}", missing_key_msg(key)))
     }
 
     pub fn has(&self, key: &str) -> bool {
@@ -49,8 +52,7 @@ impl FrameData {
     }
 
     pub fn extract_readonly_buffer(&mut self, key: &str) -> Option<Bytes> {
-        self.readonly_buffers
-            .remove(key)
+        self.readonly_buffers.remove(key)
     }
 
     pub fn has_readonly_buffer(&self, key: &str) -> bool {
@@ -58,7 +60,9 @@ impl FrameData {
     }
 
     pub fn get_readonly_buffer_ref(&mut self, key: &str) -> &Bytes {
-        self.readonly_buffers.get(key).expect(&missing_key_msg(key))
+        self.readonly_buffers
+            .get(key)
+            .unwrap_or_else(|| panic!("{}", missing_key_msg(key)))
     }
 
     pub fn insert_writable_buffer(&mut self, key: &str, buffer: BytesMut) {
@@ -66,15 +70,13 @@ impl FrameData {
     }
 
     pub fn extract_writable_buffer(&mut self, key: &str) -> Option<BytesMut> {
-        self.writable_buffers
-            .remove(key)
+        self.writable_buffers.remove(key)
     }
 
     pub fn get_writable_buffer_ref(&mut self, key: &str) -> Option<&mut BytesMut> {
-        self.writable_buffers
-            .get_mut(key)
+        self.writable_buffers.get_mut(key)
     }
-    
+
     pub fn has_writable_buffer(&self, key: &str) -> bool {
         self.writable_buffers.contains_key(key)
     }
@@ -98,7 +100,7 @@ impl FrameData {
     pub fn clone_without_buffers(&self) -> Self {
         Self {
             stats: self.stats.clone(),
-            drop_reason: self.drop_reason.clone(),
+            drop_reason: self.drop_reason,
 
             ..Default::default()
         }
@@ -111,7 +113,9 @@ fn missing_key_msg(key: &str) -> String {
 
 impl Display for FrameData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{ Read-only buffers: {:?}, Writable buffers: {:?}, Stats: {:?}, Drop reason: {:?} }}",
+        write!(
+            f,
+            "{{ Read-only buffers: {:?}, Writable buffers: {:?}, Stats: {:?}, Drop reason: {:?} }}",
             self.readonly_buffers.keys(),
             self.writable_buffers.keys(),
             self.stats,

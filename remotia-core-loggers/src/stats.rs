@@ -65,7 +65,7 @@ impl ConsoleAverageStatsLogger {
             let avg = self
                 .logged_frames
                 .iter()
-                .map(|frame| get_frame_stat(frame, value))
+                .map(|frame| frame.get(value))
                 .sum::<u128>()
                 / logged_frames_count;
 
@@ -93,13 +93,5 @@ impl FrameProcessor for ConsoleAverageStatsLogger {
     async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
         self.log_frame_data(&frame_data);
         Some(frame_data)
-    }
-}
-
-fn get_frame_stat(frame: &FrameData, key: &str) -> u128 {
-    if frame.has(key) {
-        frame.get(key)
-    } else {
-        frame.get(key)
     }
 }

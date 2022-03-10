@@ -11,6 +11,12 @@ impl ConsoleFrameDataPrinter {
     }
 }
 
+impl Default for ConsoleFrameDataPrinter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl FrameProcessor for ConsoleFrameDataPrinter {
     async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {

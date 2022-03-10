@@ -8,9 +8,7 @@ pub async fn channel_pull<T>(receiver: &mut UnboundedReceiver<T>) -> Option<(T, 
     let object = receiver.recv().await;
     let wait_time = wait_start_time.elapsed().as_millis();
 
-    if object.is_none() {
-        return None;
-    }
+    object.as_ref()?;
 
     let object = object.unwrap();
 

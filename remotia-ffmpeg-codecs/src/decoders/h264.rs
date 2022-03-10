@@ -84,7 +84,7 @@ impl H264Decoder {
 
         while parsed_offset < input_buffer.len() {
             let (get_packet, offset) = {
-                let ref mut this = self.parser_context;
+                let this = &mut self.parser_context;
 
                 let codec_context: &mut AVCodecContext = &mut self.decode_context;
                 let packet: &mut AVPacket = &mut packet;
@@ -159,6 +159,12 @@ impl H264Decoder {
         self.write_avframe(avframe, output_buffer);
 
         Ok(frame_id)
+    }
+}
+
+impl Default for H264Decoder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -6,9 +6,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use remotia::{
-    traits::FrameProcessor, types::FrameData, error::DropReason,
-};
+use remotia::{error::DropReason, traits::FrameProcessor, types::FrameData};
 
 use super::utils::yuv2bgr::raster;
 use async_trait::async_trait;
@@ -125,6 +123,12 @@ impl LibVpxVP9Decoder {
     }
 }
 
+impl Default for LibVpxVP9Decoder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl FrameProcessor for LibVpxVP9Decoder {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
@@ -161,4 +165,3 @@ impl FrameProcessor for LibVpxVP9Decoder {
         Some(frame_data)
     }
 }
-

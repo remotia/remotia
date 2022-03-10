@@ -24,13 +24,13 @@ async fn main() -> std::io::Result<()> {
         .tag("ErrorsHandler")
         .link(
             Component::new()
-                .add(
+                .append(
                     ConsoleDropReasonLogger::new()
                         .log(DropReason::StaleFrame)
                         .log(DropReason::ConnectionError)
                         .log(DropReason::CodecError),
                 )
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Dropped frames delay times")
                         .log("capture_delay"),
@@ -48,27 +48,27 @@ async fn main() -> std::io::Result<()> {
         .tag("Encoding")
         .link(
             Component::new()
-                .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
-                .add(X264Encoder::new(
+                .append(TimestampAdder::new("encoding_start_timestamp"))
+                .append(BufferAllocator::new("encoded_frame_buffer", buffer_size))
+                .append(X264Encoder::new(
                     buffer_size,
                     width as i32,
                     height as i32,
                     "keyint=16",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "process_start_timestamp",
                     "total_time",
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .append(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
             Component::new()
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
                         .log("capture_time")
@@ -76,12 +76,12 @@ async fn main() -> std::io::Result<()> {
                         .log("encoding_time")
                         .log("total_time"),
                 )
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
                         .log("capture_delay"),
                 )
-                .add(
+                .append(
                     CSVFrameDataSerializer::new("dry_h264_encoding_logs.csv")
                         .log("capture_timestamp")
                         .log("capture_time")
@@ -114,16 +114,16 @@ async fn main() -> std::io::Result<()> {
         .tag("Capturing")
         .link(
             Component::new()
-                .add(Ticker::new(20))
-                .add(TimestampAdder::new("process_start_timestamp"))
-                .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
-                .add(TimestampAdder::new("capture_timestamp"))
-                .add(capturer)
-                .add(TimestampDiffCalculator::new(
+                .append(Ticker::new(20))
+                .append(TimestampAdder::new("process_start_timestamp"))
+                .append(BufferAllocator::new("raw_frame_buffer", buffer_size))
+                .append(TimestampAdder::new("capture_timestamp"))
+                .append(capturer)
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "capture_time",
                 ))
-                .add(conversion_switch)
+                .append(conversion_switch)
                 // .add(Switch::new(&encoding_pipeline)),
         )
         .bind();
@@ -153,30 +153,30 @@ fn build_color_conversion_pipeline(
         .tag("ColorSpaceConversion")
         .link(
             Component::new()
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "capture_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(TimestampAdder::new(
+                .append(ThresholdBasedFrameDropper::new("capture_delay", 10))
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(TimestampAdder::new(
                     "color_space_conversion_start_timestamp",
                 ))
-                .add(BufferAllocator::new("y_channel_buffer", width * height))
-                .add(BufferAllocator::new(
+                .append(BufferAllocator::new("y_channel_buffer", width * height))
+                .append(BufferAllocator::new(
                     "cb_channel_buffer",
                     width * height / 4,
                 ))
-                .add(BufferAllocator::new(
+                .append(BufferAllocator::new(
                     "cr_channel_buffer",
                     width * height / 4,
                 ))
-                .add(RGBAToYUV420PConverter::new())
-                .add(TimestampDiffCalculator::new(
+                .append(RGBAToYUV420PConverter::new())
+                .append(TimestampDiffCalculator::new(
                     "color_space_conversion_start_timestamp",
                     "color_space_conversion_time",
                 ))
-                .add(Switch::new(&encoding_pipeline)),
+                .append(Switch::new(&encoding_pipeline)),
         )
         .bind()
         .feedable()

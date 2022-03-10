@@ -39,20 +39,20 @@ async fn main() -> std::io::Result<()> {
         .tag("ErrorsHandler")
         .link(
             Component::new()
-                .add(rfb_pool.redeemer().soft())
-                .add(ycb_pool.redeemer().soft())
-                .add(crcb_pool.redeemer().soft())
-                .add(cbcb_pool.redeemer().soft())
-                .add(efb_pool.redeemer().soft())
-                .add(
+                .append(rfb_pool.redeemer().soft())
+                .append(ycb_pool.redeemer().soft())
+                .append(crcb_pool.redeemer().soft())
+                .append(cbcb_pool.redeemer().soft())
+                .append(efb_pool.redeemer().soft())
+                .append(
                     ConsoleDropReasonLogger::new()
                         .log(DropReason::StaleFrame)
                         .log(DropReason::ConnectionError)
                         .log(DropReason::CodecError)
                         .log(DropReason::NoAvailableBuffers),
                 )
-                .add(KeyChecker::new("capture_timestamp"))
-                .add(CSVFrameDataSerializer::new("drops.csv").log("capture_timestamp")),
+                .append(KeyChecker::new("capture_timestamp"))
+                .append(CSVFrameDataSerializer::new("drops.csv").log("capture_timestamp")),
         )
         .bind()
         .feedable();
@@ -61,51 +61,51 @@ async fn main() -> std::io::Result<()> {
         .tag("Main")
         .link(
             Component::new()
-                .add(Ticker::new(500))
-                .add(TimestampAdder::new("capture_timestamp"))
-                .add(rfb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(capturer),
+                .append(Ticker::new(500))
+                .append(TimestampAdder::new("capture_timestamp"))
+                .append(rfb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(capturer),
         )
         .link(
             Component::new()
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(ycb_pool.borrower())
-                .add(crcb_pool.borrower())
-                .add(cbcb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(RGBAToYUV420PConverter::new())
-                .add(efb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(X264Encoder::new(
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(ycb_pool.borrower())
+                .append(crcb_pool.borrower())
+                .append(cbcb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(RGBAToYUV420PConverter::new())
+                .append(efb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(X264Encoder::new(
                     buffer_size,
                     width as i32,
                     height as i32,
                     &x264opts,
                 ))
-                .add(RawFrameDumper::new(
+                .append(RawFrameDumper::new(
                     "raw_frame_buffer",
                     PathBuf::from("./encoded_frames_dump/"),
                 ))
-                .add(rfb_pool.redeemer())
-                .add(ycb_pool.redeemer())
-                .add(crcb_pool.redeemer())
-                .add(cbcb_pool.redeemer())
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .append(rfb_pool.redeemer())
+                .append(ycb_pool.redeemer())
+                .append(crcb_pool.redeemer())
+                .append(cbcb_pool.redeemer())
+                .append(OnErrorSwitch::new(&error_handling_pipeline)),
         )
-        .link(Component::new().add(RandomFrameDropper::new(0.5)))
+        .link(Component::new().append(RandomFrameDropper::new(0.5)))
         .link(
             Component::new()
-                .add(rfb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(H264Decoder::new())
-                .add(efb_pool.redeemer())
-                .add(RawFrameDumper::new(
+                .append(rfb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(H264Decoder::new())
+                .append(efb_pool.redeemer())
+                .append(RawFrameDumper::new(
                     "raw_frame_buffer",
                     PathBuf::from("./decoded_frames_dump/"),
                 ))
-                .add(rfb_pool.redeemer())
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .append(rfb_pool.redeemer())
+                .append(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .bind();
 

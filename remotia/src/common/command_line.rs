@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-pub fn parse_canvas_resolution_str(arg: &String) -> (u32, u32) {
-    let canvas_resolution_split: Vec<&str> = arg.split("x").collect();
+pub fn parse_canvas_resolution_str(arg: &str) -> (u32, u32) {
+    let canvas_resolution_split: Vec<&str> = arg.split('x').collect();
 
     let width_str = canvas_resolution_split[0];
     let height_str = canvas_resolution_split[1];

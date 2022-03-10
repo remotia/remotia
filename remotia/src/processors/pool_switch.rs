@@ -27,6 +27,12 @@ impl PoolingSwitch {
     }
 }
 
+impl Default for PoolingSwitch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl FrameProcessor for PoolingSwitch {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
@@ -55,6 +61,12 @@ impl DepoolingSwitch {
     pub fn entry(mut self, key: u128, pipeline: &AscodePipeline) -> Self {
         self.entries.insert(key, pipeline.get_feeder());
         self
+    }
+}
+
+impl Default for DepoolingSwitch {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -20,7 +20,7 @@ async fn main() -> std::io::Result<()> {
     let error_handling_pipeline = AscodePipeline::new()
         .tag("ErrorsHandler")
         .link(
-            Component::new().add(
+            Component::new().append(
                 ConsoleDropReasonLogger::new()
                     .log(DropReason::StaleFrame)
                     .log(DropReason::ConnectionError)
@@ -39,58 +39,58 @@ async fn main() -> std::io::Result<()> {
         .tag("ServerMain")
         .link(
             Component::new()
-                .add(Ticker::new(30))
-                .add(TimestampAdder::new("process_start_timestamp"))
-                .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
-                .add(TimestampAdder::new("capture_timestamp"))
-                .add(capturer),
+                .append(Ticker::new(30))
+                .append(TimestampAdder::new("process_start_timestamp"))
+                .append(BufferAllocator::new("raw_frame_buffer", buffer_size))
+                .append(TimestampAdder::new("capture_timestamp"))
+                .append(capturer),
         )
         .link(
             Component::new()
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "capture_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(ThresholdBasedFrameDropper::new("capture_delay", 10))
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
 
-                .add(TimestampAdder::new(
+                .append(TimestampAdder::new(
                     "color_space_conversion_start_timestamp",
                 ))
-                .add(BufferAllocator::new("y_channel_buffer", width * height))
-                .add(BufferAllocator::new(
+                .append(BufferAllocator::new("y_channel_buffer", width * height))
+                .append(BufferAllocator::new(
                     "cb_channel_buffer",
                     width * height / 4,
                 ))
-                .add(BufferAllocator::new(
+                .append(BufferAllocator::new(
                     "cr_channel_buffer",
                     width * height / 4,
                 ))
-                .add(RGBAToYUV420PConverter::new())
-                .add(TimestampDiffCalculator::new(
+                .append(RGBAToYUV420PConverter::new())
+                .append(TimestampDiffCalculator::new(
                     "color_space_conversion_start_timestamp",
                     "color_space_conversion_time",
                 ))
 
-                .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
-                .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(LibVpxVP9Encoder::new(buffer_size, width as i32, height as i32))
-                .add(TimestampDiffCalculator::new(
+                .append(BufferAllocator::new("encoded_frame_buffer", buffer_size))
+                .append(TimestampAdder::new("encoding_start_timestamp"))
+                .append(LibVpxVP9Encoder::new(buffer_size, width as i32, height as i32))
+                .append(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .append(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
             Component::new()
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
                         .log("encoded_size")
                         .log("avframe_building_time")
                         .log("encoding_time"),
                 )
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
                         .log("capture_delay"),

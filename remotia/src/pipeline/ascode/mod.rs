@@ -89,3 +89,9 @@ impl AscodePipeline {
         self
     }
 }
+
+impl Default for AscodePipeline {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -30,10 +30,10 @@ async fn main() -> std::io::Result<()> {
         .tag("ErrorsHandler")
         .link(
             Component::new()
-                .add(rfb_pool.redeemer().soft())
-                .add(efb_pool.redeemer().soft())
+                .append(rfb_pool.redeemer().soft())
+                .append(efb_pool.redeemer().soft())
 
-                .add(
+                .append(
                     ConsoleDropReasonLogger::new()
                         .log(DropReason::StaleFrame)
                         .log(DropReason::ConnectionError)
@@ -42,8 +42,8 @@ async fn main() -> std::io::Result<()> {
                         .log(DropReason::ConnectionError)
                         .log(DropReason::NoAvailableBuffers),
                 )
-                .add(KeyChecker::new("capture_timestamp"))
-                .add(CSVFrameDataSerializer::new("client_drops.csv").log("capture_timestamp")),
+                .append(KeyChecker::new("capture_timestamp"))
+                .append(CSVFrameDataSerializer::new("client_drops.csv").log("capture_timestamp")),
         )
         .bind()
         .feedable();
@@ -53,68 +53,68 @@ async fn main() -> std::io::Result<()> {
         .tag("ClientMain")
         .link(
             Component::new()
-                .add(Ticker::new(10))
-                .add(efb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(Ticker::new(10))
+                .append(efb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
 
-                .add(TimestampAdder::new("reception_start_timestamp"))
-                .add(SRTFrameReceiver::new("127.0.0.1:5001", Duration::from_millis(100)).await)
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampAdder::new("reception_start_timestamp"))
+                .append(SRTFrameReceiver::new("127.0.0.1:5001", Duration::from_millis(100)).await)
+                .append(TimestampDiffCalculator::new(
                     "reception_start_timestamp",
                     "reception_time",
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .append(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
             Component::new()
-                .add(rfb_pool.borrower())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(rfb_pool.borrower())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
 
-                .add(TimestampAdder::new("decoding_start_timestamp"))
-                .add(H264Decoder::new())
+                .append(TimestampAdder::new("decoding_start_timestamp"))
+                .append(H264Decoder::new())
                 // .add(H265Decoder::new())
                 // .add(LibVpxVP9Decoder::new())
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "decoding_start_timestamp",
                     "decoding_time",
                 ))
-                .add(efb_pool.redeemer())
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .append(efb_pool.redeemer())
+                .append(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
             Component::new()
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "pre_render_frame_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new(
+                .append(ThresholdBasedFrameDropper::new(
                     "pre_render_frame_delay",
                     300,
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(TimestampAdder::new("rendering_start_timestamp"))
-                .add(BerylliumRenderer::new(width as u32, height as u32))
-                .add(TimestampDiffCalculator::new(
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(TimestampAdder::new("rendering_start_timestamp"))
+                .append(BerylliumRenderer::new(width as u32, height as u32))
+                .append(TimestampDiffCalculator::new(
                     "rendering_start_timestamp",
                     "rendering_time",
                 ))
 
-                .add(rfb_pool.redeemer())
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
+                .append(rfb_pool.redeemer())
+                .append(OnErrorSwitch::new(&error_handling_pipeline))
 
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "reception_start_timestamp",
                     "total_time",
                 ))
-                .add(TimestampDiffCalculator::new(
+                .append(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "frame_delay",
                 ))
-                .add(OnErrorSwitch::new(&error_handling_pipeline)),
+                .append(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
             Component::new()
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
                         .log("reception_time")
@@ -122,13 +122,13 @@ async fn main() -> std::io::Result<()> {
                         .log("rendering_time")
                         .log("total_time"),
                 )
-                .add(
+                .append(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
                         .log("reception_delay")
                         .log("frame_delay"),
                 )
-                .add(
+                .append(
                     CSVFrameDataSerializer::new("client.csv")
                         .log("capture_timestamp")
                         .log("reception_time")

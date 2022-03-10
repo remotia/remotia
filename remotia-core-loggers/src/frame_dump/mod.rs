@@ -44,7 +44,7 @@ impl FrameProcessor for RawFrameDumper {
         let mut file_path = self.folder.clone();
         file_path.push(format!("{}.bgra", frame_id));
         let mut output_file = File::create(file_path.as_path()).unwrap();
-        output_file.write_all(&buffer).unwrap();
+        output_file.write_all(buffer).unwrap();
 
         Some(frame_data)
     }

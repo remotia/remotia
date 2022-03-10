@@ -58,8 +58,8 @@ impl FrameProcessor for SRTFrameReceiver {
         debug!("Receiving binarized frame DTO...");
 
         let receive_result = self.receive_binarized().await;
-        if receive_result.is_err() {
-            frame_data.set_drop_reason(Some(receive_result.unwrap_err()));
+        if let Err(error) = receive_result {
+            frame_data.set_drop_reason(Some(error));
             return Some(frame_data);
         }
 
@@ -70,9 +70,7 @@ impl FrameProcessor for SRTFrameReceiver {
 
         let serialization_result = bincode::deserialize::<SRTFrameData>(&binarized_obj);
 
-        if serialization_result.is_ok() {
-            let srt_frame_data = serialization_result.unwrap();
-
+        if let Ok(srt_frame_data) = serialization_result {
             // Convert network data to pipeline data
             srt_frame_data.merge_with_frame_data(&mut frame_data);
         } else {

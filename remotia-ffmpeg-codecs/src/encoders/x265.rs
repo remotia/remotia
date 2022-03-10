@@ -28,14 +28,14 @@ pub struct X265EncoderState {
 
 impl X265EncoderState {
     pub fn increase_network_stability(&mut self, amount: f32) {
-        self.network_stability = self.network_stability + amount;
+        self.network_stability += amount;
         if self.network_stability > 1.0 {
             self.network_stability = 1.0;
         }
     }
 
     pub fn decrease_network_stability(&mut self, amount: f32) {
-        self.network_stability = self.network_stability - amount;
+        self.network_stability -= amount;
         if self.network_stability < 0.0 {
             self.network_stability = 0.0;
         }

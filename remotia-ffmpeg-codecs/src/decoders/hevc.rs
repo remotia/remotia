@@ -122,6 +122,12 @@ impl HEVCDecoder {
     }
 }
 
+impl Default for HEVCDecoder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl FrameProcessor for HEVCDecoder {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {

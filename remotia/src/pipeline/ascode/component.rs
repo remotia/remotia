@@ -3,7 +3,7 @@ use std::time::Duration;
 use log::{debug, info};
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
-    task::JoinHandle
+    task::JoinHandle,
 };
 
 use crate::{traits::FrameProcessor, types::FrameData};
@@ -22,12 +22,11 @@ impl Component {
         Self {
             processors: Vec::new(),
             receiver: None,
-            sender: None
+            sender: None,
         }
     }
 
-
-    pub fn add<T: 'static + FrameProcessor + Send>(mut self, processor: T) -> Self {
+    pub fn append<T: 'static + FrameProcessor + Send>(mut self, processor: T) -> Self {
         self.processors.push(Box::new(processor));
         self
     }
@@ -71,13 +70,21 @@ impl Component {
                     }
                 }
 
-                if frame_data.is_some() && self.sender.is_some() {
-                    debug!("Sending frame data: {}", frame_data.as_ref().unwrap());
-                    if let Err(_) = self.sender.as_mut().unwrap().send(frame_data.unwrap()) {
-                        panic!("Error while sending frame data");
+                if self.sender.is_some() {
+                    if let Some(frame_data) = frame_data {
+                        debug!("Sending frame data: {}", frame_data);
+                        if self.sender.as_mut().unwrap().send(frame_data).is_err() {
+                            panic!("Error while sending frame data");
+                        }
                     }
                 }
             }
         })
+    }
+}
+
+impl Default for Component {
+    fn default() -> Self {
+        Self::new()
     }
 }

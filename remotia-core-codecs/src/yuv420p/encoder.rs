@@ -10,10 +10,16 @@ impl RGBAToYUV420PConverter {
     }
 }
 
+impl Default for RGBAToYUV420PConverter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl FrameProcessor for RGBAToYUV420PConverter {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        let mut raw_frame_buffer = frame_data
+        let raw_frame_buffer = frame_data
             .extract_writable_buffer("raw_frame_buffer")
             .unwrap();
         let mut y_channel_buffer = frame_data
@@ -30,7 +36,7 @@ impl FrameProcessor for RGBAToYUV420PConverter {
         cr_channel_buffer.fill(0);
 
         bgra_to_yuv_separate(
-            &mut raw_frame_buffer,
+            &raw_frame_buffer,
             &mut y_channel_buffer,
             &mut cb_channel_buffer,
             &mut cr_channel_buffer,

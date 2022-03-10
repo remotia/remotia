@@ -6,3 +6,4 @@ pub mod switch;
 pub mod pool_switch;
 pub mod key_check;
 pub mod clone_switch;
+pub mod debug;

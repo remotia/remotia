@@ -1227,24 +1227,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 name = "remotia"
 version = "0.1.0"
 dependencies = [
- "remotia-buffer-utils",
  "remotia-core",
- "remotia-core-capturers",
- "remotia-core-codecs",
- "remotia-core-loggers",
- "remotia-core-renderers",
- "remotia-profilation-utils",
-]
-
-[[package]]
-name = "remotia-buffer-utils"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes",
- "log",
- "remotia-core",
- "tokio",
 ]
 
 [[package]]
@@ -1274,43 +1257,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "remotia-core-capturers"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes",
- "env_logger",
- "log",
- "remotia-core",
- "scrap",
-]
-
-[[package]]
-name = "remotia-core-codecs"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes",
- "env_logger",
- "log",
- "rayon",
- "remotia-core",
- "tokio",
-]
-
-[[package]]
-name = "remotia-core-loggers"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes",
- "csv",
- "env_logger",
- "log",
- "remotia-core",
-]
-
-[[package]]
 name = "remotia-core-renderers"
 version = "0.1.0"
 dependencies = [
@@ -1320,17 +1266,8 @@ dependencies = [
  "env_logger",
  "log",
  "pixels",
- "remotia-core",
+ "remotia",
  "zstring",
-]
-
-[[package]]
-name = "remotia-profilation-utils"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes",
- "remotia-core",
 ]
 
 [[package]]

@@ -6,4 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-remotia-core = { path = "../remotia-core/" }
+remotia-core = { path = "./remotia-core" }
+remotia-buffer-utils = { path = "./remotia-buffer-utils" }
+remotia-core-capturers = { path = "./remotia-core-capturers" }
+remotia-core-codecs = { path = "./remotia-core-codecs" }
+remotia-core-loggers = { path = "./remotia-core-loggers" }
+remotia-core-renderers = { path = "./remotia-core-renderers" }
+remotia-profilation-utils = { path = "./remotia-profilation-utils" }

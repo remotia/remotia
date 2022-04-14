@@ -8,11 +8,19 @@ use tokio::{
 
 use crate::{traits::FrameProcessor, types::FrameData};
 
+macro_rules! tagged {
+    ($self:ident, $msg:tt) => {{
+        &format!("[{}] {}", $self.tag.as_ref().unwrap_or(&"".to_string()), $msg)
+    }}
+}
+
 pub struct Component {
     processors: Vec<Box<dyn FrameProcessor + Send>>,
 
     receiver: Option<UnboundedReceiver<FrameData>>,
     sender: Option<UnboundedSender<FrameData>>,
+
+    tag: Option<String>
 }
 
 unsafe impl Send for Component {}
@@ -23,11 +31,17 @@ impl Component {
             processors: Vec::new(),
             receiver: None,
             sender: None,
+            tag: None
         }
     }
 
     pub fn append<T: 'static + FrameProcessor + Send>(mut self, processor: T) -> Self {
         self.processors.push(Box::new(processor));
+        self
+    }
+
+    pub fn tag(mut self, tag: &str) -> Self {
+        self.tag = Some(tag.to_string());
         self
     }
 
@@ -53,7 +67,7 @@ impl Component {
                             .unwrap()
                             .recv()
                             .await
-                            .expect("Receive channel closed"),
+                            .expect(tagged!(self, "Receive channel closed")),
                     )
                 } else {
                     debug!("No receiver registered, allocating an empty frame DTO");
@@ -74,7 +88,7 @@ impl Component {
                     if let Some(frame_data) = frame_data {
                         debug!("Sending frame data: {}", frame_data);
                         if self.sender.as_mut().unwrap().send(frame_data).is_err() {
-                            panic!("Error while sending frame data");
+                            panic!("{}", tagged!(self, "Error while sending frame data"));
                         }
                     }
                 }
@@ -82,6 +96,7 @@ impl Component {
         })
     }
 }
+
 
 impl Default for Component {
     fn default() -> Self {

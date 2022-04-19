@@ -60,7 +60,10 @@ impl FrameProcessor for BufferBorrower {
 
         match buffer {
             Some(buffer) => frame_data.insert_writable_buffer(&self.slot_id, buffer),
-            None => frame_data.set_drop_reason(Some(DropReason::NoAvailableBuffers)),
+            None => {
+                debug!("No available '{}' buffers", self.slot_id);
+                frame_data.set_drop_reason(Some(DropReason::NoAvailableBuffers))
+            },
         }
 
         Some(frame_data)
@@ -88,7 +91,12 @@ impl FrameProcessor for BufferRedeemer {
         let buffer = frame_data.extract_writable_buffer(&self.slot_id);
 
         match buffer {
-            Some(buffer) => self.buffers.lock().await.push(buffer),
+            Some(buffer) => {
+                self.buffers.lock().await.push(buffer);
+                if self.soft {
+                    debug!("Soft-redeemed a '{}' buffer", self.slot_id);
+                }
+            },
             None => {
                 if !self.soft {
                     panic!("Missing '{}' buffer in frame {}", self.slot_id, frame_data);

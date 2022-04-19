@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use remotia_core::{error::DropReason, traits::FrameProcessor, types::FrameData};
 
 use async_trait::async_trait;
-use log::info;
+use log::{info, debug};
 
 pub struct ConsoleDropReasonLogger {
     header: Option<String>,
@@ -83,6 +83,8 @@ impl ConsoleDropReasonLogger {
         if frame_data.get_drop_reason().is_none() {
             return;
         }
+
+        debug!("Logging frame drop reason: {:?}", frame_data.get_drop_reason());
 
         self.logged_reasons
             .push(frame_data.get_drop_reason().unwrap());

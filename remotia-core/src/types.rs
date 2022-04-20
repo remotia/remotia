@@ -1,4 +1,7 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{
+    collections::{hash_map::Keys, HashMap},
+    fmt::Display,
+};
 
 use bytes::{Bytes, BytesMut};
 use serde::Serialize;
@@ -79,6 +82,14 @@ impl FrameData {
 
     pub fn has_writable_buffer(&self, key: &str) -> bool {
         self.writable_buffers.contains_key(key)
+    }
+
+    pub fn get_writable_buffers_keys(&self) -> Vec<String> {
+        self.writable_buffers
+            .keys()
+            .into_iter()
+            .map(|key| key.to_string())
+            .collect()
     }
 
     //*************//

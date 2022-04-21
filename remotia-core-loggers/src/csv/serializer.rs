@@ -15,6 +15,9 @@ pub struct CSVFrameDataSerializer {
 
 impl CSVFrameDataSerializer {
     pub fn new(path: &str) -> Self {
+        let prefix = std::path::Path::new(path).parent().unwrap();
+        std::fs::create_dir_all(prefix).unwrap();
+
         Self {
             writer: csv::Writer::from_path(path).unwrap(),
             values_to_log: Vec::new(),

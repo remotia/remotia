@@ -22,6 +22,7 @@ impl FrameProcessor for ThresholdBasedFrameDropper {
         let diff_value = frame_data.get(&self.stat_id);
 
         if diff_value > self.threshold {
+            debug!("Dropping frame due to higher than threshold value {} > {}", diff_value, self.threshold);
             frame_data.set_drop_reason(Some(DropReason::StaleFrame));
         }
 

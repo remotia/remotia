@@ -1,4 +1,4 @@
-use std::sync::{Arc};
+use std::{sync::{Arc}, time::Duration};
 
 use async_trait::async_trait;
 
@@ -33,6 +33,7 @@ impl BuffersPool {
         BufferBorrower {
             slot_id: self.slot_id.clone(),
             buffers: self.buffers.clone(),
+            blocking: true
         }
     }
 
@@ -48,22 +49,36 @@ impl BuffersPool {
 pub struct BufferBorrower {
     slot_id: String,
     buffers: Arc<Mutex<Vec<BytesMut>>>,
+
+    blocking: bool
+}
+
+impl BufferBorrower {
+    pub fn blocking(mut self, blocking: bool) -> Self {
+        self.blocking = blocking;
+        self
+    }
 }
 
 #[async_trait]
 impl FrameProcessor for BufferBorrower {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        debug!("Borrowing '{}' buffer...", self.slot_id);
+        loop {
+            debug!("Borrowing '{}' buffer...", self.slot_id);
+            let mut buffers = self.buffers.lock().await;
 
-        let mut buffers = self.buffers.lock().await;
-        let buffer = buffers.pop();
-
-        match buffer {
-            Some(buffer) => frame_data.insert_writable_buffer(&self.slot_id, buffer),
-            None => {
+            if let Some(buffer) = buffers.pop() {
+                frame_data.insert_writable_buffer(&self.slot_id, buffer);
+                break;
+            } else {
                 debug!("No available '{}' buffers", self.slot_id);
-                frame_data.set_drop_reason(Some(DropReason::NoAvailableBuffers))
-            },
+                if self.blocking {
+                    drop(buffers);
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                } else {
+                    frame_data.set_drop_reason(Some(DropReason::NoAvailableBuffers))
+                }
+            }
         }
 
         Some(frame_data)

@@ -26,3 +26,10 @@ impl FrameProcessor for AsyncFunction {
         (self.function)(frame_data).await
     }
 }
+
+#[macro_export]
+macro_rules! async_func {
+    (async move $body:block) => {
+        Box::pin(async move { $body })
+    };
+}

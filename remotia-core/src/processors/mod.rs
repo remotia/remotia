@@ -9,3 +9,4 @@ pub mod clone_switch;
 pub mod debug;
 pub mod containers;
 pub mod functional;
+pub mod async_functional;

@@ -4,6 +4,7 @@ use remotia_core::{traits::FrameProcessor, types::FrameData};
 use async_trait::async_trait;
 
 pub mod pool;
+pub mod pool_registry;
 
 pub struct BufferAllocator { 
     buffer_id: String,

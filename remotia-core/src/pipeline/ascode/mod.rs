@@ -14,7 +14,9 @@ pub struct AscodePipeline {
 
     tag: String,
 
-    bound: bool
+    bound: bool,
+
+    to_be_feedable: bool,
 }
 
 impl AscodePipeline {
@@ -25,7 +27,9 @@ impl AscodePipeline {
 
             tag: "".to_string(),
 
-            bound: false
+            bound: false,
+
+            to_be_feedable: false,
         }
     }
 
@@ -38,15 +42,24 @@ impl AscodePipeline {
         self
     }
 
-    pub fn get_feeder(&self) -> AscodePipelineFeeder {
+    pub fn get_feeder(&mut self) -> AscodePipelineFeeder {
+        if self.to_be_feedable {
+            self.make_feedable();
+        }
+
         let sender = self.feeding_sender.as_ref().unwrap().clone();
         AscodePipelineFeeder::new(sender)
     }
 
-    pub fn run(self) -> Vec<JoinHandle<()>> {
+    pub fn run(mut self) -> Vec<JoinHandle<()>> {
         info!("[{}] Launching threads...", self.tag);
+
         if !self.bound {
-            panic!("[{}] Called 'run' before binding the pipeline", self.tag);
+            self.bind();
+        }
+
+        if self.to_be_feedable {
+            self.make_feedable();
         }
 
         let mut handles = Vec::new();
@@ -59,7 +72,7 @@ impl AscodePipeline {
         handles
     }
 
-    pub fn bind(mut self) -> Self {
+    fn bind(&mut self) {
         info!("[{}] Binding channels...", self.tag);
 
         for i in 0..self.components.len()-1 {
@@ -73,19 +86,15 @@ impl AscodePipeline {
         }
 
         self.bound = true;
-
-        self
     }
 
-    pub fn feedable(mut self) -> Self {
+    fn make_feedable(&mut self) {
         let head = self.components.get_mut(0).unwrap();
 
         let (sender, receiver) = mpsc::unbounded_channel::<FrameData>();
         self.feeding_sender = Some(sender);
 
         head.set_receiver(receiver);
-
-        self
     }
 
     pub fn tag(mut self, tag: &str) -> Self {

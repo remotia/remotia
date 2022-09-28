@@ -8,7 +8,7 @@ pub struct CloneSwitch {
 }
 
 impl CloneSwitch {
-    pub fn new(destination_pipeline: &AscodePipeline) -> Self {
+    pub fn new(destination_pipeline: &mut AscodePipeline) -> Self {
         Self {
             feeder: destination_pipeline.get_feeder()
         }

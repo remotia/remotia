@@ -29,6 +29,10 @@ impl AscodePipeline {
         }
     }
 
+    pub fn singleton(component: Component) -> Self {
+        Self::new().link(component)
+    }
+
     pub fn link(mut self, component: Component) -> Self {
         self.components.push(component);
         self

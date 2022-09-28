@@ -35,6 +35,10 @@ impl Component {
         }
     }
 
+    pub fn singleton<T: 'static + FrameProcessor + Send>(processor: T) -> Self {
+        Self::new().append(processor)
+    }
+
     pub fn append<T: 'static + FrameProcessor + Send>(mut self, processor: T) -> Self {
         self.processors.push(Box::new(processor));
         self

@@ -95,10 +95,17 @@ impl AscodePipeline {
         self.feeding_sender = Some(sender);
 
         head.set_receiver(receiver);
+
+        self.to_be_feedable = false;
     }
 
     pub fn tag(mut self, tag: &str) -> Self {
         self.tag = tag.to_string();
+        self
+    }
+
+    pub fn feedable(mut self) -> Self {
+        self.to_be_feedable = true;
         self
     }
 }

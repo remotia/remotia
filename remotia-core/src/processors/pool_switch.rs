@@ -21,7 +21,7 @@ impl PoolingSwitch {
         }
     }
 
-    pub fn entry(mut self, key: u128, pipeline: &AscodePipeline) -> Self {
+    pub fn entry(mut self, key: u128, pipeline: &mut AscodePipeline) -> Self {
         self.entries.push((key, pipeline.get_feeder()));
         self
     }
@@ -58,7 +58,7 @@ impl DepoolingSwitch {
         }
     }
 
-    pub fn entry(mut self, key: u128, pipeline: &AscodePipeline) -> Self {
+    pub fn entry(mut self, key: u128, pipeline: &mut AscodePipeline) -> Self {
         self.entries.insert(key, pipeline.get_feeder());
         self
     }

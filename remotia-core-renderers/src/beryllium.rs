@@ -39,7 +39,7 @@ impl BerylliumRenderer {
 impl FrameProcessor for BerylliumRenderer {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let raw_frame_buffer = frame_data.get_writable_buffer_ref("raw_frame_buffer").unwrap();
-        packed_bgra_to_packed_rgba(raw_frame_buffer, self.pixels.get_frame());
+        self.pixels.get_frame().copy_from_slice(&raw_frame_buffer);
         self.pixels.render().unwrap();
 
         Some(frame_data)
@@ -72,28 +72,4 @@ pub fn create_gl_window(width: i32, height: i32) -> GlWindow {
     gl_win.set_swap_interval(1).unwrap();
 
     gl_win
-}
-
-pub fn packed_bgr_to_packed_rgba(packed_bgr_buffer: &[u8], packed_rgba_buffer: &mut [u8]) {
-    let pixels_count = packed_rgba_buffer.len() / 4;
-
-    for i in 0..pixels_count {
-        packed_rgba_buffer[i * 4 + 2] = packed_bgr_buffer[i * 3];
-        packed_rgba_buffer[i * 4 + 1] = packed_bgr_buffer[i * 3 + 1];
-        packed_rgba_buffer[i * 4] = packed_bgr_buffer[i * 3 + 2];
-    }
-}
-
-pub fn packed_bgra_to_packed_rgba(packed_bgra_buffer: &[u8], packed_rgba_buffer: &mut [u8]) {
-    let pixels_count = packed_rgba_buffer.len() / 4;
-
-    for i in 0..pixels_count {
-        // BGR -> RGB channels
-        packed_rgba_buffer[i * 4] = packed_bgra_buffer[i * 4 + 2];
-        packed_rgba_buffer[i * 4 + 1] = packed_bgra_buffer[i * 4 + 1];
-        packed_rgba_buffer[i * 4 + 2] = packed_bgra_buffer[i * 4];
-
-        // Alpha channel
-        packed_rgba_buffer[i * 4 + 3] = packed_bgra_buffer[i * 4 + 3];
-    }
 }

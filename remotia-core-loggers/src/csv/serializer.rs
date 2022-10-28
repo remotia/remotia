@@ -11,6 +11,7 @@ pub struct CSVFrameDataSerializer {
     values_to_log: Vec<String>,
 
     columns_written: bool,
+    log_drop_reason: bool,
 }
 
 impl CSVFrameDataSerializer {
@@ -22,11 +23,17 @@ impl CSVFrameDataSerializer {
             writer: csv::Writer::from_path(path).unwrap(),
             values_to_log: Vec::new(),
             columns_written: false,
+            log_drop_reason: false,
         }
     }
 
     pub fn log(mut self, value: &str) -> Self {
         self.values_to_log.push(value.to_string());
+        self
+    }
+
+    pub fn log_drop_reason(mut self) -> Self {
+        self.log_drop_reason = true;
         self
     }
 }
@@ -35,16 +42,30 @@ impl CSVFrameDataSerializer {
 impl FrameProcessor for CSVFrameDataSerializer {
     async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
         if !self.columns_written {
+            let mut columns = self.values_to_log.clone();
+            if self.log_drop_reason {
+                columns.push("drop_reason".to_string());
+            }
             self.writer
-                .write_record(self.values_to_log.clone())
+                .write_record(columns)
                 .unwrap();
             self.columns_written = true;
         }
 
-        let record = self
+        let mut record: Vec<String> = self
             .values_to_log
             .iter()
-            .map(|key| format!("{}", frame_data.get(key)));
+            .map(|key| 
+                frame_data.get_opt(key)
+                    .map(|value| format!("{}", value))
+                    .unwrap_or("".to_string())
+            ).collect();
+
+        if self.log_drop_reason {
+            record.push(frame_data.get_drop_reason()
+                .map(|drop_reason| drop_reason.to_string())
+                .unwrap_or("".to_string()));
+        }
 
         self.writer.write_record(record).unwrap();
         self.writer.flush().unwrap();

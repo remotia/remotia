@@ -34,6 +34,10 @@ impl FrameData {
             .unwrap_or_else(|| panic!("{}", missing_key_msg(key)))
     }
 
+    pub fn get_opt(&self, key: &str) -> Option<u128> {
+        self.stats.get(key).copied()
+    }
+
     pub fn has(&self, key: &str) -> bool {
         self.stats.contains_key(key)
     }

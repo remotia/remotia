@@ -13,6 +13,7 @@ pub struct RawFrameDumper {
     buffer_id: String,
 
     key: String,
+    extension: String,
 
     folder: PathBuf,
 }
@@ -23,12 +24,18 @@ impl RawFrameDumper {
         Self {
             buffer_id: buffer_id.to_string(),
             key: "capture_timestamp".to_string(),
+            extension: "raw".to_string(),
             folder,
         }
     }
 
     pub fn key(mut self, key: &str) -> Self {
         self.key = key.to_string();
+        self
+    }
+
+    pub fn extension(mut self, value: &str) -> Self {
+        self.extension = value.to_string();
         self
     }
 }
@@ -42,7 +49,7 @@ impl FrameProcessor for RawFrameDumper {
         debug!("Dumping frame {}", frame_id);
 
         let mut file_path = self.folder.clone();
-        file_path.push(format!("{}.bgra", frame_id));
+        file_path.push(format!("{}.{}", frame_id, self.extension));
         let mut output_file = File::create(file_path.as_path()).unwrap();
         output_file.write_all(buffer).unwrap();
 

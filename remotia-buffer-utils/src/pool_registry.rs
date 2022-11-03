@@ -15,8 +15,8 @@ impl PoolRegistry {
         }
     }
 
-    pub fn register(&mut self, slot_id: &str, pool_size: usize, buffer_size: usize) {
-        let pool = BuffersPool::new(slot_id, pool_size, buffer_size);
+    pub async fn register(&mut self, slot_id: &str, pool_size: usize, buffer_size: usize) {
+        let pool = BuffersPool::new(slot_id, pool_size, buffer_size).await;
         self.pools.insert(slot_id.to_string(), pool);
     }
 

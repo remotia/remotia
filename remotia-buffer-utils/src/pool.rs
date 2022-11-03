@@ -3,44 +3,45 @@ use std::{sync::{Arc}, time::Duration};
 use async_trait::async_trait;
 
 use bytes::BytesMut;
-use log::debug;
-use remotia_core::{error::DropReason, traits::FrameProcessor, types::FrameData};
-use tokio::sync::Mutex;
+use log::{debug, trace, warn};
+use remotia_core::{traits::FrameProcessor, types::FrameData, error::DropReason};
+use tokio::sync::{Mutex, mpsc::{Sender, Receiver, self}};
 
 pub struct BuffersPool {
     slot_id: String,
-    buffers: Arc<Mutex<Vec<BytesMut>>>,
+    buffers_sender: Sender<BytesMut>,
+    buffers_receiver: Arc<Mutex<Receiver<BytesMut>>>,
 }
 
 impl BuffersPool {
-    pub fn new(slot_id: &str, pool_size: usize, buffer_size: usize) -> Self {
+    pub async fn new(slot_id: &str, pool_size: usize, buffer_size: usize) -> Self {
         let slot_id = slot_id.to_string();
 
-        let mut buffers = Vec::new();
+        let (sender, receiver) = mpsc::channel(pool_size);
 
         for _ in 0..pool_size {
             let mut buf = BytesMut::with_capacity(buffer_size);
             buf.resize(buffer_size, 0);
-            buffers.push(buf)
+            sender.send(buf).await.unwrap();
         }
 
-        let buffers = Arc::new(Mutex::new(buffers));
-
-        Self { slot_id, buffers }
+        Self { slot_id, 
+            buffers_sender: sender,
+            buffers_receiver: Arc::new(Mutex::new(receiver))
+        }
     }
 
     pub fn borrower(&self) -> BufferBorrower {
         BufferBorrower {
             slot_id: self.slot_id.clone(),
-            buffers: self.buffers.clone(),
-            blocking: true
+            receiver: self.buffers_receiver.clone()
         }
     }
 
     pub fn redeemer(&self) -> BufferRedeemer {
         BufferRedeemer {
             slot_id: self.slot_id.clone(),
-            buffers: self.buffers.clone(),
+            sender: self.buffers_sender.clone(),
             soft: false,
         }
     }
@@ -48,36 +49,26 @@ impl BuffersPool {
 
 pub struct BufferBorrower {
     slot_id: String,
-    buffers: Arc<Mutex<Vec<BytesMut>>>,
-
-    blocking: bool
-}
-
-impl BufferBorrower {
-    pub fn blocking(mut self, blocking: bool) -> Self {
-        self.blocking = blocking;
-        self
-    }
+    receiver: Arc<Mutex<Receiver<BytesMut>>>
 }
 
 #[async_trait]
 impl FrameProcessor for BufferBorrower {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        loop {
-            debug!("Borrowing '{}' buffer...", self.slot_id);
-            let mut buffers = self.buffers.lock().await;
+        debug!("Borrowing '{}' buffer...", self.slot_id);
+        let mut receiver = self.receiver.lock().await;
 
-            if let Some(buffer) = buffers.pop() {
-                frame_data.insert_writable_buffer(&self.slot_id, buffer);
-                break;
-            } else {
-                debug!("No available '{}' buffers", self.slot_id);
-                if self.blocking {
-                    drop(buffers);
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                } else {
-                    frame_data.set_drop_reason(Some(DropReason::NoAvailableBuffers))
-                }
+        loop {
+            match tokio::time::timeout(Duration::from_millis(1000), receiver.recv()).await {
+                Ok(result) => {
+                    if let Some(buffer) = result {
+                        frame_data.insert_writable_buffer(&self.slot_id, buffer);
+                        break;
+                    }
+                },
+                Err(err) => {
+                    warn!("Unable to borrow '{}' buffer: {:?}", self.slot_id, err);
+                },
             }
         }
 
@@ -87,7 +78,7 @@ impl FrameProcessor for BufferBorrower {
 
 pub struct BufferRedeemer {
     slot_id: String,
-    buffers: Arc<Mutex<Vec<BytesMut>>>,
+    sender: Sender<BytesMut>,
     soft: bool,
 }
 
@@ -107,7 +98,8 @@ impl FrameProcessor for BufferRedeemer {
 
         match buffer {
             Some(buffer) => {
-                self.buffers.lock().await.push(buffer);
+                self.sender.send(buffer).await.expect("Unable to redeem buffer");
+
                 if self.soft {
                     debug!("Soft-redeemed a '{}' buffer", self.slot_id);
                 }

@@ -3,8 +3,8 @@ use std::{sync::{Arc}, time::Duration};
 use async_trait::async_trait;
 
 use bytes::BytesMut;
-use log::{debug, trace, warn};
-use remotia_core::{traits::FrameProcessor, types::FrameData, error::DropReason};
+use log::{debug, warn};
+use remotia_core::{traits::FrameProcessor, types::FrameData};
 use tokio::sync::{Mutex, mpsc::{Sender, Receiver, self}};
 
 pub struct BuffersPool {
@@ -110,6 +110,8 @@ impl FrameProcessor for BufferRedeemer {
                 }
             }
         }
+
+        debug!("Redeemed '{}' buffer (soft = {})", self.slot_id, self.soft);
 
         Some(frame_data)
     }

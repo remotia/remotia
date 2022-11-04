@@ -98,7 +98,7 @@ impl FrameProcessor for BufferRedeemer {
 
         match buffer {
             Some(buffer) => {
-                self.sender.send(buffer).await.expect("Unable to redeem buffer");
+                self.sender.send(buffer).await.expect(&format!("Unable to redeem '{}' buffer", self.slot_id));
 
                 if self.soft {
                     debug!("Soft-redeemed a '{}' buffer", self.slot_id);

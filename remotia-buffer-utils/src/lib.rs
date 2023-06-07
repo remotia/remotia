@@ -1,11 +1,13 @@
 use bytes::BytesMut;
-use remotia_core::{traits::FrameProcessor, types::FrameData};
+use remotia_core::{traits::{FrameProcessor, FrameProperties}};
 
 use async_trait::async_trait;
 
-pub mod pool;
-pub mod pool_registry;
+// pub mod pool;
+// pub mod pool_registry;
 
+#[cfg(test)]
+mod tests;
 pub struct BufferAllocator { 
     buffer_id: String,
     size: usize
@@ -27,10 +29,11 @@ impl BufferAllocator {
 }
 
 #[async_trait]
-impl FrameProcessor for BufferAllocator {
-    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        frame_data.insert_writable_buffer(&self.buffer_id, self.allocate_buffer());
+impl<F> FrameProcessor<F> for BufferAllocator 
+    where F: FrameProperties<BytesMut> + Send + 'static
+{
+    async fn process(&mut self, mut frame_data: F) -> Option<F> {
+        frame_data.set(&self.buffer_id, self.allocate_buffer());
         Some(frame_data)
     }
-
 }

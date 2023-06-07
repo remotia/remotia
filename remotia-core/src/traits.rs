@@ -7,11 +7,10 @@ pub trait FrameProcessor<F> {
 
 pub trait FrameProperties<T> {
     fn set(&mut self, key: &str, value: T);
-    fn get(&mut self, key: &str) -> T;
+    fn get(&mut self, key: &str) -> Option<T>;
 }
 
 pub trait FrameError<E> {
     fn report_error(&mut self, error: E);
-    fn has_error(&mut self) -> bool;
-    fn get_error(&mut self) -> E;
+    fn get_error(&mut self) -> Option<E>;
 }

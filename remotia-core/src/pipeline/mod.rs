@@ -1,16 +1,16 @@
+use std::fmt::Debug;
+
 use log::info;
 use tokio::{sync::mpsc::{self, UnboundedSender}, task::JoinHandle};
-
-use crate::types::FrameData;
 
 use self::{component::Component, feeder::PipelineFeeder};
 
 pub mod component;
 pub mod feeder;
 
-pub struct Pipeline {
-    components: Vec<Component>,
-    feeding_sender: Option<UnboundedSender<FrameData>>,
+pub struct Pipeline<F> {
+    components: Vec<Component<F>>,
+    feeding_sender: Option<UnboundedSender<F>>,
 
     tag: String,
 
@@ -19,7 +19,7 @@ pub struct Pipeline {
     to_be_feedable: bool,
 }
 
-impl Pipeline {
+impl<F: Debug + Default + Send + 'static> Pipeline<F> {
     pub fn new() -> Self {
         Self {
             components: Vec::new(),
@@ -33,16 +33,16 @@ impl Pipeline {
         }
     }
 
-    pub fn singleton(component: Component) -> Self {
+    pub fn singleton(component: Component<F>) -> Self {
         Self::new().link(component)
     }
 
-    pub fn link(mut self, component: Component) -> Self {
+    pub fn link(mut self, component: Component<F>) -> Self {
         self.components.push(component);
         self
     }
 
-    pub fn get_feeder(&mut self) -> PipelineFeeder {
+    pub fn get_feeder(&mut self) -> PipelineFeeder<F> {
         if self.to_be_feedable {
             self.make_feedable();
         }
@@ -76,7 +76,7 @@ impl Pipeline {
         info!("[{}] Binding channels...", self.tag);
 
         for i in 0..self.components.len()-1 {
-            let (sender, receiver) = mpsc::unbounded_channel::<FrameData>();
+            let (sender, receiver) = mpsc::unbounded_channel::<F>();
 
             let src_component = self.components.get_mut(i).unwrap();
             src_component.set_sender(sender);
@@ -91,7 +91,7 @@ impl Pipeline {
     fn make_feedable(&mut self) {
         let head = self.components.get_mut(0).unwrap();
 
-        let (sender, receiver) = mpsc::unbounded_channel::<FrameData>();
+        let (sender, receiver) = mpsc::unbounded_channel::<F>();
         self.feeding_sender = Some(sender);
 
         head.set_receiver(receiver);
@@ -110,7 +110,7 @@ impl Pipeline {
     }
 }
 
-impl Default for Pipeline {
+impl<F: Default + Debug + Send + 'static> Default for Pipeline<F> {
     fn default() -> Self {
         Self::new()
     }

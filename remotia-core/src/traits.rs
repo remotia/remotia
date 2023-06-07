@@ -1,8 +1,6 @@
-use super::types::FrameData;
-
 use async_trait::async_trait;
 
 #[async_trait]
-pub trait FrameProcessor {
-    async fn process(&mut self, frame_data: FrameData) -> Option<FrameData>;
+pub trait FrameProcessor<F> {
+    async fn process(&mut self, frame_data: F) -> Option<F>;
 }

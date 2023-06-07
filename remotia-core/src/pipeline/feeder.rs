@@ -1,19 +1,19 @@
+use std::fmt::Debug;
+
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::types::FrameData;
-
-pub struct PipelineFeeder {
-    sender: UnboundedSender<FrameData>
+pub struct PipelineFeeder<F> {
+    sender: UnboundedSender<F>
 }
 
-impl PipelineFeeder {
-    pub fn new(sender: UnboundedSender<FrameData>) -> Self {
+impl<F: Debug> PipelineFeeder<F> {
+    pub fn new(sender: UnboundedSender<F>) -> Self {
         Self {
             sender
         }
     }
 
-    pub fn feed(&self, frame_data: FrameData) {
+    pub fn feed(&self, frame_data: F) {
         self.sender.send(frame_data).unwrap();
     }
 }

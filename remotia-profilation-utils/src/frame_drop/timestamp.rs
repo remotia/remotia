@@ -1,24 +1,32 @@
-use crate::{error::DropReason, traits::FrameProcessor, types::FrameData};
+use std::{cmp, fmt};
+
 use async_trait::async_trait;
 use log::debug;
+use remotia_core::traits::{FrameProcessor, FrameProperties, FrameError};
 
-pub struct TimestampBasedFrameDropper {
-    last_timestamp: u128,
+pub struct TimestampBasedFrameDropper<T, E> {
+    last_timestamp: T,
+    error: E,
     stat_id: String,
 }
 
-impl TimestampBasedFrameDropper {
-    pub fn new(stat_id: &str) -> Self {
+impl<T: Default, E> TimestampBasedFrameDropper<T, E> {
+    pub fn new(stat_id: &str, error: E) -> Self {
         Self {
-            last_timestamp: 0,
+            error,
+            last_timestamp: Default::default(),
             stat_id: stat_id.to_string(),
         }
     }
 }
 
 #[async_trait]
-impl FrameProcessor for TimestampBasedFrameDropper {
-    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
+impl<T, F, E> FrameProcessor<F> for TimestampBasedFrameDropper <T, E>  where
+    F: FrameProperties<T> + FrameError<E> + Send + 'static,
+    T: fmt::Debug + fmt::Display + cmp::PartialOrd + Send,
+    E: Copy + Send
+{
+    async fn process(&mut self, mut frame_data: F) -> Option<F> {
         let frame_timestamp = frame_data.get(&self.stat_id);
 
         if frame_timestamp < self.last_timestamp {
@@ -26,7 +34,7 @@ impl FrameProcessor for TimestampBasedFrameDropper {
                 "Dropping frame with timestamp {} (last rendered timestamp: {})",
                 frame_timestamp, self.last_timestamp
             );
-            frame_data.set_drop_reason(Some(DropReason::StaleFrame));
+            frame_data.report_error(self.error);
         } else {
             self.last_timestamp = frame_timestamp;
         }

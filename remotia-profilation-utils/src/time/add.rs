@@ -18,10 +18,10 @@ impl TimestampAdder {
 #[async_trait]
 impl<F> FrameProcessor<F> for TimestampAdder
 where
-    F: FrameProperties<u128> + Send + 'static,
+    F: FrameProperties<String, u128> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
-        frame_data.set(&self.id, now_timestamp());
+        frame_data.set(self.id.clone(), now_timestamp());
         Some(frame_data)
     }
 }

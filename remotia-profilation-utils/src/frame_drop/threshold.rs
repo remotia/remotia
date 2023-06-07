@@ -22,7 +22,7 @@ impl<T, E> ThresholdBasedFrameDropper<T, E> {
 
 #[async_trait]
 impl<T, F, E> FrameProcessor<F> for ThresholdBasedFrameDropper<T, E>  where
-    F: FrameProperties<T> + FrameError<E> + Send + 'static,
+    F: FrameProperties<String, T> + FrameError<E> + Send + 'static,
     T: fmt::Debug + fmt::Display + cmp::PartialOrd + Send,
     E: Copy + Send
 {

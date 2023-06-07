@@ -22,7 +22,7 @@ impl<T: Default, E> TimestampBasedFrameDropper<T, E> {
 
 #[async_trait]
 impl<T, F, E> FrameProcessor<F> for TimestampBasedFrameDropper <T, E>  where
-    F: FrameProperties<T> + FrameError<E> + Send + 'static,
+    F: FrameProperties<String, T> + FrameError<E> + Send + 'static,
     T: fmt::Debug + fmt::Display + cmp::PartialOrd + Send,
     E: Copy + Send
 {

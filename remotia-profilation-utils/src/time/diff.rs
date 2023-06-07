@@ -22,11 +22,11 @@ impl TimestampDiffCalculator {
 #[async_trait]
 impl<F> FrameProcessor<F> for TimestampDiffCalculator
 where
-    F: FrameProperties<u128> + Send + 'static,
+    F: FrameProperties<String, u128> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         let source_timestamp = frame_data.get(&self.source_id).unwrap();
-        frame_data.set(&self.diff_id, now_timestamp() - source_timestamp);
+        frame_data.set(self.diff_id.clone(), now_timestamp() - source_timestamp);
         Some(frame_data)
     }
 }

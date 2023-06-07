@@ -1,32 +1,42 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
 use bytes::BytesMut;
-use remotia_core::traits::{FrameProcessor, FrameProperties};
+use remotia_core::traits::{FrameProcessor, BorrowableFrameProperties};
 
 use crate::BufferAllocator;
 
-#[derive(Default)]
-struct TestFrameData {
-    buffers: HashMap<String, BytesMut>
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+enum BufferType {
+    Test
 }
 
-impl FrameProperties<BytesMut> for TestFrameData {
-    fn set(&mut self, key: &str, value: BytesMut) {
-        self.buffers.insert(key.to_string(), value); 
+#[derive(Default)]
+struct TestFrameData {
+    buffers: HashMap<BufferType, BytesMut>
+}
+
+impl BorrowableFrameProperties<BufferType, BytesMut> for TestFrameData {
+    fn push(&mut self, key: BufferType, value: BytesMut) {
+        self.buffers.insert(key, value);
     }
 
-    fn get(&mut self, key: &str) -> Option<BytesMut> {
-        match self.buffers.get(key) {
-            Some(buffer_ref) => Some(buffer_ref.clone()),
-            None => None,
-        }
+    fn pull(&mut self, key: &BufferType) -> Option<BytesMut> {
+        self.buffers.remove(key)
+    }
+
+    fn get_ref(&self, key: &BufferType) -> Option<&BytesMut> {
+        self.buffers.get(key)
+    }
+
+    fn get_mut_ref(&mut self, key: &BufferType) -> Option<&mut BytesMut> {
+        self.buffers.get_mut(key)
     }
 }
 
 #[tokio::test]
 async fn test_allocation() {
-    let mut allocator = BufferAllocator::new("test_buffer", 1024);
+    let mut allocator = BufferAllocator::new(BufferType::Test, 1024);
     let mut dto = TestFrameData::default();
     dto = allocator.process(dto).await.unwrap();
-    assert!(dto.get("test_buffer").is_some());
+    assert!(dto.pull(&BufferType::Test).is_some());
 }

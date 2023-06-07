@@ -5,13 +5,13 @@ use log::debug;
 use rand::prelude::{SliceRandom, ThreadRng};
 
 use crate::{
-    pipeline::ascode::{feeder::AscodePipelineFeeder, AscodePipeline},
+    pipeline::{feeder::PipelineFeeder, Pipeline},
     traits::FrameProcessor,
     types::FrameData,
 };
 
 pub struct PoolingSwitch {
-    entries: Vec<(u128, AscodePipelineFeeder)>
+    entries: Vec<(u128, PipelineFeeder)>
 }
 
 impl PoolingSwitch {
@@ -21,7 +21,7 @@ impl PoolingSwitch {
         }
     }
 
-    pub fn entry(mut self, key: u128, pipeline: &mut AscodePipeline) -> Self {
+    pub fn entry(mut self, key: u128, pipeline: &mut Pipeline) -> Self {
         self.entries.push((key, pipeline.get_feeder()));
         self
     }
@@ -48,7 +48,7 @@ impl FrameProcessor for PoolingSwitch {
 }
 
 pub struct DepoolingSwitch {
-    entries: HashMap<u128, AscodePipelineFeeder>
+    entries: HashMap<u128, PipelineFeeder>
 }
 
 impl DepoolingSwitch {
@@ -58,7 +58,7 @@ impl DepoolingSwitch {
         }
     }
 
-    pub fn entry(mut self, key: u128, pipeline: &mut AscodePipeline) -> Self {
+    pub fn entry(mut self, key: u128, pipeline: &mut Pipeline) -> Self {
         self.entries.insert(key, pipeline.get_feeder());
         self
     }

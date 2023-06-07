@@ -1,14 +1,14 @@
 use async_trait::async_trait;
 use log::debug;
 
-use crate::{pipeline::ascode::{AscodePipeline, feeder::AscodePipelineFeeder}, traits::FrameProcessor, types::FrameData};
+use crate::{pipeline::{Pipeline, feeder::PipelineFeeder}, traits::FrameProcessor, types::FrameData};
 
 pub struct Switch {
-    feeder: AscodePipelineFeeder
+    feeder: PipelineFeeder
 }
 
 impl Switch {
-    pub fn new(destination_pipeline: &mut AscodePipeline) -> Self {
+    pub fn new(destination_pipeline: &mut Pipeline) -> Self {
         Self {
             feeder: destination_pipeline.get_feeder()
         }

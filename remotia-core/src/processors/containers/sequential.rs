@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use log::debug;
 
 use crate::{
-    pipeline::ascode::{feeder::AscodePipelineFeeder, AscodePipeline},
+    pipeline::{feeder::PipelineFeeder, Pipeline},
     traits::FrameProcessor,
     types::FrameData,
 };

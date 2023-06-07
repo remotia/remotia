@@ -2,11 +2,11 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::types::FrameData;
 
-pub struct AscodePipelineFeeder {
+pub struct PipelineFeeder {
     sender: UnboundedSender<FrameData>
 }
 
-impl AscodePipelineFeeder {
+impl PipelineFeeder {
     pub fn new(sender: UnboundedSender<FrameData>) -> Self {
         Self {
             sender

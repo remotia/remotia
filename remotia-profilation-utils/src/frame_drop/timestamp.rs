@@ -27,7 +27,7 @@ impl<T, F, E> FrameProcessor<F> for TimestampBasedFrameDropper <T, E>  where
     E: Copy + Send
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
-        let frame_timestamp = frame_data.get(&self.stat_id);
+        let frame_timestamp = frame_data.get(&self.stat_id).unwrap();
 
         if frame_timestamp < self.last_timestamp {
             debug!(

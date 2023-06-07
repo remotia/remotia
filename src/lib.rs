@@ -15,5 +15,8 @@ pub use remotia_core::*;
 // #[cfg(feature = "renderers")]
 // pub use remotia_core_renderers::*;
 
-// #[cfg(feature = "profilation_utils")]
-// pub use remotia_profilation_utils::*;
+pub mod profilation {
+    #[cfg(feature = "profilation")]
+    pub use remotia_profilation_utils::*;
+}
+

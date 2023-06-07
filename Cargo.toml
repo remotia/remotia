@@ -9,13 +9,12 @@ remotia-core = { path = "./remotia-core" }
 # remotia-core-capturers = { path = "./remotia-core-capturers", optional = true  }
 # remotia-core-loggers = { path = "./remotia-core-loggers", optional = true  }
 # remotia-core-renderers = { path = "./remotia-core-renderers", optional = true  }
-# remotia-profilation-utils = { path = "./remotia-profilation-utils", optional = true  }
+remotia-profilation-utils = { path = "./remotia-profilation-utils", optional = true  }
 
 [features]
-default = []
-# default = ["remotia-buffer-utils", "remotia-core-capturers", "remotia-core-loggers", "remotia-core-renderers", "remotia-profilation-utils"]
+default = ["profilation"]
 # buffer_utils = ["remotia-buffer-utils"]
 # capturers = ["remotia-core-capturers"]
 # loggers = ["remotia-core-loggers"]
 # renderers = ["remotia-core-renderers"]
-# profilation_utils = ["remotia-profilation-utils"]
+profilation = ["remotia-profilation-utils"]

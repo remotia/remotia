@@ -817,6 +817,7 @@ name = "remotia"
 version = "0.1.0"
 dependencies = [
  "remotia-core",
+ "remotia-profilation-utils",
 ]
 
 [[package]]
@@ -843,6 +844,15 @@ dependencies = [
  "srt-tokio",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "remotia-profilation-utils"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "remotia-core",
 ]
 
 [[package]]

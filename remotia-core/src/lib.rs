@@ -4,7 +4,7 @@
 //! The project is in early stage and documentation is in progress, but it is already usable for experimentations
 //! and to develop prototypes of cloud gaming software without relying on specific APIs.
 
-// pub mod common;
+pub mod common;
 
 pub mod pipeline;
 

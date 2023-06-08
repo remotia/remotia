@@ -37,6 +37,10 @@ impl<K> ScrapFrameCapturer<K> {
         self.capturer.height()
     }
 
+    pub fn buffer_size(&mut self) -> usize {
+        self.capturer.frame().unwrap().len()
+    }
+
     pub fn capture_in_buffer(&mut self, dest: &mut [u8]) {
         debug!("Capturing...");
         match self.capturer.frame() {

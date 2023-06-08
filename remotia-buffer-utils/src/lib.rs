@@ -1,5 +1,5 @@
 use bytes::BytesMut;
-use remotia_core::{traits::{FrameProcessor, FrameProperties, BorrowableFrameProperties}};
+use remotia_core::{traits::{FrameProcessor, BorrowableFrameProperties}};
 
 use async_trait::async_trait;
 

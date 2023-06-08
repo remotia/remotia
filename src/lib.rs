@@ -5,8 +5,10 @@ pub mod buffers {
     pub use remotia_buffer_utils::*;
 }
 
-// #[cfg(feature = "capturers")]
-// pub use remotia_core_capturers::*;
+#[cfg(feature = "capture")]
+pub mod capture {
+    pub use remotia_core_capturers::*;
+}
 
 // #[cfg(feature = "codecs")]
 // pub use remotia_core_codecs::*;

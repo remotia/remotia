@@ -6,15 +6,15 @@ edition = "2021"
 [dependencies]
 remotia-core = { path = "./remotia-core" }
 remotia-buffer-utils = { path = "./remotia-buffer-utils", optional = true }
-# remotia-core-capturers = { path = "./remotia-core-capturers", optional = true  }
+remotia-core-capturers = { path = "./remotia-core-capturers", optional = true  }
 # remotia-core-loggers = { path = "./remotia-core-loggers", optional = true  }
 # remotia-core-renderers = { path = "./remotia-core-renderers", optional = true  }
 remotia-profilation-utils = { path = "./remotia-profilation-utils", optional = true  }
 
 [features]
-default = ["profilation", "buffers"]
+default = ["buffers", "capture", "profilation"]
 buffers = ["remotia-buffer-utils"]
-# capturers = ["remotia-core-capturers"]
+capture = ["remotia-core-capturers"]
 # loggers = ["remotia-core-loggers"]
 # renderers = ["remotia-core-renderers"]
 profilation = ["remotia-profilation-utils"]

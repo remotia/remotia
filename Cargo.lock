@@ -818,6 +818,7 @@ version = "0.1.0"
 dependencies = [
  "remotia-buffer-utils",
  "remotia-core",
+ "remotia-core-capturers",
  "remotia-profilation-utils",
 ]
 
@@ -856,6 +857,18 @@ dependencies = [
  "srt-tokio",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "remotia-core-capturers"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "env_logger",
+ "log",
+ "remotia-core",
+ "scrap",
 ]
 
 [[package]]

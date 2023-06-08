@@ -2,8 +2,7 @@ use std::time::Duration;
 
 use log::{debug, info};
 use tokio::{
-    sync::mpsc::{UnboundedReceiver, UnboundedSender},
-    task::JoinHandle,
+    task::JoinHandle, sync::mpsc::{UnboundedReceiver, UnboundedSender},
 };
 
 use crate::{traits::FrameProcessor};

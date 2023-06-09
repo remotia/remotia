@@ -1,10 +1,13 @@
-use bytes::BytesMut;
+use bytes::{BytesMut, Bytes};
 use remotia_core::{traits::{FrameProcessor, BorrowableFrameProperties}};
 
 use async_trait::async_trait;
 
 // pub mod pool;
 // pub mod pool_registry;
+
+pub type Buffer = Bytes;
+pub type BufferMut = BytesMut;
 
 #[cfg(test)]
 mod tests;

@@ -19,6 +19,11 @@ pub mod capture {
 // #[cfg(feature = "renderers")]
 // pub use remotia_core_renderers::*;
 
+#[cfg(feature = "render")]
+pub mod render {
+    pub use remotia_core_renderers::*;
+}
+
 #[cfg(feature = "transmission")]
 pub mod transmission {
     pub use remotia_core_transmission::*;

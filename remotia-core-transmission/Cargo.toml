@@ -11,4 +11,4 @@ features = ["net", "io-util"]
 remotia-core = { path = "../remotia-core" }
 bytes = "1.4.0"
 log = "0.4.18"
-async-trait = "0.1.51"
+async-trait = "0.1.68"

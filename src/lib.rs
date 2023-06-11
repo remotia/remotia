@@ -34,3 +34,8 @@ pub mod profilation {
     pub use remotia_profilation_utils::*;
 }
 
+#[cfg(feature = "codecs")]
+pub mod codecs{
+    pub use remotia_core_codecs::*;
+}
+

@@ -24,8 +24,8 @@ pub trait PullableFrameProperties<K, V> {
     fn pull(&mut self, key: &K) -> Option<V>;
 }
 
-pub trait BorrowFrameProperties<K, R> {
-    fn get_ref(&self, key: &K) -> Option<R>;
+pub trait BorrowFrameProperties<'a, K, R> {
+    fn get_ref(&'a self, key: &K) -> Option<R>;
 }
 
 pub trait BorrowMutFrameProperties<K, R> {

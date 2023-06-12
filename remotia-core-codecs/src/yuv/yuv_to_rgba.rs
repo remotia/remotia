@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bytes::BytesMut;
-use remotia_core::traits::{BorrowFrameProperties, FrameProcessor, PullableFrameProperties};
+use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 
 use super::yuv_to_rgb;
 
@@ -39,10 +39,10 @@ impl<K: Copy> YUV420PToRGBAConverter<K> {
 }
 
 #[async_trait]
-impl<'a, F, K> FrameProcessor<F> for YUV420PToRGBAConverter<K>
+impl<F, K> FrameProcessor<F> for YUV420PToRGBAConverter<K>
 where
     K: Copy + Send,
-    F: BorrowFrameProperties<K, &'a [u8]> + PullableFrameProperties<K, BytesMut> + Send + 'static,
+    F: PullableFrameProperties<K, BytesMut> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         let y_buffer = frame_data.pull(&self.y_buffer_key).unwrap();

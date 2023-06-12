@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bytes::BytesMut;
-use remotia_core::traits::{BorrowFrameProperties, FrameProcessor, PullableFrameProperties};
+use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 
 use super::bgr_to_yuv_f32;
 
@@ -46,19 +46,20 @@ impl<K: Copy> RGBAToYUV420PConverter<K> {
 }
 
 #[async_trait]
-impl<'a, F, K> FrameProcessor<F> for RGBAToYUV420PConverter<K>
+impl<F, K> FrameProcessor<F> for RGBAToYUV420PConverter<K>
 where
     K: Copy + Send,
-    F: BorrowFrameProperties<K, &'a [u8]> + PullableFrameProperties<K, BytesMut> + Send + 'static,
+    F: PullableFrameProperties<K, BytesMut> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
-        let rgba_buffer = frame_data.get_ref(&self.rgba_buffer_key).unwrap();
+        let rgba_buffer = frame_data.pull(&self.rgba_buffer_key).unwrap();
         let mut y_buffer = frame_data.pull(&self.y_buffer_key).unwrap();
         let mut cb_buffer = frame_data.pull(&self.cb_buffer_key).unwrap();
         let mut cr_buffer = frame_data.pull(&self.cr_buffer_key).unwrap();
 
-        self.convert(rgba_buffer, &mut y_buffer, &mut cb_buffer, &mut cr_buffer);
+        self.convert(&rgba_buffer, &mut y_buffer, &mut cb_buffer, &mut cr_buffer);
 
+        frame_data.push(self.rgba_buffer_key, rgba_buffer);
         frame_data.push(self.y_buffer_key, y_buffer);
         frame_data.push(self.cb_buffer_key, cb_buffer);
         frame_data.push(self.cr_buffer_key, cr_buffer);

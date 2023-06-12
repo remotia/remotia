@@ -24,12 +24,12 @@ pub trait PullableFrameProperties<K, V> {
     fn pull(&mut self, key: &K) -> Option<V>;
 }
 
-pub trait BorrowFrameProperties<'a, K, R> {
-    fn get_ref(&'a self, key: &K) -> Option<R>;
+pub trait BorrowFrameProperties<K, V> {
+    fn get_ref(&self, key: &K) -> Option<&V>;
 }
 
-pub trait BorrowMutFrameProperties<K, R> {
-    fn get_mut_ref(&mut self, key: &K) -> Option<R>;
+pub trait BorrowMutFrameProperties<K, V> {
+    fn get_mut_ref(&mut self, key: &K) -> Option<&mut V>;
 }
 
 pub trait FrameError<E> {

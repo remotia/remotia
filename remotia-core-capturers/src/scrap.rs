@@ -1,8 +1,9 @@
 use async_trait::async_trait;
-use bytes::BytesMut;
 use log::debug;
+use remotia_buffer_utils::BufferMut;
 use remotia_core::{traits::{FrameProcessor, BorrowableFrameProperties}};
 use scrap::{Capturer, Display};
+use bytes::BufMut;
 
 use core::slice;
 
@@ -40,28 +41,24 @@ impl<K> ScrapFrameCapturer<K> {
     pub fn buffer_size(&mut self) -> usize {
         self.capturer.frame().unwrap().len()
     }
+}
 
-    pub fn capture_in_buffer(&mut self, dest: &mut [u8]) {
+#[async_trait]
+impl<F, K> FrameProcessor<F> for ScrapFrameCapturer<K> where
+    F: BorrowableFrameProperties<K, BufferMut> + Send + 'static
+{
+    async fn process(&mut self, mut frame_data: F) -> Option<F> {
         debug!("Capturing...");
+        let output_buffer = frame_data.get_mut_ref(&self.buffer_key).unwrap();
         match self.capturer.frame() {
             Ok(buffer) => {
                 let frame_slice = unsafe { slice::from_raw_parts(buffer.as_ptr(), buffer.len()) };
-                dest.copy_from_slice(frame_slice);
+                output_buffer.put(frame_slice);
             }
             Err(error) => {
                 panic!("Scrap capture error: {}", error);
             }
         }
-    }
-}
-
-#[async_trait]
-impl<F, K> FrameProcessor<F> for ScrapFrameCapturer<K> where
-    F: BorrowableFrameProperties<K, BytesMut> + Send + 'static
-{
-    async fn process(&mut self, mut frame_data: F) -> Option<F> {
-        let buffer_ref = frame_data.get_mut_ref(&self.buffer_key).unwrap();
-        self.capture_in_buffer(buffer_ref);
         Some(frame_data)
     }
 }

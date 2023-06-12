@@ -5,6 +5,12 @@ use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 use super::yuv_to_rgb;
 
 pub struct YUV420PToRGBAConverter<K: Copy> {
+    stride: usize,
+
+    r_offset: usize,
+    g_offset: usize,
+    b_offset: usize,
+
     rgba_buffer_key: K,
     y_buffer_key: K,
     cb_buffer_key: K,
@@ -12,29 +18,18 @@ pub struct YUV420PToRGBAConverter<K: Copy> {
 }
 
 impl<K: Copy> YUV420PToRGBAConverter<K> {
-    pub fn new(y_buffer_key: K, cb_buffer_key: K, cr_buffer_key: K, rgba_buffer_key: K) -> Self {
+    pub fn new(stride: usize, y_buffer_key: K, cb_buffer_key: K, cr_buffer_key: K, rgba_buffer_key: K) -> Self {
         Self {
+            stride, 
+
+            r_offset: 0,
+            g_offset: 0,
+            b_offset: 0,
+
             rgba_buffer_key,
             y_buffer_key,
             cb_buffer_key,
             cr_buffer_key,
-        }
-    }
-
-    pub fn convert(
-        &self,
-        y_pixels: &[u8],
-        u_pixels: &[u8],
-        v_pixels: &[u8],
-        rgba_pixels: &mut [u8],
-    ) {
-        for i in 0..y_pixels.len() {
-            let (y, u, v) = (y_pixels[i], u_pixels[i / 4], v_pixels[i / 4]);
-            let (r, g, b) = yuv_to_rgb(y, u, v);
-            rgba_pixels[i * 4] = r;
-            rgba_pixels[i * 4 + 1] = g;
-            rgba_pixels[i * 4 + 2] = b;
-            rgba_pixels[i * 4 + 3] = 255;
         }
     }
 }
@@ -51,7 +46,14 @@ where
         let cr_buffer = frame_data.pull(&self.cr_buffer_key).unwrap();
         let mut rgba_buffer = frame_data.pull(&self.rgba_buffer_key).unwrap();
 
-        self.convert(&y_buffer, &cb_buffer, &cr_buffer, &mut rgba_buffer);
+        let pixels_count = rgba_buffer.len() / 4; 
+        let lines = pixels_count / self.stride; 
+
+        // let (r, g, b) = yuv_to_rgb(y, u, v);
+        for h in 0..lines {
+            for w in 0..self.stride {
+            }
+        }
 
         frame_data.push(self.rgba_buffer_key, rgba_buffer);
         frame_data.push(self.y_buffer_key, y_buffer);

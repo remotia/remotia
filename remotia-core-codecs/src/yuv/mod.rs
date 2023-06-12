@@ -1,7 +1,7 @@
 pub mod rgba_to_yuv;
 pub mod yuv_to_rgba;
 
-pub fn bgr_to_yuv_f32(b: u8, g: u8, r: u8) -> (f32, f32, f32) {
+pub fn bgr_to_yuv_f32((b, g, r): (u8, u8, u8)) -> (f32, f32, f32) {
     let r = r as f32;
     let g = g as f32;
     let b = b as f32;

@@ -21,8 +21,7 @@ impl<K: Copy> BuffersPool<K> {
         let (sender, receiver) = mpsc::channel(pool_size);
 
         for _ in 0..pool_size {
-            let mut buf = BufferMut::with_capacity(buffer_size);
-            buf.resize(buffer_size, 0);
+            let buf = BufferMut::with_capacity(buffer_size);
             sender.send(buf).await.unwrap();
         }
 
@@ -111,7 +110,9 @@ where
         let buffer = frame_data.pull(&self.slot_id);
 
         match buffer {
-            Some(buffer) => {
+            Some(mut buffer) => {
+                buffer.clear();
+
                 self.sender
                     .send(buffer)
                     .await

@@ -34,6 +34,7 @@ impl<K: Copy> YUV420PToRGBAConverter<K> {
             rgba_pixels[i * 4] = r;
             rgba_pixels[i * 4 + 1] = g;
             rgba_pixels[i * 4 + 2] = b;
+            rgba_pixels[i * 4 + 3] = 255;
         }
     }
 }

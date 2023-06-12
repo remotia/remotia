@@ -12,7 +12,7 @@ pub struct YUV420PToRGBAConverter<K: Copy> {
 }
 
 impl<K: Copy> YUV420PToRGBAConverter<K> {
-    pub fn new(rgba_buffer_key: K, y_buffer_key: K, cb_buffer_key: K, cr_buffer_key: K) -> Self {
+    pub fn new(y_buffer_key: K, cb_buffer_key: K, cr_buffer_key: K, rgba_buffer_key: K) -> Self {
         Self {
             rgba_buffer_key,
             y_buffer_key,

@@ -1,4 +1,4 @@
-// pub mod error_switch;
+pub mod error_switch;
 // pub mod frame_drop;
 // pub mod frame_reorder;
 pub mod ticker;

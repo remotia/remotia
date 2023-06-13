@@ -9,5 +9,5 @@ pub mod ticker;
 // pub mod debug;
 pub mod containers;
 pub mod functional;
-// #[macro_use]
-// pub mod async_functional;
+#[macro_use]
+pub mod async_functional;

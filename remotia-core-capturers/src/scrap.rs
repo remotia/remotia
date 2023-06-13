@@ -1,9 +1,8 @@
 use async_trait::async_trait;
 use log::debug;
-use remotia_buffer_utils::BufferMut;
-use remotia_core::{traits::{FrameProcessor, BorrowableFrameProperties}};
+use remotia_core::traits::{FrameProcessor, BorrowMutFrameProperties};
 use scrap::{Capturer, Display};
-use bytes::BufMut;
+use remotia_buffer_utils::{BufMut, BytesMut};
 
 use core::slice;
 
@@ -18,16 +17,19 @@ unsafe impl<K> Send for ScrapFrameCapturer<K> {}
 
 impl<K> ScrapFrameCapturer<K> {
     pub fn new(buffer_key: K, capturer: Capturer) -> Self {
-        Self { 
+        Self {
             buffer_key,
-            capturer 
+            capturer,
         }
     }
 
     pub fn new_from_primary(buffer_key: K) -> Self {
         let display = Display::primary().expect("Couldn't find primary display.");
         let capturer = Capturer::new(display).expect("Couldn't begin capture.");
-        Self { buffer_key, capturer }
+        Self {
+            buffer_key,
+            capturer,
+        }
     }
 
     pub fn width(&self) -> usize {
@@ -44,8 +46,9 @@ impl<K> ScrapFrameCapturer<K> {
 }
 
 #[async_trait]
-impl<F, K> FrameProcessor<F> for ScrapFrameCapturer<K> where
-    F: BorrowableFrameProperties<K, BufferMut> + Send + 'static
+impl<F, K> FrameProcessor<F> for ScrapFrameCapturer<K>
+where
+    F: BorrowMutFrameProperties<K, BytesMut> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         debug!("Capturing...");

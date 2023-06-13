@@ -1,9 +1,12 @@
 use pixels::{Pixels, PixelsBuilder, SurfaceTexture};
-use remotia_buffer_utils::BufferMut;
-use remotia_core::{traits::{FrameProcessor, BorrowableFrameProperties}};
+use remotia_buffer_utils::BytesMut;
+use remotia_core::traits::{BorrowMutFrameProperties, FrameProcessor};
 
 use async_trait::async_trait;
-use winit::{event_loop::EventLoop, window::{WindowBuilder, Window}};
+use winit::{
+    event_loop::EventLoop,
+    window::{Window, WindowBuilder},
+};
 
 pub struct WinitRenderer<K> {
     buffer_key: K,
@@ -26,14 +29,15 @@ impl<K> WinitRenderer<K> {
         Self {
             buffer_key,
             pixels,
-            _window: window
+            _window: window,
         }
     }
 }
 
 #[async_trait]
-impl<F, K> FrameProcessor<F> for WinitRenderer<K> where
-    F: BorrowableFrameProperties<K, BufferMut> + Send + 'static
+impl<F, K> FrameProcessor<F> for WinitRenderer<K>
+where
+    F: BorrowMutFrameProperties<K, BytesMut> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         let raw_frame_buffer = frame_data.get_mut_ref(&self.buffer_key).unwrap();

@@ -9,6 +9,6 @@ features = ["net", "io-util"]
 
 [dependencies]
 remotia-core = { path = "../remotia-core" }
-bytes = "1.4.0"
+remotia-buffer-utils = { path = "../remotia-buffer-utils" }
 log = "0.4.18"
 async-trait = "0.1.68"

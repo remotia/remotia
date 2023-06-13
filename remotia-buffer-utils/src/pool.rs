@@ -2,18 +2,17 @@ use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 
+use crate::BytesMut;
 use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 use tokio::sync::{
     mpsc::{self, Receiver, Sender},
     Mutex,
 };
 
-use crate::BufferMut;
-
 pub struct BuffersPool<K: Copy> {
     slot_id: K,
-    buffers_sender: Sender<BufferMut>,
-    buffers_receiver: Arc<Mutex<Receiver<BufferMut>>>,
+    buffers_sender: Sender<BytesMut>,
+    buffers_receiver: Arc<Mutex<Receiver<BytesMut>>>,
 }
 
 impl<K: Copy> BuffersPool<K> {
@@ -21,7 +20,7 @@ impl<K: Copy> BuffersPool<K> {
         let (sender, receiver) = mpsc::channel(pool_size);
 
         for _ in 0..pool_size {
-            let buf = BufferMut::with_capacity(buffer_size);
+            let buf = BytesMut::with_capacity(buffer_size);
             sender.send(buf).await.unwrap();
         }
 
@@ -50,14 +49,14 @@ impl<K: Copy> BuffersPool<K> {
 
 pub struct BufferBorrower<K> {
     slot_id: K,
-    receiver: Arc<Mutex<Receiver<BufferMut>>>,
+    receiver: Arc<Mutex<Receiver<BytesMut>>>,
 }
 
 #[async_trait]
 impl<F, K> FrameProcessor<F> for BufferBorrower<K>
 where
     K: Copy + Debug + Send,
-    F: PullableFrameProperties<K, BufferMut> + Send + 'static,
+    F: PullableFrameProperties<K, BytesMut> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         log::debug!("Borrowing '{:?}' buffer...", self.slot_id);
@@ -84,7 +83,7 @@ where
 
 pub struct BufferRedeemer<K> {
     slot_id: K,
-    sender: Sender<BufferMut>,
+    sender: Sender<BytesMut>,
     soft: bool,
 }
 
@@ -99,7 +98,7 @@ impl<K> BufferRedeemer<K> {
 impl<F, K> FrameProcessor<F> for BufferRedeemer<K>
 where
     K: Copy + Debug + Send,
-    F: PullableFrameProperties<K, BufferMut> + Send + 'static,
+    F: PullableFrameProperties<K, BytesMut> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         log::debug!(

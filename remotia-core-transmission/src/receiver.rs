@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 
-use bytes::BytesMut;
-use remotia_core::traits::{BorrowableFrameProperties, FrameProcessor};
-use tokio::io::{AsyncReadExt};
+use remotia_buffer_utils::BytesMut;
+use remotia_core::traits::{FrameProcessor, BorrowMutFrameProperties};
+use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 
 pub struct TcpFrameReceiver<K> {
@@ -20,7 +20,7 @@ impl<K> TcpFrameReceiver<K> {
 impl<F, K> FrameProcessor<F> for TcpFrameReceiver<K>
 where
     K: Send,
-    F: BorrowableFrameProperties<K, BytesMut> + Send + 'static,
+    F: BorrowMutFrameProperties<K, BytesMut> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         let mut buffer = frame_data.get_mut_ref(&self.buffer_key).unwrap();

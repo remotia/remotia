@@ -10,6 +10,7 @@ remotia-core-capturers = { path = "./remotia-core-capturers", optional = true  }
 remotia-core-transmission = { path = "./remotia-core-transmission", optional = true  }
 remotia-core-renderers = { path = "./remotia-core-renderers", optional = true  }
 remotia-profilation-utils = { path = "./remotia-profilation-utils", optional = true  }
+remotia-serialization-utils = { path = "./remotia-serialization-utils", optional = true  }
 
 [features]
 default = []
@@ -18,3 +19,4 @@ capture = ["remotia-core-capturers"]
 transmission = ["remotia-core-transmission"]
 render = ["remotia-core-renderers"]
 profilation = ["remotia-profilation-utils"]
+serialization = ["remotia-serialization-utils"]

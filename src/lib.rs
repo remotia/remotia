@@ -24,3 +24,9 @@ pub mod transmission {
 pub mod profilation {
     pub use remotia_profilation_utils::*;
 }
+
+#[cfg(feature = "serialization")]
+pub mod serialization {
+    pub use remotia_serialization_utils::*;
+}
+

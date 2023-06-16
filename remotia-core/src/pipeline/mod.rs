@@ -7,6 +7,7 @@ use self::{component::Component, feeder::PipelineFeeder};
 
 pub mod component;
 pub mod feeder;
+pub mod registry;
 
 pub struct Pipeline<F> {
     components: Vec<Component<F>>,

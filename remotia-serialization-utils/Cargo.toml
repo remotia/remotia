@@ -1,17 +1,13 @@
 [package]
-name = "remotia-core-loggers"
+name = "remotia-serialization-utils"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = "0.4.19"
 remotia-core = { path = "../remotia-core" }
-
-env_logger = "0.9.0"
-log = "0.4.14"
-
-async-trait = "0.1.51"
-bytes = "1.1.0"
-
-csv = "1.1.6"
+remotia-buffer-utils = { path = "../remotia-buffer-utils" }
+async-trait = "0.1.68"
+bincode = "2.0.0-rc.3"

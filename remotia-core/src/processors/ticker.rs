@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use tokio::time::Interval;
 
-use crate::{traits::FrameProcessor, types::FrameData};
+use crate::{traits::FrameProcessor};
 
 pub struct Ticker {
     interval: Interval,
@@ -19,8 +19,8 @@ impl Ticker {
 }
 
 #[async_trait]
-impl FrameProcessor for Ticker {
-    async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
+impl<F: Send + 'static> FrameProcessor<F> for Ticker {
+    async fn process(&mut self, frame_data: F) -> Option<F> {
         self.interval.tick().await;
         Some(frame_data)
     }

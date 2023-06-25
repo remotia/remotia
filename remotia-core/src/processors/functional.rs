@@ -1,15 +1,13 @@
 use async_trait::async_trait;
 
-use crate::{traits::FrameProcessor, types::FrameData};
+use crate::{traits::FrameProcessor};
 
-type ProcessorFn = fn(FrameData) -> Option<FrameData>;
-
-pub struct Function {
-    function: ProcessorFn
+pub struct Function<F> {
+    function: fn(F) -> Option<F>
 }
 
-impl Function {
-    pub fn new(function: ProcessorFn) -> Self {
+impl<F> Function<F> {
+    pub fn new(function: fn(F) -> Option<F>) -> Self {
         Self {
             function,
         }
@@ -17,8 +15,8 @@ impl Function {
 }
 
 #[async_trait]
-impl FrameProcessor for Function {
-    async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
+impl<F: Send> FrameProcessor<F> for Function<F> {
+    async fn process(&mut self, frame_data: F) -> Option<F> {
         (self.function)(frame_data)
     }
 }

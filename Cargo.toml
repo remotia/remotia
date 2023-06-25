@@ -7,16 +7,16 @@ edition = "2021"
 remotia-core = { path = "./remotia-core" }
 remotia-buffer-utils = { path = "./remotia-buffer-utils", optional = true }
 remotia-core-capturers = { path = "./remotia-core-capturers", optional = true  }
-remotia-core-codecs = { path = "./remotia-core-codecs", optional = true  }
-remotia-core-loggers = { path = "./remotia-core-loggers", optional = true  }
+remotia-core-transmission = { path = "./remotia-core-transmission", optional = true  }
 remotia-core-renderers = { path = "./remotia-core-renderers", optional = true  }
 remotia-profilation-utils = { path = "./remotia-profilation-utils", optional = true  }
+remotia-serialization-utils = { path = "./remotia-serialization-utils", optional = true  }
 
 [features]
-default = ["remotia-buffer-utils", "remotia-core-capturers", "remotia-core-codecs", "remotia-core-loggers", "remotia-core-renderers", "remotia-profilation-utils"]
-buffer_utils = ["remotia-buffer-utils"]
-capturers = ["remotia-core-capturers"]
-codecs = ["remotia-core-codecs"]
-loggers = ["remotia-core-loggers"]
-renderers = ["remotia-core-renderers"]
-profilation_utils = ["remotia-profilation-utils"]
+default = []
+buffers = ["remotia-buffer-utils"]
+capture = ["remotia-core-capturers"]
+transmission = ["remotia-core-transmission"]
+render = ["remotia-core-renderers"]
+profilation = ["remotia-profilation-utils"]
+serialization = ["remotia-serialization-utils"]

@@ -1,22 +1,23 @@
-use bytes::BytesMut;
-use remotia_core::{traits::FrameProcessor, types::FrameData};
+use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 
 use async_trait::async_trait;
 
 pub mod pool;
 pub mod pool_registry;
 
-pub struct BufferAllocator { 
-    buffer_id: String,
-    size: usize
+pub use bytes::*;
+
+
+#[cfg(test)]
+mod tests;
+pub struct BufferAllocator<K> {
+    buffer_key: K,
+    size: usize,
 }
 
-impl BufferAllocator {
-    pub fn new(buffer_id: &str, size: usize) -> Self {
-        Self {
-            buffer_id: buffer_id.to_string(),
-            size
-        }
+impl<K> BufferAllocator<K> {
+    pub fn new(buffer_key: K, size: usize) -> Self {
+        Self { buffer_key, size }
     }
 
     fn allocate_buffer(&self) -> BytesMut {
@@ -27,10 +28,13 @@ impl BufferAllocator {
 }
 
 #[async_trait]
-impl FrameProcessor for BufferAllocator {
-    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        frame_data.insert_writable_buffer(&self.buffer_id, self.allocate_buffer());
+impl<F, K> FrameProcessor<F> for BufferAllocator<K>
+where
+    F: PullableFrameProperties<K, BytesMut> + Send + 'static,
+    K: Copy + Send,
+{
+    async fn process(&mut self, mut frame_data: F) -> Option<F> {
+        frame_data.push(self.buffer_key, self.allocate_buffer());
         Some(frame_data)
     }
-
 }

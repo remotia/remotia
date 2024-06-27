@@ -11,9 +11,15 @@ pub trait FrameProperties<K, V> {
     fn set(&mut self, key: K, value: V);
     fn get(&self, key: &K) -> Option<V>;
 }
+
 pub trait PullableFrameProperties<K, V> {
     fn push(&mut self, key: K, value: V);
     fn pull(&mut self, key: &K) -> Option<V>;
+}
+
+pub trait OptionalFrameData<D> {
+    fn find_mut(&mut self) -> &mut Option<D>;
+    fn find(&self) -> &Option<D>;
 }
 
 pub trait BorrowFrameProperties<K, V> {

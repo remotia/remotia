@@ -10,4 +10,4 @@ log = "0.4.19"
 remotia-core = { path = "../remotia-core" }
 remotia-buffer-utils = { path = "../remotia-buffer-utils" }
 async-trait = "0.1.68"
-bincode = "2.0.0-rc.3"
+bincode = "=2.0.0-rc.3"

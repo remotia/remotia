@@ -29,4 +29,3 @@ pub mod profilation {
 pub mod serialization {
     pub use remotia_serialization_utils::*;
 }
-

@@ -1,0 +1,22 @@
+[package]
+name = "remotia-buffer-utils"
+version = "0.1.1"
+edition = "2021"
+license = "MIT"
+description = "Buffer management utilities of remotia, an open source framework for the development of remote rendering software in pure Rust"
+repository = "https://github.com/remotia/remotia"
+keywords = ["video", "encoding", "streaming", "gaming"]
+categories = ["compression", "encoding", "multimedia"]
+
+
+[dependencies.tokio]
+version = "1.28.2"
+features = ["rt", "sync", "time", "macros"]
+
+[dependencies]
+remotia-core = { path = "../remotia-core", version = "0.1.1" }
+
+log = "0.4.14"
+
+async-trait = "0.1.68"
+bytes = "1.4.0"

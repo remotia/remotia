@@ -1,0 +1,18 @@
+[package]
+name = "remotia-serialization-utils"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Serialization utilities for remotia, an open source framework for the development of remote rendering software in pure Rust"
+repository = "https://github.com/remotia/remotia"
+keywords = ["video", "encoding", "streaming", "gaming"]
+categories = ["compression", "encoding", "multimedia"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+remotia-core = { path = "../remotia-core", version = "0.1.1" }
+remotia-buffer-utils = { path = "../remotia-buffer-utils", version = "0.1.1" }
+log = "0.4.19"
+async-trait = "0.1.68"
+bincode = "=2.0.0-rc.3"

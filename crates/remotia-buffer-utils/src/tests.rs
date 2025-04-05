@@ -1,35 +1,27 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use bytes::BytesMut;
-use remotia_core::traits::{FrameProcessor, BorrowableFrameProperties};
+use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 
 use crate::BufferAllocator;
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 enum BufferType {
-    Test
+    Test,
 }
 
 #[derive(Default)]
 struct TestFrameData {
-    buffers: HashMap<BufferType, BytesMut>
+    buffers: HashMap<BufferType, BytesMut>,
 }
 
-impl BorrowableFrameProperties<BufferType, BytesMut> for TestFrameData {
+impl PullableFrameProperties<BufferType, BytesMut> for TestFrameData {
     fn push(&mut self, key: BufferType, value: BytesMut) {
         self.buffers.insert(key, value);
     }
 
     fn pull(&mut self, key: &BufferType) -> Option<BytesMut> {
         self.buffers.remove(key)
-    }
-
-    fn get_ref(&self, key: &BufferType) -> Option<&BytesMut> {
-        self.buffers.get(key)
-    }
-
-    fn get_mut_ref(&mut self, key: &BufferType) -> Option<&mut BytesMut> {
-        self.buffers.get_mut(key)
     }
 }
 

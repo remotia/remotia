@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies.tokio]
 version = "1.28.2"
-features = ["rt", "sync", "time"]
+features = ["rt", "sync", "time", "macros"]
 
 [dependencies]
 remotia-core = { path = "../remotia-core" }

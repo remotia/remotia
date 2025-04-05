@@ -19,4 +19,4 @@ Lorenzo.
 
 ## Usage
 
-You may find some examples including different architectures, codecs and communication protocols in the "remotia-samples" crate. Some of them include limited command line configuration, but the aim of most of these snippets is demonstrating how to define an architecture via code. Documentation is in progress.
+Documentation is in progress, for information consult the [Remotia Book](https://remotia.github.io/book/).

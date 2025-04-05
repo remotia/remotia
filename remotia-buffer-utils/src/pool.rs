@@ -1,82 +1,78 @@
-use std::{sync::{Arc}, time::Duration};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 
-use bytes::BytesMut;
-use log::debug;
-use remotia_core::{error::DropReason, traits::FrameProcessor, types::FrameData};
-use tokio::sync::Mutex;
+use crate::BytesMut;
+use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
+use tokio::sync::{
+    mpsc::{self, Receiver, Sender},
+    Mutex,
+};
 
-pub struct BuffersPool {
-    slot_id: String,
-    buffers: Arc<Mutex<Vec<BytesMut>>>,
+pub struct BuffersPool<K: Copy> {
+    slot_id: K,
+    buffers_sender: Sender<BytesMut>,
+    buffers_receiver: Arc<Mutex<Receiver<BytesMut>>>,
 }
 
-impl BuffersPool {
-    pub fn new(slot_id: &str, pool_size: usize, buffer_size: usize) -> Self {
-        let slot_id = slot_id.to_string();
-
-        let mut buffers = Vec::new();
+impl<K: Copy> BuffersPool<K> {
+    pub async fn new(slot_id: K, pool_size: usize, buffer_size: usize) -> Self {
+        let (sender, receiver) = mpsc::channel(pool_size);
 
         for _ in 0..pool_size {
-            let mut buf = BytesMut::with_capacity(buffer_size);
-            buf.resize(buffer_size, 0);
-            buffers.push(buf)
+            let buf = BytesMut::with_capacity(buffer_size);
+            sender.send(buf).await.unwrap();
         }
 
-        let buffers = Arc::new(Mutex::new(buffers));
-
-        Self { slot_id, buffers }
+        Self {
+            slot_id,
+            buffers_sender: sender,
+            buffers_receiver: Arc::new(Mutex::new(receiver)),
+        }
     }
 
-    pub fn borrower(&self) -> BufferBorrower {
+    pub fn borrower(&self) -> BufferBorrower<K> {
         BufferBorrower {
-            slot_id: self.slot_id.clone(),
-            buffers: self.buffers.clone(),
-            blocking: true
+            slot_id: self.slot_id,
+            receiver: self.buffers_receiver.clone(),
         }
     }
 
-    pub fn redeemer(&self) -> BufferRedeemer {
+    pub fn redeemer(&self) -> BufferRedeemer<K> {
         BufferRedeemer {
             slot_id: self.slot_id.clone(),
-            buffers: self.buffers.clone(),
+            sender: self.buffers_sender.clone(),
             soft: false,
         }
     }
 }
 
-pub struct BufferBorrower {
-    slot_id: String,
-    buffers: Arc<Mutex<Vec<BytesMut>>>,
-
-    blocking: bool
-}
-
-impl BufferBorrower {
-    pub fn blocking(mut self, blocking: bool) -> Self {
-        self.blocking = blocking;
-        self
-    }
+pub struct BufferBorrower<K> {
+    slot_id: K,
+    receiver: Arc<Mutex<Receiver<BytesMut>>>,
 }
 
 #[async_trait]
-impl FrameProcessor for BufferBorrower {
-    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        loop {
-            debug!("Borrowing '{}' buffer...", self.slot_id);
-            let mut buffers = self.buffers.lock().await;
+impl<F, K> FrameProcessor<F> for BufferBorrower<K>
+where
+    K: Copy + Debug + Send,
+    F: PullableFrameProperties<K, BytesMut> + Send + 'static,
+{
+    async fn process(&mut self, mut frame_data: F) -> Option<F> {
+        log::debug!("Borrowing '{:?}' buffer...", self.slot_id);
 
-            if let Some(buffer) = buffers.pop() {
-                frame_data.insert_writable_buffer(&self.slot_id, buffer);
-                break;
-            } else {
-                debug!("No available '{}' buffers", self.slot_id);
-                if self.blocking {
-                    drop(buffers);
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                } else {
-                    frame_data.set_drop_reason(Some(DropReason::NoAvailableBuffers))
+        let mut receiver = self.receiver.lock().await;
+
+        loop {
+            match tokio::time::timeout(Duration::from_millis(1000), receiver.recv()).await {
+                Ok(result) => {
+                    if let Some(buffer) = result {
+                        frame_data.push(self.slot_id, buffer);
+                        break;
+                    }
+                }
+                Err(err) => {
+                    log::warn!("Unable to borrow '{:?}' buffer: {:?}", self.slot_id, err);
                 }
             }
         }
@@ -85,13 +81,13 @@ impl FrameProcessor for BufferBorrower {
     }
 }
 
-pub struct BufferRedeemer {
-    slot_id: String,
-    buffers: Arc<Mutex<Vec<BytesMut>>>,
+pub struct BufferRedeemer<K> {
+    slot_id: K,
+    sender: Sender<BytesMut>,
     soft: bool,
 }
 
-impl BufferRedeemer {
+impl<K> BufferRedeemer<K> {
     pub fn soft(mut self) -> Self {
         self.soft = true;
         self
@@ -99,25 +95,40 @@ impl BufferRedeemer {
 }
 
 #[async_trait]
-impl FrameProcessor for BufferRedeemer {
-    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        debug!("Redeeming '{}' buffer (soft = {})...", self.slot_id, self.soft);
+impl<F, K> FrameProcessor<F> for BufferRedeemer<K>
+where
+    K: Copy + Debug + Send,
+    F: PullableFrameProperties<K, BytesMut> + Send + 'static,
+{
+    async fn process(&mut self, mut frame_data: F) -> Option<F> {
+        log::debug!(
+            "Redeeming '{:?}' buffer (soft = {})...",
+            self.slot_id, self.soft
+        );
 
-        let buffer = frame_data.extract_writable_buffer(&self.slot_id);
+        let buffer = frame_data.pull(&self.slot_id);
 
         match buffer {
-            Some(buffer) => {
-                self.buffers.lock().await.push(buffer);
+            Some(mut buffer) => {
+                buffer.clear();
+
+                self.sender
+                    .send(buffer)
+                    .await
+                    .expect(&format!("Unable to redeem '{:?}' buffer", self.slot_id));
+
                 if self.soft {
-                    debug!("Soft-redeemed a '{}' buffer", self.slot_id);
+                    log::debug!("Soft-redeemed a '{:?}' buffer", self.slot_id);
                 }
-            },
+            }
             None => {
                 if !self.soft {
-                    panic!("Missing '{}' buffer in frame {}", self.slot_id, frame_data);
+                    panic!("Missing '{:?}' buffer", self.slot_id);
                 }
             }
         }
+
+        log::debug!("Redeemed '{:?}' buffer (soft = {})", self.slot_id, self.soft);
 
         Some(frame_data)
     }

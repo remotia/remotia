@@ -2,11 +2,10 @@ use std::time::Duration;
 
 use log::{debug, info};
 use tokio::{
-    sync::mpsc::{UnboundedReceiver, UnboundedSender},
-    task::JoinHandle,
+    task::JoinHandle, sync::mpsc::{UnboundedReceiver, UnboundedSender},
 };
 
-use crate::{traits::FrameProcessor, types::FrameData};
+use crate::{traits::FrameProcessor};
 
 macro_rules! tagged {
     ($self:ident, $msg:tt) => {{
@@ -14,18 +13,18 @@ macro_rules! tagged {
     }}
 }
 
-pub struct Component {
-    processors: Vec<Box<dyn FrameProcessor + Send>>,
+pub struct Component<F> {
+    processors: Vec<Box<dyn FrameProcessor<F> + Send>>,
 
-    receiver: Option<UnboundedReceiver<FrameData>>,
-    sender: Option<UnboundedSender<FrameData>>,
+    receiver: Option<UnboundedReceiver<F>>,
+    sender: Option<UnboundedSender<F>>,
 
     tag: Option<String>
 }
 
-unsafe impl Send for Component {}
+unsafe impl<F> Send for Component<F> {}
 
-impl Component {
+impl<F: Default + Send + 'static> Component<F> {
     pub fn new() -> Self {
         Self {
             processors: Vec::new(),
@@ -35,11 +34,11 @@ impl Component {
         }
     }
 
-    pub fn singleton<T: 'static + FrameProcessor + Send>(processor: T) -> Self {
+    pub fn singleton<T: 'static + FrameProcessor<F> + Send>(processor: T) -> Self {
         Self::new().append(processor)
     }
 
-    pub fn append<T: 'static + FrameProcessor + Send>(mut self, processor: T) -> Self {
+    pub fn append<T: 'static + FrameProcessor<F> + Send>(mut self, processor: T) -> Self {
         self.processors.push(Box::new(processor));
         self
     }
@@ -53,11 +52,11 @@ impl Component {
     // Internal methods //
     //////////////////////
 
-    pub(crate) fn set_sender(&mut self, sender: UnboundedSender<FrameData>) {
+    pub(crate) fn set_sender(&mut self, sender: UnboundedSender<F>) {
         self.sender = Some(sender);
     }
 
-    pub(crate) fn set_receiver(&mut self, receiver: UnboundedReceiver<FrameData>) {
+    pub(crate) fn set_receiver(&mut self, receiver: UnboundedReceiver<F>) {
         self.receiver = Some(receiver);
     }
 
@@ -75,10 +74,8 @@ impl Component {
                     )
                 } else {
                     debug!("No receiver registered, allocating an empty frame DTO");
-                    Some(FrameData::default())
+                    Some(F::default())
                 };
-
-                debug!("Received frame data: {}", frame_data.as_ref().unwrap());
 
                 for processor in &mut self.processors {
                     frame_data = processor.process(frame_data.unwrap()).await;
@@ -90,7 +87,6 @@ impl Component {
 
                 if self.sender.is_some() {
                     if let Some(frame_data) = frame_data {
-                        debug!("Sending frame data: {}", frame_data);
                         if self.sender.as_mut().unwrap().send(frame_data).is_err() {
                             panic!("{}", tagged!(self, "Error while sending frame data"));
                         }
@@ -102,7 +98,7 @@ impl Component {
 }
 
 
-impl Default for Component {
+impl<F: Default + Send + 'static> Default for Component<F> {
     fn default() -> Self {
         Self::new()
     }

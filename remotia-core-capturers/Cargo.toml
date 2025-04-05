@@ -7,11 +7,11 @@ edition = "2021"
 
 [dependencies]
 remotia-core = { path = "../remotia-core" }
+remotia-buffer-utils = { path = "../remotia-buffer-utils" }
 
-env_logger = "0.9.0"
 log = "0.4.14"
 
-async-trait = "0.1.51"
-bytes = "1.1.0"
+async-trait = "0.1.68"
 
 scrap = "0.5"
+y4m = "0.8.0"

@@ -1,82 +1,85 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
 use async_trait::async_trait;
 use log::debug;
 use rand::prelude::{SliceRandom, ThreadRng};
 
 use crate::{
-    pipeline::ascode::{feeder::AscodePipelineFeeder, AscodePipeline},
-    traits::FrameProcessor,
-    types::FrameData,
+    pipeline::{feeder::PipelineFeeder, Pipeline},
+    traits::{FrameProcessor, FrameProperties},
 };
 
-pub struct PoolingSwitch {
-    entries: Vec<(u128, AscodePipelineFeeder)>
+pub struct PoolingSwitch<F, P, K> {
+    property_key: P,
+    entries: Vec<(K, PipelineFeeder<F>)>
 }
 
-impl PoolingSwitch {
-    pub fn new() -> Self {
+impl<F, P, K> PoolingSwitch<F, P, K> where
+    F: Debug + Default + Send
+{
+    pub fn new(property_key: P) -> Self {
         Self {
+            property_key,
             entries: Vec::new(),
         }
     }
 
-    pub fn entry(mut self, key: u128, pipeline: &mut AscodePipeline) -> Self {
+    pub fn entry(mut self, key: K, pipeline: &mut Pipeline<F>) -> Self where
+        F: 'static
+    {
         self.entries.push((key, pipeline.get_feeder()));
         self
     }
 }
 
-impl Default for PoolingSwitch {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[async_trait]
-impl FrameProcessor for PoolingSwitch {
-    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
+impl<F, P, K> FrameProcessor<F> for PoolingSwitch<F, P, K> where
+    P: Copy + Send,
+    K: Copy + Send,
+    F: Debug + FrameProperties<P, K> + Send + 'static
+{
+    async fn process(&mut self, mut frame_data: F) -> Option<F> {
         let (key, feeder) = self.entries.choose(&mut rand::thread_rng()).unwrap();
 
-        debug!("Feeding to pipeline #{}...", key);
-
-        frame_data.set("pool_key", *key);
+        frame_data.set(self.property_key, *key);
         feeder.feed(frame_data);
 
         None
     }
 }
 
-pub struct DepoolingSwitch {
-    entries: HashMap<u128, AscodePipelineFeeder>
+pub struct DepoolingSwitch<F, P, K> {
+    property_key: P,
+    entries: HashMap<K, PipelineFeeder<F>>
 }
 
-impl DepoolingSwitch {
-    pub fn new() -> Self {
+impl<F, P, K> DepoolingSwitch<F, P, K> {
+    pub fn new(property_key: P) -> Self {
         Self {
+            property_key,
             entries: HashMap::new(),
         }
     }
 
-    pub fn entry(mut self, key: u128, pipeline: &mut AscodePipeline) -> Self {
+    pub fn entry(mut self, key: K, pipeline: &mut Pipeline<F>) -> Self where
+        K: Hash + Eq,
+        F: Debug + Default + Send + 'static
+    {
         self.entries.insert(key, pipeline.get_feeder());
         self
     }
 }
 
-impl Default for DepoolingSwitch {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[async_trait]
-impl FrameProcessor for DepoolingSwitch {
-    async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
-        let key = frame_data.get("pool_key");
+impl<F, P, K> FrameProcessor<F> for DepoolingSwitch<F, P, K> 
+where
+    P: Send,
+    K: Eq + Hash + Send,
+    F: Debug + FrameProperties<P, K> + Send + 'static
+{
+    async fn process(&mut self, frame_data: F) -> Option<F> {
+        let key = frame_data.get(&self.property_key).unwrap();
         let feeder = self.entries.get(&key).unwrap();
-
-        debug!("Feeding to pipeline #{}...", key);
 
         feeder.feed(frame_data);
 

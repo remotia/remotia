@@ -1,23 +1,34 @@
+use std::fmt::Debug;
+
 use async_trait::async_trait;
 use log::debug;
 
-use crate::{pipeline::ascode::{AscodePipeline, feeder::AscodePipelineFeeder}, traits::FrameProcessor, types::FrameData};
+use crate::{
+    pipeline::{feeder::PipelineFeeder, Pipeline},
+    traits::FrameProcessor,
+};
 
-pub struct Switch {
-    feeder: AscodePipelineFeeder
+pub struct Switch<F> {
+    feeder: PipelineFeeder<F>,
 }
 
-impl Switch {
-    pub fn new(destination_pipeline: &mut AscodePipeline) -> Self {
+impl<F> Switch<F>
+where
+    F: Default + Debug + Send + 'static,
+{
+    pub fn new(destination_pipeline: &mut Pipeline<F>) -> Self {
         Self {
-            feeder: destination_pipeline.get_feeder()
+            feeder: destination_pipeline.get_feeder(),
         }
     }
 }
 
 #[async_trait]
-impl FrameProcessor for Switch {
-    async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
+impl<F> FrameProcessor<F> for Switch<F>
+where
+    F: Debug + Send,
+{
+    async fn process(&mut self, frame_data: F) -> Option<F> {
         self.feeder.feed(frame_data);
         None
     }

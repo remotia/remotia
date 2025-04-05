@@ -1,16 +1,14 @@
 [package]
-name = "remotia-buffer-utils"
+name = "remotia-core-transmission"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies.tokio]
 version = "1.28.2"
-features = ["rt", "sync", "time"]
+features = ["net", "io-util"]
 
 [dependencies]
 remotia-core = { path = "../remotia-core" }
-
-log = "0.4.14"
-
+remotia-buffer-utils = { path = "../remotia-buffer-utils" }
+log = "0.4.18"
 async-trait = "0.1.68"
-bytes = "1.4.0"

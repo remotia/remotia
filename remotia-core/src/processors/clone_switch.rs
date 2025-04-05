@@ -1,14 +1,16 @@
+use std::fmt::Debug;
 use async_trait::async_trait;
-use log::debug;
 
-use crate::{pipeline::ascode::{AscodePipeline, feeder::AscodePipelineFeeder}, traits::FrameProcessor, types::FrameData};
+use crate::{pipeline::{Pipeline, feeder::PipelineFeeder}, traits::FrameProcessor};
 
-pub struct CloneSwitch {
-    feeder: AscodePipelineFeeder
+pub struct CloneSwitch<F> {
+    feeder: PipelineFeeder<F>
 }
 
-impl CloneSwitch {
-    pub fn new(destination_pipeline: &mut AscodePipeline) -> Self {
+impl<F> CloneSwitch<F> {
+    pub fn new(destination_pipeline: &mut Pipeline<F>) -> Self where
+        F: Debug + Default + Send + 'static
+    {
         Self {
             feeder: destination_pipeline.get_feeder()
         }
@@ -16,8 +18,10 @@ impl CloneSwitch {
 }
 
 #[async_trait]
-impl FrameProcessor for CloneSwitch {
-    async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
+impl<F> FrameProcessor<F> for CloneSwitch<F> where
+    F: Debug + Clone + Default + Send + 'static
+{
+    async fn process(&mut self, frame_data: F) -> Option<F> {
         self.feeder.feed(frame_data.clone());
         Some(frame_data)
     }

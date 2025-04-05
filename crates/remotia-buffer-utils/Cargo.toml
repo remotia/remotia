@@ -14,7 +14,7 @@ version = "1.28.2"
 features = ["rt", "sync", "time", "macros"]
 
 [dependencies]
-remotia-core = { path = "../remotia-core" }
+remotia-core = { path = "../remotia-core", version = "0.1.1" }
 
 log = "0.4.14"
 

@@ -11,8 +11,8 @@ categories = ["compression", "encoding", "multimedia"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+remotia-core = { path = "../remotia-core", version = "0.1.1" }
+remotia-buffer-utils = { path = "../remotia-buffer-utils", version = "0.1.1" }
 log = "0.4.19"
-remotia-core = { path = "../remotia-core" }
-remotia-buffer-utils = { path = "../remotia-buffer-utils" }
 async-trait = "0.1.68"
 bincode = "=2.0.0-rc.3"

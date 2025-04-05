@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Lorenzo Catania <aegroto@protonmail.com>"]
 edition = "2021"
 license = "MIT"
-description = "Open source framework for the development of remote rendering software in pure Rust"
+description = "Open source framework for the development of media streaming and remote rendering software in pure Rust"
 repository = "https://github.com/remotia/remotia"
 readme = "README.md"
 keywords = ["video", "encoding", "streaming", "gaming"]
@@ -27,13 +27,13 @@ rand = "0.8.5"
 bytes = "1.1.0"
 async-trait = "0.1.68"
 
-remotia-core = { path = "../remotia-core" }
-remotia-buffer-utils = { path = "../remotia-buffer-utils", optional = true }
-remotia-core-capturers = { path = "../remotia-core-capturers", optional = true }
-remotia-core-transmission = { path = "../remotia-core-transmission", optional = true }
-remotia-core-renderers = { path = "../remotia-core-renderers", optional = true }
-remotia-profilation-utils = { path = "../remotia-profilation-utils", optional = true }
-remotia-serialization-utils = { path = "../remotia-serialization-utils", optional = true }
+remotia-core = { path = "../remotia-core", version = "0.1.1" }
+remotia-buffer-utils = { path = "../remotia-buffer-utils", optional = true, version = "0.1.1" }
+remotia-core-capturers = { path = "../remotia-core-capturers", optional = true, version = "0.1.0" }
+remotia-core-transmission = { path = "../remotia-core-transmission", optional = true, version = "0.1.0" }
+remotia-core-renderers = { path = "../remotia-core-renderers", optional = true, version = "0.1.0" }
+remotia-profilation-utils = { path = "../remotia-profilation-utils", optional = true, version = "0.1.0" }
+remotia-serialization-utils = { path = "../remotia-serialization-utils", optional = true, version = "0.1.0" }
 
 [features]
 default = []

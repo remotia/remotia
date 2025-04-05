@@ -7,7 +7,6 @@ rust-version = "1.85.0"
 license = "MIT"
 description = "Open source framework for the development of media streaming and remote rendering software in pure Rust"
 repository = "https://github.com/remotia/remotia"
-readme = "README.md"
 keywords = ["video", "encoding", "streaming", "gaming"]
 categories = ["compression", "encoding", "multimedia"]
 

@@ -3,6 +3,7 @@ name = "remotia"
 version = "0.1.0"
 authors = ["Lorenzo Catania <aegroto@protonmail.com>"]
 edition = "2021"
+rust-version = "1.85.0"
 license = "MIT"
 description = "Open source framework for the development of media streaming and remote rendering software in pure Rust"
 repository = "https://github.com/remotia/remotia"

@@ -1,4 +1,6 @@
 # remotia
+[![Current Crates.io Version](https://img.shields.io/crates/v/remotia.svg)](https://crates.io/crates/remotia)
+[![Minimum Supported Rust Version](https://img.shields.io/crates/msrv/remotia)](https://crates.io/crates/remotia)
 
 ## Introduction
 

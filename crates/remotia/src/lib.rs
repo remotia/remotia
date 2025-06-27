@@ -3,6 +3,7 @@ pub use remotia_core::*;
 #[cfg(feature = "buffers")]
 pub mod buffers {
     pub use remotia_buffer_utils::*;
+    pub use remotia_buffer_utils_macros::*;
 }
 
 #[cfg(feature = "capture")]

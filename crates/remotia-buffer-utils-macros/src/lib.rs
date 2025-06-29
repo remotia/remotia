@@ -1,43 +1,20 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, ItemStruct, Meta, NestedMeta};
+use syn::{parse_macro_input, Ident, ItemStruct};
 
 #[proc_macro_attribute]
-pub fn buffers_map(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn buffers_map(attr: TokenStream, input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
     let input = parse_macro_input!(input as ItemStruct);
-    let args = parse_macro_input!(args as AttributeArgs);
 
     // Extract the field name from the macro arguments
-    let field_name = if let Some(NestedMeta::Meta(Meta::Path(path))) = args.first() {
-        path.get_ident().unwrap().clone()
-    } else {
-        panic!("Expected a single identifier as an argument");
-    };
+    let field_name = Ident::new(&attr.to_string(), Span::call_site());
 
     // Get the name of the struct
     let name = input.ident.clone();
-
-    // Ensure the struct has the specified field
-    let fields = if let syn::Fields::Named(fields_named) = input.fields.clone() {
-        fields_named.named
-    } else {
-        panic!("Struct must have named fields");
-    };
-
-    let field_exists = fields.iter().any(|field| {
-        field
-            .ident
-            .as_ref()
-            .map(|ident| *ident == field_name)
-            .unwrap_or(false)
-    });
-
-    if !field_exists {
-        panic!("Struct must have a field named `{}`", field_name);
-    }
 
     // Generate the implementation of PullableFrameProperties
     let expanded = quote! {

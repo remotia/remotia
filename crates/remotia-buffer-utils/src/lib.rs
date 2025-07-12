@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 
 use async_trait::async_trait;
@@ -7,6 +9,7 @@ pub mod pool_registry;
 
 pub use bytes::*;
 
+pub type BuffersMap<K> = HashMap<K, BytesMut>;
 
 #[cfg(test)]
 mod tests;

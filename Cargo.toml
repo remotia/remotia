@@ -7,3 +7,4 @@ members = ["crates/*"]
 edition = "2021"
 repository = "https://github.com/remotia/remotia"
 homepage = "https://remotia.github.io/book/"
+license = "MIT"

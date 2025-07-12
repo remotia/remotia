@@ -1,6 +1,6 @@
 [package]
 name = "remotia"
-version = "0.1.0"
+version = "0.1.3"
 authors = ["Lorenzo Catania <aegroto@protonmail.com>"]
 edition = "2021"
 rust-version = "1.85.0"
@@ -28,9 +28,9 @@ rand = "0.8.5"
 bytes = "1.1.0"
 async-trait = "0.1.68"
 
-remotia-core = { path = "../remotia-core", version = "0.1.1" }
-remotia-buffer-utils = { path = "../remotia-buffer-utils", optional = true, version = "0.1.1" }
-remotia-buffer-utils-macros = { path = "../remotia-buffer-utils-macros", optional = true, version = "0.1.0" }
+remotia-core = { path = "../remotia-core", version = "0.1.2" }
+remotia-buffer-utils = { path = "../remotia-buffer-utils", optional = true, version = "0.1.2" }
+remotia-buffer-utils-macros = { path = "../remotia-buffer-utils-macros", optional = true, version = "0.1.1" }
 remotia-core-capturers = { path = "../remotia-core-capturers", optional = true, version = "0.1.0" }
 remotia-core-transmission = { path = "../remotia-core-transmission", optional = true, version = "0.1.0" }
 remotia-core-renderers = { path = "../remotia-core-renderers", optional = true, version = "0.1.0" }

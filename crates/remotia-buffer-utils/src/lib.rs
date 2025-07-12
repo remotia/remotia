@@ -5,7 +5,6 @@ use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 use async_trait::async_trait;
 
 pub mod pool;
-pub mod autodrop_pool;
 pub mod pool_registry;
 
 pub use bytes::*;

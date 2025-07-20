@@ -13,3 +13,4 @@ pub mod traits;
 // pub mod error;
 
 pub mod processors;
+pub mod sync_processor;

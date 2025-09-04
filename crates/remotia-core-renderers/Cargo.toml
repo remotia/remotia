@@ -19,5 +19,5 @@ log = "0.4.14"
 
 async-trait = "0.1.68"
 
-pixels = "=0.12.1"
-winit = "0.28.6"
+pixels = "0.15"
+winit = "0.29"

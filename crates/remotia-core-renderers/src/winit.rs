@@ -18,7 +18,7 @@ impl<'a, K> WinitRenderer<'a, K> {
             .unwrap();
 
         let surface_texture = SurfaceTexture::new(canvas_width, canvas_height, window);
-        let pixels = Pixels::new(canvas_width, canvas_height, surface_texture).unwrap();
+        let mut pixels = Pixels::new(canvas_width, canvas_height, surface_texture).unwrap();
 
         Self { buffer_key, pixels }
     }
@@ -30,6 +30,8 @@ where
     F: BorrowMutFrameProperties<K, BytesMut> + Send + 'static,
 {
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
+        log::debug!("Updating renderer...");
+
         let raw_frame_buffer = frame_data.get_mut_ref(&self.buffer_key).unwrap();
         self.pixels.frame_mut().copy_from_slice(raw_frame_buffer);
         self.pixels.render().unwrap();

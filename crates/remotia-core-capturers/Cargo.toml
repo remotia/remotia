@@ -1,6 +1,6 @@
 [package]
 name = "remotia-core-capturers"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "Common capturing components of remotia, an open source framework for the development of remote rendering software in pure Rust"
@@ -12,7 +12,7 @@ categories = ["compression", "encoding", "multimedia"]
 
 [dependencies]
 remotia-core = { path = "../remotia-core", version = "0.1.1" }
-remotia-buffer-utils = { path = "../remotia-buffer-utils", version = "0.1.1" }
+remotia-buffer-utils = { path = "../remotia-buffer-utils", version = "0.1.3" }
 
 log = "0.4.14"
 

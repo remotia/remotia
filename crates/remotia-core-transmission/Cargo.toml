@@ -1,6 +1,6 @@
 [package]
 name = "remotia-core-transmission"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "Core transmission components of remotia, an open source framework for the development of remote rendering software in pure Rust"
@@ -14,6 +14,6 @@ features = ["net", "io-util"]
 
 [dependencies]
 remotia-core = { path = "../remotia-core", version = "0.1.1" }
-remotia-buffer-utils = { path = "../remotia-buffer-utils", version = "0.1.1" }
+remotia-buffer-utils = { path = "../remotia-buffer-utils", version = "0.1.3" }
 log = "0.4.18"
 async-trait = "0.1.68"

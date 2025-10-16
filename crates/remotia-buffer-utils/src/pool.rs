@@ -35,6 +35,7 @@ impl<K: Copy> BuffersPool<K> {
         BufferBorrower {
             slot_id: self.slot_id,
             receiver: self.buffers_receiver.clone(),
+            soft: false,
         }
     }
 
@@ -50,6 +51,14 @@ impl<K: Copy> BuffersPool<K> {
 pub struct BufferBorrower<K> {
     slot_id: K,
     receiver: Arc<Mutex<Receiver<BytesMut>>>,
+    soft: bool,
+}
+
+impl<K> BufferBorrower<K> {
+    pub fn soft(mut self) -> Self {
+        self.soft = true;
+        self
+    }
 }
 
 #[async_trait]
@@ -61,18 +70,19 @@ where
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         log::debug!("Borrowing '{:?}' buffer...", self.slot_id);
 
-        let mut receiver = self.receiver.lock().await;
-
         loop {
-            match tokio::time::timeout(Duration::from_millis(1000), receiver.recv()).await {
-                Ok(result) => {
-                    if let Some(buffer) = result {
-                        frame_data.push(self.slot_id, buffer);
-                        break;
-                    }
+            let mut receiver = self.receiver.lock().await;
+            match receiver.try_recv() {
+                Ok(buffer) => {
+                    frame_data.push(self.slot_id, buffer);
+                    break;
                 }
                 Err(err) => {
-                    log::warn!("Unable to borrow '{:?}' buffer: {:?}", self.slot_id, err);
+                    log::debug!("Unable to borrow '{:?}' buffer: {:?}", self.slot_id, err);
+                    tokio::task::yield_now().await;
+                    if self.soft {
+                        break;
+                    }
                 }
             }
         }
@@ -103,7 +113,8 @@ where
     async fn process(&mut self, mut frame_data: F) -> Option<F> {
         log::debug!(
             "Redeeming '{:?}' buffer (soft = {})...",
-            self.slot_id, self.soft
+            self.slot_id,
+            self.soft
         );
 
         let buffer = frame_data.pull(&self.slot_id);
@@ -128,7 +139,11 @@ where
             }
         }
 
-        log::debug!("Redeemed '{:?}' buffer (soft = {})", self.slot_id, self.soft);
+        log::debug!(
+            "Redeemed '{:?}' buffer (soft = {})",
+            self.slot_id,
+            self.soft
+        );
 
         Some(frame_data)
     }

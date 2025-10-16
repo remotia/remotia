@@ -1,18 +1,11 @@
-use std::{
-    future::Future,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use pixels::{Pixels, SurfaceTexture};
 use remotia_buffer_utils::BytesMut;
 use remotia_core::traits::{BorrowMutFrameProperties, FrameProcessor};
 
 use async_trait::async_trait;
-use winit::{
-    dpi::LogicalSize,
-    event_loop::{self, EventLoop},
-    window::WindowBuilder,
-};
+use winit::{event_loop::EventLoop, window::WindowBuilder};
 
 pub struct WinitRenderer<'a, K> {
     buffer_key: K,

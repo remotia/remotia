@@ -64,14 +64,14 @@ impl<F: Default + Send + 'static> Component<F> {
         tokio::spawn(async move {
             loop {
                 let mut frame_data = if self.receiver.is_some() {
-                    Some(
-                        self.receiver
-                            .as_mut()
-                            .unwrap()
-                            .recv()
-                            .await
-                            .expect(tagged!(self, "Receive channel closed")),
-                    )
+                    match self.receiver.as_mut().unwrap().recv().await {
+                        Some(frame) => Some(frame),
+                        None => {
+                            let tag = self.tag.as_deref().unwrap_or("");
+                            info!("[{}] Receive channel closed, shutting down", tag);
+                            break;
+                        }
+                    }
                 } else {
                     debug!("No receiver registered, allocating an empty frame DTO");
                     Some(F::default())
@@ -88,7 +88,9 @@ impl<F: Default + Send + 'static> Component<F> {
                 if self.sender.is_some() {
                     if let Some(frame_data) = frame_data {
                         if self.sender.as_mut().unwrap().send(frame_data).is_err() {
-                            panic!("{}", tagged!(self, "Error while sending frame data"));
+                            let tag = self.tag.as_deref().unwrap_or("");
+                            info!("[{}] Send channel closed, shutting down", tag);
+                            break;
                         }
                     }
                 }

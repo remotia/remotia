@@ -1,4 +1,8 @@
 use std::fmt::Debug;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 use log::info;
 use tokio::{sync::mpsc::{self, UnboundedSender}, task::JoinHandle};
@@ -9,9 +13,30 @@ pub mod component;
 pub mod feeder;
 pub mod registry;
 
+pub struct PipelineHandle {
+    shutdown_tx: UnboundedSender<()>,
+}
+
+impl PipelineHandle {
+    pub fn request_shutdown(&self) {
+        let _ = self.shutdown_tx.send(());
+    }
+}
+
+impl Clone for PipelineHandle {
+    fn clone(&self) -> Self {
+        Self {
+            shutdown_tx: self.shutdown_tx.clone(),
+        }
+    }
+}
+
 pub struct Pipeline<F> {
     components: Vec<Component<F>>,
     feeding_sender: Option<UnboundedSender<F>>,
+
+    shutdown_tx: Option<UnboundedSender<()>>,
+    shutdown_signal: Arc<AtomicBool>,
 
     tag: String,
 
@@ -25,6 +50,9 @@ impl<F: Debug + Default + Send + 'static> Pipeline<F> {
         Self {
             components: Vec::new(),
             feeding_sender: None,
+
+            shutdown_tx: None,
+            shutdown_signal: Arc::new(AtomicBool::new(false)),
 
             tag: "".to_string(),
 
@@ -52,6 +80,24 @@ impl<F: Debug + Default + Send + 'static> Pipeline<F> {
         PipelineFeeder::new(sender)
     }
 
+    pub fn get_handle(&mut self) -> PipelineHandle {
+        if self.shutdown_tx.is_none() {
+            let (tx, mut rx) = mpsc::unbounded_channel::<()>();
+            self.shutdown_tx = Some(tx);
+
+            let signal = self.shutdown_signal.clone();
+            tokio::spawn(async move {
+                if rx.recv().await.is_some() {
+                    signal.store(true, Ordering::Relaxed);
+                }
+            });
+        }
+
+        PipelineHandle {
+            shutdown_tx: self.shutdown_tx.as_ref().unwrap().clone(),
+        }
+    }
+
     pub fn run(mut self) -> Vec<JoinHandle<()>> {
         info!("[{}] Launching threads...", self.tag);
 
@@ -61,6 +107,10 @@ impl<F: Debug + Default + Send + 'static> Pipeline<F> {
 
         if self.to_be_feedable {
             self.make_feedable();
+        }
+
+        for component in &mut self.components {
+            component.set_shutdown_signal(self.shutdown_signal.clone());
         }
 
         let mut handles = Vec::new();

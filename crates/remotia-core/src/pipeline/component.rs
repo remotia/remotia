@@ -1,23 +1,22 @@
-use std::time::Duration;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
-use log::{debug, info};
+use log::{debug, info, trace};
 use tokio::{
     task::JoinHandle, sync::mpsc::{UnboundedReceiver, UnboundedSender},
 };
 
 use crate::{traits::FrameProcessor};
 
-macro_rules! tagged {
-    ($self:ident, $msg:tt) => {{
-        &format!("[{}] {}", $self.tag.as_ref().unwrap_or(&"".to_string()), $msg)
-    }}
-}
-
 pub struct Component<F> {
     processors: Vec<Box<dyn FrameProcessor<F> + Send>>,
 
     receiver: Option<UnboundedReceiver<F>>,
     sender: Option<UnboundedSender<F>>,
+
+    shutdown_signal: Option<Arc<AtomicBool>>,
 
     tag: Option<String>
 }
@@ -30,6 +29,7 @@ impl<F: Default + Send + 'static> Component<F> {
             processors: Vec::new(),
             receiver: None,
             sender: None,
+            shutdown_signal: None,
             tag: None
         }
     }
@@ -60,18 +60,41 @@ impl<F: Default + Send + 'static> Component<F> {
         self.receiver = Some(receiver);
     }
 
+    pub(crate) fn set_shutdown_signal(&mut self, signal: Arc<AtomicBool>) {
+        self.shutdown_signal = Some(signal);
+    }
+
+    fn is_shutdown(&self) -> bool {
+        self.shutdown_signal
+            .as_ref()
+            .map(|s| s.load(Ordering::Relaxed))
+            .unwrap_or(false)
+    }
+
     pub(crate) fn launch(mut self) -> JoinHandle<()> {
         tokio::spawn(async move {
+            let mut channel_closed = false;
+
             loop {
-                let mut frame_data = if self.receiver.is_some() {
-                    match self.receiver.as_mut().unwrap().recv().await {
-                        Some(frame) => Some(frame),
-                        None => {
-                            let tag = self.tag.as_deref().unwrap_or("");
-                            info!("[{}] Receive channel closed, shutting down", tag);
-                            break;
+                let mut frame_data = if let Some(receiver) = self.receiver.as_mut() {
+                    if channel_closed {
+                        tokio::task::yield_now().await;
+                        Some(F::default())
+                    } else {
+                        match receiver.recv().await {
+                            Some(frame) => Some(frame),
+                            None => {
+                                let tag = self.tag.as_deref().unwrap_or("");
+                                trace!("[{}] Receive channel closed, entering drain mode", tag);
+                                channel_closed = true;
+                                Some(F::default())
+                            }
                         }
                     }
+                } else if self.is_shutdown() {
+                    let tag = self.tag.as_deref().unwrap_or("");
+                    info!("[{}] Shutdown signal received, shutting down", tag);
+                    break;
                 } else {
                     debug!("No receiver registered, allocating an empty frame DTO");
                     Some(F::default())
@@ -85,14 +108,22 @@ impl<F: Default + Send + 'static> Component<F> {
                     }
                 }
 
-                if self.sender.is_some() {
+                let is_none = frame_data.is_none();
+
+                if let Some(sender) = self.sender.as_mut() {
                     if let Some(frame_data) = frame_data {
-                        if self.sender.as_mut().unwrap().send(frame_data).is_err() {
+                        if sender.send(frame_data).is_err() {
                             let tag = self.tag.as_deref().unwrap_or("");
                             info!("[{}] Send channel closed, shutting down", tag);
                             break;
                         }
                     }
+                }
+
+                if channel_closed && self.is_shutdown() && is_none {
+                    let tag = self.tag.as_deref().unwrap_or("");
+                    info!("[{}] Drain complete and shutdown signaled, shutting down", tag);
+                    break;
                 }
             }
         })

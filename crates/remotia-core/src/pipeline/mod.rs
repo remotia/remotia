@@ -5,7 +5,7 @@ use std::sync::{
 };
 
 use log::info;
-use tokio::{sync::mpsc::{self, UnboundedSender}, task::JoinHandle};
+use tokio::{sync::mpsc::{self, UnboundedReceiver, UnboundedSender}, task::JoinHandle};
 
 use self::{component::Component, feeder::PipelineFeeder};
 
@@ -24,6 +24,24 @@ impl PipelineHandle {
 }
 
 impl Clone for PipelineHandle {
+    fn clone(&self) -> Self {
+        Self {
+            shutdown_tx: self.shutdown_tx.clone(),
+        }
+    }
+}
+
+pub struct LazyPipelineHandle {
+    shutdown_tx: UnboundedSender<()>,
+}
+
+impl LazyPipelineHandle {
+    pub fn request_shutdown(&self) {
+        let _ = self.shutdown_tx.send(());
+    }
+}
+
+impl Clone for LazyPipelineHandle {
     fn clone(&self) -> Self {
         Self {
             shutdown_tx: self.shutdown_tx.clone(),
@@ -78,6 +96,10 @@ impl<F: Debug + Default + Send + 'static> Pipeline<F> {
 
         let sender = self.feeding_sender.as_ref().unwrap().clone();
         PipelineFeeder::new(sender)
+    }
+
+    pub fn shutdown_signal(&self) -> Arc<AtomicBool> {
+        self.shutdown_signal.clone()
     }
 
     pub fn get_handle(&mut self) -> PipelineHandle {

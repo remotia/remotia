@@ -96,7 +96,7 @@ impl<F: Default + Send + 'static> Component<F> {
                     info!("[{}] Shutdown signal received, shutting down", tag);
                     break;
                 } else {
-                    debug!("No receiver registered, allocating an empty frame DTO");
+                    tokio::task::yield_now().await;
                     Some(F::default())
                 };
 

@@ -1,16 +1,29 @@
-use std::{collections::HashMap, fmt::Debug, hash::Hash};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash};
 
-use super::Pipeline;
+use tokio::sync::mpsc::UnboundedReceiver;
+
+use super::{LazyPipelineHandle, Pipeline};
 
 pub struct PipelineRegistry<F, K> {
     pipelines: HashMap<K, Pipeline<F>>,
+    pending_handles: RefCell<HashMap<K, Vec<UnboundedReceiver<()>>>>,
 }
 
 impl<F, K> PipelineRegistry<F, K> where K: Eq + Hash {
     pub fn new() -> Self {
         Self {
             pipelines: HashMap::new(),
+            pending_handles: RefCell::new(HashMap::new()),
         }
+    }
+
+    pub fn lazy_handle(&self, id: K) -> LazyPipelineHandle
+    where
+        K: Clone,
+    {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+        self.pending_handles.borrow_mut().entry(id).or_default().push(rx);
+        LazyPipelineHandle { shutdown_tx: tx }
     }
 
     pub fn register_empty(&mut self, id: K)
@@ -36,6 +49,20 @@ impl<F, K> PipelineRegistry<F, K> where K: Eq + Hash {
     where
         F: Default + Debug + Send + 'static,
     {
+        for (key, receivers) in self.pending_handles.borrow_mut().drain() {
+            if let Some(pipeline) = self.pipelines.get(&key) {
+                let signal = pipeline.shutdown_signal();
+                for mut rx in receivers {
+                    let signal = signal.clone();
+                    tokio::spawn(async move {
+                        if rx.recv().await.is_some() {
+                            signal.store(true, std::sync::atomic::Ordering::Relaxed);
+                        }
+                    });
+                }
+            }
+        }
+
         let mut handles = Vec::new();
         for (_, pipeline) in self.pipelines.drain() {
             handles.extend(pipeline.run());

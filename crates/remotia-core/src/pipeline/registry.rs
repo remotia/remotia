@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash};
 
 use tokio::sync::mpsc::UnboundedReceiver;
 
-use super::{LazyPipelineHandle, Pipeline};
+use super::{PipelineHandle, Pipeline};
 
 pub struct PipelineRegistry<F, K> {
     pipelines: HashMap<K, Pipeline<F>>,
@@ -17,13 +17,13 @@ impl<F, K> PipelineRegistry<F, K> where K: Eq + Hash {
         }
     }
 
-    pub fn lazy_handle(&self, id: K) -> LazyPipelineHandle
+    pub fn lazy_handle(&self, id: K) -> PipelineHandle
     where
         K: Clone,
     {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<()>();
         self.pending_handles.borrow_mut().entry(id).or_default().push(rx);
-        LazyPipelineHandle { shutdown_tx: tx }
+        PipelineHandle { shutdown_tx: tx }
     }
 
     pub fn register_empty(&mut self, id: K)

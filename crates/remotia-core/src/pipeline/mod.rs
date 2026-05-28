@@ -31,24 +31,6 @@ impl Clone for PipelineHandle {
     }
 }
 
-pub struct LazyPipelineHandle {
-    shutdown_tx: UnboundedSender<()>,
-}
-
-impl LazyPipelineHandle {
-    pub fn request_shutdown(&self) {
-        let _ = self.shutdown_tx.send(());
-    }
-}
-
-impl Clone for LazyPipelineHandle {
-    fn clone(&self) -> Self {
-        Self {
-            shutdown_tx: self.shutdown_tx.clone(),
-        }
-    }
-}
-
 pub struct Pipeline<F> {
     components: Vec<Component<F>>,
     feeding_sender: Option<UnboundedSender<F>>,

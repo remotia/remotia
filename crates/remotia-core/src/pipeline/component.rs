@@ -120,7 +120,7 @@ impl<F: Default + Send + 'static> Component<F> {
                     }
                 }
 
-                if channel_closed && self.is_shutdown() && is_none {
+                if channel_closed && is_none {
                     let tag = self.tag.as_deref().unwrap_or("");
                     info!("[{}] Drain complete and shutdown signaled, shutting down", tag);
                     break;

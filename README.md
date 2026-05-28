@@ -4,11 +4,11 @@
 
 ## Introduction
 
-remotia is an open source framework for building remote rendering software, implemented in pure Rust.
+remotia is an open source media processing and streaming framework, implemented in pure Rust.
 
 The objective of this project is to provide:
 
-- A easy to customize benchmarking tool to researchers that want to evaluate their network communication protocols and encoders in a context of real-time video streaming.
+- An easy to customize benchmarking tool for researchers that want to evaluate their network communication protocols and encoders in a context of real-time video streaming.
 
 - A solid basis for teams that want to develop both the server and the client part of a remote rendering solution, with a special focus on cloud gaming and real-time desktop streaming.
 

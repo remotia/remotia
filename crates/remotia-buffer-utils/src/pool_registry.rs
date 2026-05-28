@@ -48,7 +48,7 @@ impl<K: Copy + PartialEq + Eq + Hash + Debug> PoolRegistry<K> {
         sequential
     }*/
 
-    pub fn get_buffer_ids(&self) -> Keys<K, BuffersPool<K>> {
+    pub fn get_buffer_ids(&'_ self) -> Keys<'_, K, BuffersPool<K>> {
         self.pools.keys()
     }
 }

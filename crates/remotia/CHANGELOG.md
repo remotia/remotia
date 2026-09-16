@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5](https://github.com/remotia/remotia/compare/remotia-v0.1.4...remotia-v0.1.5) - 2026-09-16
+
+### Other
+
+- updated the following local packages: remotia-core, remotia-buffer-utils-macros, remotia-buffer-utils, remotia-core-capturers, remotia-core-renderers, remotia-core-transmission, remotia-profilation-utils, remotia-serialization-utils
+
 ## [0.1.4](https://github.com/remotia/remotia/compare/remotia-v0.1.3...remotia-v0.1.4) - 2025-10-16
 
 ### Other

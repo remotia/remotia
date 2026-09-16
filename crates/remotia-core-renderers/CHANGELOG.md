@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/remotia/remotia/compare/remotia-core-renderers-v0.1.1...remotia-core-renderers-v0.1.2) - 2026-09-16
+
+### Other
+
+- updated the following local packages: remotia-core, remotia-buffer-utils
+
 ## [0.1.1](https://github.com/remotia/remotia/compare/remotia-core-renderers-v0.1.0...remotia-core-renderers-v0.1.1) - 2025-10-16
 
 ### Added

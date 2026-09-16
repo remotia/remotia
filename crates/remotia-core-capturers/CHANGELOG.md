@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3](https://github.com/remotia/remotia/compare/remotia-core-capturers-v0.1.2...remotia-core-capturers-v0.1.3) - 2026-09-16
+
+### Other
+
+- tweaks for codec example ([#14](https://github.com/remotia/remotia/pull/14))
+
 ## [0.1.2](https://github.com/remotia/remotia/compare/remotia-core-capturers-v0.1.1...remotia-core-capturers-v0.1.2) - 2026-09-16
 
 ### Other

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/remotia/remotia/compare/remotia-profilation-utils-v0.1.1...remotia-profilation-utils-v0.1.2) - 2026-09-16
+
+### Other
+
+- updated the following local packages: remotia-core
+
 ## [0.1.1](https://github.com/remotia/remotia/compare/remotia-profilation-utils-v0.1.0...remotia-profilation-utils-v0.1.1) - 2026-09-16
 
 ### Other

@@ -7,14 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.4](https://github.com/remotia/remotia/compare/remotia-buffer-utils-v0.1.3...remotia-buffer-utils-v0.1.4) - 2026-09-16
+## [0.1.1](https://github.com/remotia/remotia/compare/remotia-profilation-utils-v0.1.0...remotia-profilation-utils-v0.1.1) - 2026-09-16
 
 ### Other
 
 - updated the following local packages: remotia-core
-
-## [0.1.3](https://github.com/remotia/remotia/compare/remotia-buffer-utils-v0.1.2...remotia-buffer-utils-v0.1.3) - 2025-10-16
-
-### Added
-
-- winit update and soft borrowing

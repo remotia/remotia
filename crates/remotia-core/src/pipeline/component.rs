@@ -1,6 +1,11 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    task::{Context, Poll},
 };
 
 use log::{debug, info, trace};
@@ -9,6 +14,36 @@ use tokio::{
 };
 
 use crate::{traits::FrameProcessor};
+
+/// Yields execution once without parking the task on the current worker's
+/// defer queue.
+///
+/// `tokio::task::yield_now()` (Tokio >= 1.53) hands the waker to the
+/// worker-local defer queue, which is only drained once that worker runs out
+/// of ready tasks. A pipeline head component shares its worker with long
+/// synchronous processors (ONNX inference, PNG encoding, ...), so the deferred
+/// head is not scheduled again until the whole downstream chain has finished,
+/// serializing the pipeline. Waking the task immediately instead makes it
+/// visible to the other runtime workers right away.
+async fn fair_yield() {
+    struct YieldOnce(bool);
+
+    impl Future for YieldOnce {
+        type Output = ();
+
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
+            if self.0 {
+                Poll::Ready(())
+            } else {
+                self.0 = true;
+                cx.waker().wake_by_ref();
+                Poll::Pending
+            }
+        }
+    }
+
+    YieldOnce(false).await
+}
 
 pub struct Component<F> {
     processors: Vec<Box<dyn FrameProcessor<F> + Send>>,
@@ -78,7 +113,7 @@ impl<F: Default + Send + 'static> Component<F> {
             loop {
                 let mut frame_data = if let Some(receiver) = self.receiver.as_mut() {
                     if channel_closed {
-                        tokio::task::yield_now().await;
+                        fair_yield().await;
                         Some(F::default())
                     } else {
                         match receiver.recv().await {
@@ -96,7 +131,7 @@ impl<F: Default + Send + 'static> Component<F> {
                     info!("[{}] Shutdown signal received, shutting down", tag);
                     break;
                 } else {
-                    tokio::task::yield_now().await;
+                    fair_yield().await;
                     Some(F::default())
                 };
 

@@ -48,7 +48,7 @@ where
         let result: Option<F> = self.inner_sequential.process(frame_data).await;
         let time = start_time.elapsed().as_millis();
 
-        log::warn!("Logged time: {}", time);
+        log::debug!("Logged time: {}", time);
 
         result.map(|frame_data| self.inject_time(frame_data, time))
     }

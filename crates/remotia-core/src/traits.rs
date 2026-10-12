@@ -34,3 +34,14 @@ pub trait FrameError<E> {
     fn report_error(&mut self, error: E);
     fn get_error(&self) -> Option<E>;
 }
+
+/// Ordered chain of [`FrameProcessor`]s (`Component`, `Sequential`,
+/// `ProfiledSequential`, ...).
+///
+/// This abstracts over the concrete `append` builders so helpers like the
+/// buffer-pool binding (`remotia-buffer-utils`) can be defined once over this
+/// trait instead of once per chain type. Each chain keeps its inherent
+/// `append`; this trait's `chain` forwards to it.
+pub trait ProcessorChain<F>: Sized {
+    fn chain<T: FrameProcessor<F> + Send + 'static>(self, processor: T) -> Self;
+}

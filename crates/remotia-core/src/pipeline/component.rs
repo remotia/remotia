@@ -14,7 +14,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::traits::FrameProcessor;
+use crate::traits::{FrameProcessor, ProcessorChain};
 
 /// Yields execution once without parking the task on the current worker's
 /// defer queue.
@@ -188,6 +188,12 @@ impl<F: Default + Send + 'static> Component<F> {
 impl<F: Default + Send + 'static> Default for Component<F> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<F: Default + Send + 'static> ProcessorChain<F> for Component<F> {
+    fn chain<T: FrameProcessor<F> + Send + 'static>(self, processor: T) -> Self {
+        self.append(processor)
     }
 }
 

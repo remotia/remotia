@@ -4,9 +4,12 @@ use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 
 use async_trait::async_trait;
 
+pub mod binding;
 pub mod format;
 pub mod pool;
 pub mod pool_registry;
+
+pub use binding::BufferPoolBinding;
 
 pub use bytes::*;
 pub use format::{

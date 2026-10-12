@@ -3,7 +3,7 @@ use std::time::Instant;
 use async_trait::async_trait;
 use remotia_core::{
     processors::containers::sequential::Sequential,
-    traits::{FrameProcessor, FrameProperties},
+    traits::{FrameProcessor, FrameProperties, ProcessorChain},
 };
 
 pub struct ProfiledSequential<P, F> {
@@ -34,6 +34,15 @@ impl<P, F> ProfiledSequential<P, F> {
     {
         frame_data.set(self.property_key, time);
         frame_data
+    }
+}
+
+impl<P, F> ProcessorChain<F> for ProfiledSequential<P, F> {
+    fn chain<T>(self, processor: T) -> Self
+    where
+        T: 'static + FrameProcessor<F> + Send,
+    {
+        self.append(processor)
     }
 }
 

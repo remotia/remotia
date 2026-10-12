@@ -3,7 +3,7 @@ use log::debug;
 
 use crate::{
     pipeline::{feeder::PipelineFeeder, Pipeline},
-    traits::FrameProcessor,
+    traits::{FrameProcessor, ProcessorChain},
 };
 
 pub struct Sequential<F> {
@@ -20,6 +20,12 @@ impl<F> Sequential<F> {
     pub fn append<T: 'static + FrameProcessor<F> + Send>(mut self, processor: T) -> Self {
         self.processors.push(Box::new(processor));
         self
+    }
+}
+
+impl<F> ProcessorChain<F> for Sequential<F> {
+    fn chain<T: 'static + FrameProcessor<F> + Send>(self, processor: T) -> Self {
+        self.append(processor)
     }
 }
 

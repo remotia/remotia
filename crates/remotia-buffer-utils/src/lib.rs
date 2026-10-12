@@ -4,10 +4,15 @@ use remotia_core::traits::{FrameProcessor, PullableFrameProperties};
 
 use async_trait::async_trait;
 
+pub mod format;
 pub mod pool;
 pub mod pool_registry;
 
 pub use bytes::*;
+pub use format::{
+    BufferFormatError, BufferFormatter, BufferFormatterSource, FillBlack, FormatConverter,
+    PixelFormat,
+};
 
 pub type BuffersMap<K> = HashMap<K, BytesMut>;
 

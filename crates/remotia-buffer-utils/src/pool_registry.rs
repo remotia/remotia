@@ -1,4 +1,8 @@
-use std::{collections::{hash_map::Keys, HashMap}, hash::Hash, fmt::Debug};
+use std::{
+    collections::{hash_map::Keys, HashMap},
+    fmt::Debug,
+    hash::Hash,
+};
 
 use crate::pool::BuffersPool;
 
